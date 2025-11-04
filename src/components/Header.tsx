@@ -48,46 +48,46 @@ const Header = ({ activeTab, onTabChange, user, onAuthClick, onLogout, onRoleSwi
 </p>
             </div>
           </div>
-          <nav className="hidden md:flex gap-1 items-center">
+          <nav className="flex gap-1 items-center overflow-x-auto scrollbar-hide">
             <Button
               variant={activeTab === 'home' ? 'default' : 'ghost'}
               onClick={() => onTabChange('home')}
-              className="gap-2"
+              className="gap-2 flex-shrink-0"
             >
               <Icon name="Home" size={18} />
-              Главная
+              <span className="hidden sm:inline">Главная</span>
             </Button>
             <Button
               variant={activeTab === 'objects' ? 'default' : 'ghost'}
               onClick={() => onTabChange('objects')}
-              className="gap-2"
+              className="gap-2 flex-shrink-0"
             >
               <Icon name="Building2" size={18} />
-              Объекты
+              <span className="hidden sm:inline">Объекты</span>
             </Button>
             <Button
               variant={activeTab === 'calculator' ? 'default' : 'ghost'}
               onClick={() => onTabChange('calculator')}
-              className="gap-2"
+              className="gap-2 flex-shrink-0"
             >
               <Icon name="Calculator" size={18} />
-              Калькулятор
+              <span className="hidden sm:inline">Калькулятор</span>
             </Button>
             {user && (
               <Button
                 variant={activeTab === 'dashboard' ? 'default' : 'ghost'}
                 onClick={() => onTabChange('dashboard')}
-                className="gap-2"
+                className="gap-2 flex-shrink-0"
               >
                 <Icon name="LayoutDashboard" size={18} />
-                Кабинет
+                <span className="hidden sm:inline">Кабинет</span>
               </Button>
             )}
             {favoritesCount > 0 && (
               <Button
                 variant="ghost"
                 size="icon"
-                className="relative"
+                className="relative flex-shrink-0"
                 onClick={() => onTabChange('objects')}
               >
                 <Icon name="Heart" size={20} />
