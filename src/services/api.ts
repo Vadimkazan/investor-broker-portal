@@ -5,6 +5,7 @@ export interface User {
   email: string;
   name: string;
   role: 'investor' | 'broker';
+  is_admin?: boolean;
   created_at?: string;
 }
 
@@ -21,6 +22,8 @@ export interface InvestmentObjectDB {
   payback_years: number;
   description?: string;
   images?: string[];
+  videos?: string[];
+  documents?: string[];
   status: 'available' | 'reserved' | 'sold';
   created_at?: string;
 }
@@ -37,6 +40,17 @@ export interface Favorite {
     yield_percent: number;
     images: string[];
   };
+}
+
+export interface Notification {
+  id: number;
+  user_id: number;
+  type: string;
+  title: string;
+  message: string;
+  object_id?: number;
+  is_read: boolean;
+  created_at?: string;
 }
 
 class ApiClient {
@@ -142,6 +156,45 @@ class ApiClient {
     return this.request<{ message: string }>('favorites', 'DELETE', undefined, {
       user_id: userId.toString(),
       object_id: objectId.toString(),
+    });
+  }
+
+  async getNotifications(userId: number): Promise<Notification[]> {
+    return this.request<Notification[]>('notifications', 'GET', undefined, { user_id: userId.toString() });
+  }
+
+  async markNotificationAsRead(notificationId: number): Promise<Notification> {
+    return this.request<Notification>('notifications', 'PUT', { id: notificationId });
+  }
+
+  async uploadFile(file: File): Promise<{ url: string; fileName: string; fileType: string }> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = async () => {
+        try {
+          const base64Data = reader.result as string;
+          const response = await fetch('https://functions.poehali.dev/c8226cd3-1426-487a-8f8f-0b22ed0be84e', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              file: base64Data,
+              fileName: file.name,
+              fileType: file.type
+            })
+          });
+          
+          if (!response.ok) {
+            throw new Error('Upload failed');
+          }
+          
+          const data = await response.json();
+          resolve(data);
+        } catch (error) {
+          reject(error);
+        }
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
     });
   }
 }

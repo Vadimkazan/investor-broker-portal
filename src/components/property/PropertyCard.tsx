@@ -74,18 +74,6 @@ const PropertyCard = ({ property, onEdit, onDelete, onShare, getStatusBadge }: P
           </div>
         </div>
 
-        <div className="space-y-2">
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Сбор инвестиций</span>
-            <span className="font-medium">{progress.toFixed(0)}%</span>
-          </div>
-          <Progress value={progress} className="h-2" />
-          <div className="flex justify-between text-xs text-muted-foreground">
-            <span>₽{(property.investment.currentInvestment / 1000000).toFixed(1)}M</span>
-            <span>₽{(property.investment.targetInvestment / 1000000).toFixed(1)}M</span>
-          </div>
-        </div>
-
         <div className="flex items-center justify-between pt-2 border-t">
           <div className="flex items-center gap-2">
             {getRiskBadge(property.investment.riskLevel)}

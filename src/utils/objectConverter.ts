@@ -11,9 +11,11 @@ export const convertDBObjectToFrontend = (obj: InvestmentObjectDB): InvestmentOb
     price: obj.price,
     yield: obj.yield_percent,
     paybackPeriod: obj.payback_years,
-    area: 0,
+    area: obj.area || 0,
     images: obj.images || [],
-    description: '',
+    videos: obj.videos || [],
+    documents: obj.documents || [],
+    description: obj.description || '',
     status: obj.status,
     createdAt: obj.created_at || new Date().toISOString(),
     brokerId: obj.broker_id || 1
@@ -26,10 +28,14 @@ export const convertFrontendToDBObject = (obj: InvestmentObject): Omit<Investmen
     city: obj.city,
     address: obj.address,
     property_type: obj.type,
+    area: obj.area,
     price: obj.price,
     yield_percent: obj.yield,
     payback_years: obj.paybackPeriod,
+    description: obj.description,
     images: obj.images,
+    videos: obj.videos || [],
+    documents: obj.documents || [],
     status: obj.status,
     broker_id: obj.brokerId
   };

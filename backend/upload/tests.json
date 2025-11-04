@@ -1,0 +1,27 @@
+{
+  "tests": [
+    {
+      "name": "Upload image file",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "file": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+        "fileName": "test.png",
+        "fileType": "image/png"
+      },
+      "expectedStatus": 200,
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Reject invalid file type",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "file": "data",
+        "fileName": "test.exe",
+        "fileType": "application/exe"
+      },
+      "expectedStatus": 400
+    }
+  ]
+}

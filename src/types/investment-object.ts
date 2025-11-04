@@ -13,15 +13,13 @@ export interface InvestmentObject {
   area: number;
   status: ObjectStatus;
   images: string[];
+  videos?: string[];
+  documents?: string[];
   description: string;
   brokerId: number;
   createdAt: string;
   monthlyIncome?: number;
   rentalYield?: number;
-  documents?: {
-    title: string;
-    url: string;
-  }[];
   coordinates?: {
     lat: number;
     lng: number;
