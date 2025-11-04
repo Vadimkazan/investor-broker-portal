@@ -10,8 +10,17 @@ import ObjectsPage from "./components/objects/ObjectsPage";
 import ObjectDetailPage from "./components/objects/ObjectDetailPage";
 import NotFound from "./pages/NotFound";
 import { initMockObjects } from "./utils/initMockObjects";
+import { AuthProvider } from "@/contexts/AuthContext";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000,
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 const App = () => {
   useEffect(() => {
@@ -20,19 +29,21 @@ const App = () => {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/objects" element={<ObjectsPage />} />
-            <Route path="/objects/:id" element={<ObjectDetailPage />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
+      <AuthProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/objects" element={<ObjectsPage />} />
+              <Route path="/objects/:id" element={<ObjectDetailPage />} />
+              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </TooltipProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 };

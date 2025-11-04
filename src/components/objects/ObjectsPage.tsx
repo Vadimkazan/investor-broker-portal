@@ -7,13 +7,12 @@ import Header from '@/components/Header';
 import ObjectsFilters from './ObjectsFilters';
 import ObjectCard from './ObjectCard';
 import { InvestmentObject, ObjectFilters } from '@/types/investment-object';
-import { api, InvestmentObjectDB } from '@/services/api';
+import { useObjects } from '@/hooks/useObjects';
+import { useAuth } from '@/contexts/AuthContext';
 
 const ObjectsPage = () => {
   const navigate = useNavigate();
-  const [objects, setObjects] = useState<InvestmentObject[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { user } = useAuth();
   const [filters, setFilters] = useState<ObjectFilters>({
     search: '',
     cities: [],
@@ -25,61 +24,17 @@ const ObjectsPage = () => {
   });
   const [sortBy, setSortBy] = useState('default');
   const [showMobileFilters, setShowMobileFilters] = useState(false);
-  const [user, setUser] = useState<{ name: string; email: string; role: 'investor' | 'broker' } | null>(() => {
-    const savedUser = localStorage.getItem('investpro-user');
-    return savedUser ? JSON.parse(savedUser) : null;
-  });
+
+  const { data: objects = [], isLoading, error } = useObjects({ status: 'available' });
 
   useEffect(() => {
     document.title = 'Каталог объектов для инвестиций - InvestPro';
-    loadObjects();
     loadFiltersFromStorage();
   }, []);
 
   useEffect(() => {
     localStorage.setItem('object-filters', JSON.stringify(filters));
   }, [filters]);
-
-  const loadObjects = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      const dbObjects = await api.getObjects({ status: 'available' });
-      
-      const convertedObjects: InvestmentObject[] = dbObjects.map((obj: InvestmentObjectDB) => ({
-        id: obj.id,
-        title: obj.title,
-        city: obj.city,
-        address: obj.address,
-        type: obj.property_type,
-        price: obj.price,
-        yield: obj.yield_percent,
-        paybackPeriod: obj.payback_years,
-        images: obj.images || [],
-        status: obj.status,
-        createdAt: obj.created_at || new Date().toISOString()
-      }));
-      
-      setObjects(convertedObjects);
-      
-      const savedLocalObjects = localStorage.getItem('investment-objects');
-      if (savedLocalObjects) {
-        const localObjects = JSON.parse(savedLocalObjects);
-        setObjects([...convertedObjects, ...localObjects]);
-      }
-    } catch (err) {
-      console.error('Failed to load objects from API:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load objects');
-      
-      const savedObjects = localStorage.getItem('investment-objects');
-      if (savedObjects) {
-        setObjects(JSON.parse(savedObjects));
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const loadFiltersFromStorage = () => {
     const savedFilters = localStorage.getItem('object-filters');
@@ -99,185 +54,158 @@ const ObjectsPage = () => {
       );
     }
 
-    if (filters.cities.length > 0) {
+    if (filters.cities && filters.cities.length > 0) {
       result = result.filter(obj => filters.cities.includes(obj.city));
     }
 
-    if (filters.types.length > 0) {
+    if (filters.types && filters.types.length > 0) {
       result = result.filter(obj => filters.types.includes(obj.type));
     }
 
-    result = result.filter(obj => 
-      obj.price >= filters.priceRange[0] && obj.price <= filters.priceRange[1]
-    );
+    if (filters.priceRange) {
+      result = result.filter(obj => 
+        obj.price >= filters.priceRange![0] && 
+        obj.price <= filters.priceRange![1]
+      );
+    }
 
-    if (filters.yieldRanges.length > 0) {
+    if (filters.yieldRanges && filters.yieldRanges.length > 0) {
       result = result.filter(obj => {
-        return filters.yieldRanges.some(range => {
-          if (range === '0-30') return obj.yield <= 30;
-          if (range === '31-50') return obj.yield >= 31 && obj.yield <= 50;
-          if (range === '51-100') return obj.yield >= 51 && obj.yield <= 100;
-          if (range === '100+') return obj.yield > 100;
+        return filters.yieldRanges!.some(range => {
+          if (range === '0-5') return obj.yield >= 0 && obj.yield < 5;
+          if (range === '5-10') return obj.yield >= 5 && obj.yield < 10;
+          if (range === '10-15') return obj.yield >= 10 && obj.yield < 15;
+          if (range === '15+') return obj.yield >= 15;
           return false;
         });
       });
     }
 
-    if (filters.paybackRanges.length > 0) {
+    if (filters.paybackRanges && filters.paybackRanges.length > 0) {
       result = result.filter(obj => {
-        return filters.paybackRanges.some(range => {
-          if (range === '0-5') return obj.paybackPeriod <= 5;
-          if (range === '5-8') return obj.paybackPeriod >= 5 && obj.paybackPeriod <= 8;
-          if (range === '8-12') return obj.paybackPeriod >= 8 && obj.paybackPeriod <= 12;
-          if (range === '12+') return obj.paybackPeriod > 12;
+        return filters.paybackRanges!.some(range => {
+          if (range === '0-3') return obj.paybackPeriod >= 0 && obj.paybackPeriod < 3;
+          if (range === '3-5') return obj.paybackPeriod >= 3 && obj.paybackPeriod < 5;
+          if (range === '5-7') return obj.paybackPeriod >= 5 && obj.paybackPeriod < 7;
+          if (range === '7+') return obj.paybackPeriod >= 7;
           return false;
         });
       });
-    }
-
-    if (filters.status) {
-      result = result.filter(obj => obj.status === filters.status);
     }
 
     switch (sortBy) {
-      case 'yield-asc':
-        result.sort((a, b) => a.yield - b.yield);
-        break;
-      case 'yield-desc':
-        result.sort((a, b) => b.yield - a.yield);
-        break;
       case 'price-asc':
         result.sort((a, b) => a.price - b.price);
         break;
       case 'price-desc':
         result.sort((a, b) => b.price - a.price);
         break;
-      case 'date':
-        result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      case 'yield-desc':
+        result.sort((a, b) => b.yield - a.yield);
+        break;
+      case 'payback-asc':
+        result.sort((a, b) => a.paybackPeriod - b.paybackPeriod);
         break;
     }
 
     return result;
   }, [objects, filters, sortBy]);
 
-  const getMockObjects = (): InvestmentObject[] => {
-    return [];
+  const handleLogout = () => {
+    localStorage.removeItem('investpro-user');
+    navigate('/');
   };
 
-  const handleTabChange = (tab: string) => {
-    if (tab === 'home') navigate('/');
-    else if (tab === 'objects') navigate('/objects');
-    else if (tab === 'calculator') navigate('/');
-    else if (tab === 'dashboard') navigate('/');
-  };
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header user={user} onLogout={handleLogout} />
+        <div className="text-center py-16">
+          <Icon name="Loader2" size={48} className="mx-auto text-primary animate-spin mb-4" />
+          <p className="text-muted-foreground">Загрузка объектов...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header user={user} onLogout={handleLogout} />
+        <div className="text-center py-16">
+          <Icon name="AlertCircle" size={48} className="mx-auto text-destructive mb-4" />
+          <h3 className="text-xl font-semibold mb-2">Ошибка загрузки</h3>
+          <p className="text-muted-foreground mb-4">{error.toString()}</p>
+          <Button onClick={() => window.location.reload()}>Попробовать снова</Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
-      <Header
-        activeTab="objects"
-        onTabChange={handleTabChange}
-        user={user}
-        onAuthClick={() => navigate('/')}
-        onLogout={() => {
-          setUser(null);
-          localStorage.removeItem('investpro-user');
-          navigate('/');
-        }}
-        onRoleSwitch={() => {
-          if (user) {
-            const newUser = { ...user, role: user.role === 'broker' ? 'investor' as const : 'broker' as const };
-            setUser(newUser);
-            localStorage.setItem('investpro-user', JSON.stringify(newUser));
-          }
-        }}
-      />
-
-      <div className="bg-gradient-to-br from-primary to-secondary text-white py-16 px-6">
-        <div className="max-w-7xl mx-auto">
-          <h1 className="text-4xl md:text-5xl font-bold mb-4">
-            Каталог объектов для инвестиций
-          </h1>
-          <p className="text-xl text-white/90 mb-6">
-            Подберите объект по вашим критериям доходности и бюджета
+      <Header user={user} onLogout={handleLogout} />
+      
+      <div className="container mx-auto px-4 pt-20 pb-8">
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold mb-4">Инвестиционные объекты</h1>
+          <p className="text-muted-foreground text-lg">
+            Найдите лучшие предложения для инвестиций в недвижимость
           </p>
-          <Button size="lg" variant="secondary" onClick={() => navigate('/')}>
-            <Icon name="Sparkles" className="mr-2" />
-            Получить персональную подборку
-          </Button>
         </div>
-      </div>
 
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        <div className="flex gap-6">
-          <aside className="hidden lg:block w-80 flex-shrink-0">
-            <ObjectsFilters filters={filters} onFiltersChange={setFilters} />
+        <div className="flex flex-col lg:flex-row gap-6">
+          <aside className={`
+            lg:w-80 lg:block
+            ${showMobileFilters ? 'block' : 'hidden'}
+          `}>
+            <div className="bg-card rounded-lg border p-6 sticky top-24">
+              <ObjectsFilters 
+                filters={filters}
+                onFiltersChange={setFilters}
+              />
+            </div>
           </aside>
 
           <main className="flex-1">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-              <div className="flex items-center gap-4">
-                <p className="text-muted-foreground">
-                  Найдено объектов: <span className="font-semibold text-foreground">{filteredObjects.length}</span>
-                </p>
+              <p className="text-muted-foreground">
+                Найдено объектов: <span className="font-semibold text-foreground">{filteredObjects.length}</span>
+              </p>
+
+              <div className="flex gap-2 w-full sm:w-auto">
                 <Button
                   variant="outline"
-                  size="sm"
-                  className="lg:hidden"
+                  className="lg:hidden flex-1"
                   onClick={() => setShowMobileFilters(!showMobileFilters)}
                 >
-                  <Icon name="SlidersHorizontal" size={16} className="mr-2" />
+                  <Icon name="SlidersHorizontal" className="mr-2" size={16} />
                   Фильтры
                 </Button>
-              </div>
 
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">Сортировка:</span>
                 <Select value={sortBy} onValueChange={setSortBy}>
-                  <SelectTrigger className="w-48">
-                    <SelectValue />
+                  <SelectTrigger className="w-full sm:w-[200px]">
+                    <SelectValue placeholder="Сортировка" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="default">По умолчанию</SelectItem>
-                    <SelectItem value="yield-desc">По доходности ↓</SelectItem>
-                    <SelectItem value="yield-asc">По доходности ↑</SelectItem>
-                    <SelectItem value="price-asc">По цене ↑</SelectItem>
-                    <SelectItem value="price-desc">По цене ↓</SelectItem>
-                    <SelectItem value="date">По дате добавления</SelectItem>
+                    <SelectItem value="price-asc">Цена: по возрастанию</SelectItem>
+                    <SelectItem value="price-desc">Цена: по убыванию</SelectItem>
+                    <SelectItem value="yield-desc">Доходность: макс.</SelectItem>
+                    <SelectItem value="payback-asc">Окупаемость: мин.</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
 
-            {showMobileFilters && (
-              <div className="lg:hidden mb-6">
-                <ObjectsFilters filters={filters} onFiltersChange={setFilters} />
-              </div>
-            )}
-
-            {loading && (
-              <div className="text-center py-16">
-                <Icon name="Loader2" size={48} className="mx-auto text-primary animate-spin mb-4" />
-                <p className="text-muted-foreground">Загрузка объектов...</p>
-              </div>
-            )}
-
-            {error && !loading && (
-              <div className="text-center py-16">
-                <Icon name="AlertCircle" size={48} className="mx-auto text-destructive mb-4" />
-                <h3 className="text-xl font-semibold mb-2">Ошибка загрузки</h3>
-                <p className="text-muted-foreground mb-4">{error}</p>
-                <Button onClick={loadObjects}>Попробовать снова</Button>
-              </div>
-            )}
-
-            {!loading && !error && filteredObjects.length === 0 ? (
+            {filteredObjects.length === 0 ? (
               <div className="text-center py-16">
                 <Icon name="Search" size={64} className="mx-auto text-muted-foreground mb-4" />
                 <h3 className="text-xl font-semibold mb-2">Объекты не найдены</h3>
-                <p className="text-muted-foreground mb-4">
+                <p className="text-muted-foreground mb-6">
                   Попробуйте изменить параметры фильтрации
                 </p>
-                <Button variant="outline" onClick={() => setFilters({
+                <Button onClick={() => setFilters({
                   search: '',
                   cities: [],
                   types: [],
@@ -289,10 +217,14 @@ const ObjectsPage = () => {
                   Сбросить фильтры
                 </Button>
               </div>
-            ) : !loading && !error && (
-              <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                 {filteredObjects.map((object) => (
-                  <ObjectCard key={object.id} object={object} />
+                  <ObjectCard 
+                    key={object.id} 
+                    object={object}
+                    onClick={() => navigate(`/objects/${object.id}`)}
+                  />
                 ))}
               </div>
             )}

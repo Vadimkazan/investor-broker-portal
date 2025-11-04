@@ -8,22 +8,24 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import Icon from '@/components/ui/icon';
 import Header from '@/components/Header';
-import { InvestmentObject, Broker } from '@/types/investment-object';
-import { api, InvestmentObjectDB } from '@/services/api';
+import { Broker } from '@/types/investment-object';
+import { useObject } from '@/hooks/useObjects';
+import { useFavorites, useAddToFavorites, useRemoveFromFavorites } from '@/hooks/useFavorites';
+import { useAuth } from '@/contexts/AuthContext';
 
 const ObjectDetailPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [object, setObject] = useState<InvestmentObject | null>(null);
+  const { user, logout } = useAuth();
+  const objectId = id ? parseInt(id) : 0;
+  
+  const { data: object, isLoading, error } = useObject(objectId);
+  const { data: favorites = [] } = useFavorites();
+  const addToFavorites = useAddToFavorites();
+  const removeFromFavorites = useRemoveFromFavorites();
+  
   const [broker, setBroker] = useState<Broker | null>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [isFavorite, setIsFavorite] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [user, setUser] = useState<{ name: string; email: string; role: 'investor' | 'broker' } | null>(() => {
-    const savedUser = localStorage.getItem('investpro-user');
-    return savedUser ? JSON.parse(savedUser) : null;
-  });
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
@@ -31,67 +33,16 @@ const ObjectDetailPage = () => {
     message: ''
   });
 
-  useEffect(() => {
-    if (id) {
-      loadObject(parseInt(id));
-    }
-  }, [id]);
+  const isFavorite = favorites.includes(objectId);
 
   useEffect(() => {
     if (object) {
       document.title = `${object.title} - InvestPro`;
+      if (object.brokerId) {
+        loadBroker(object.brokerId);
+      }
     }
   }, [object]);
-
-  const loadObject = async (objectId: number) => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      const dbObject = await api.getObjectById(objectId);
-      
-      const convertedObject: InvestmentObject = {
-        id: dbObject.id,
-        title: dbObject.title,
-        city: dbObject.city,
-        address: dbObject.address,
-        type: dbObject.property_type,
-        price: dbObject.price,
-        yield: dbObject.yield_percent,
-        paybackPeriod: dbObject.payback_years,
-        images: dbObject.images || [],
-        status: dbObject.status,
-        createdAt: dbObject.created_at || new Date().toISOString(),
-        brokerId: dbObject.broker_id
-      };
-      
-      setObject(convertedObject);
-      if (dbObject.broker_id) {
-        loadBroker(dbObject.broker_id);
-      }
-      
-      const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
-      setIsFavorite(favorites.includes(objectId));
-    } catch (err) {
-      console.error('Failed to load object from API:', err);
-      setError('Не удалось загрузить объект');
-      
-      const savedObjects = localStorage.getItem('investment-objects');
-      if (savedObjects) {
-        const objects: InvestmentObject[] = JSON.parse(savedObjects);
-        const foundObject = objects.find(obj => obj.id === objectId);
-        if (foundObject) {
-          setObject(foundObject);
-          loadBroker(foundObject.brokerId);
-          
-          const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
-          setIsFavorite(favorites.includes(objectId));
-        }
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const loadBroker = (brokerId: number) => {
     const mockBroker: Broker = {
@@ -120,80 +71,32 @@ const ObjectDetailPage = () => {
     sold: { label: 'Продано', variant: 'destructive' }
   };
 
-  const toggleFavorite = async () => {
-    if (!object || !user) return;
-    
-    try {
-      const userId = 1;
-      
-      if (isFavorite) {
-        await api.removeFromFavorites(userId, object.id);
-        setIsFavorite(false);
-        
-        const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
-        const newFavorites = favorites.filter((favId: number) => favId !== object.id);
-        localStorage.setItem('favorites', JSON.stringify(newFavorites));
-      } else {
-        await api.addToFavorites(userId, object.id);
-        setIsFavorite(true);
-        
-        const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
-        localStorage.setItem('favorites', JSON.stringify([...favorites, object.id]));
-      }
-    } catch (err) {
-      console.error('Failed to toggle favorite:', err);
-      
-      const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
-      if (isFavorite) {
-        const newFavorites = favorites.filter((favId: number) => favId !== object.id);
-        localStorage.setItem('favorites', JSON.stringify(newFavorites));
-        setIsFavorite(false);
-      } else {
-        localStorage.setItem('favorites', JSON.stringify([...favorites, object.id]));
-        setIsFavorite(true);
-      }
+  const handleToggleFavorite = async () => {
+    if (isFavorite) {
+      await removeFromFavorites.mutateAsync(objectId);
+    } else {
+      await addToFavorites.mutateAsync(objectId);
     }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    alert('Заявка отправлена! Мы свяжемся с вами в ближайшее время.');
-    setFormData({ name: '', phone: '', email: '', message: '' });
+    console.log('Заявка отправлена:', formData);
+    alert('Спасибо за заявку! Мы свяжемся с вами в ближайшее время.');
   };
 
-  const handleTabChange = (tab: string) => {
-    if (tab === 'home') navigate('/');
-    else if (tab === 'objects') navigate('/objects');
-    else if (tab === 'calculator') navigate('/');
-    else if (tab === 'dashboard') navigate('/');
+  const handleLogout = () => {
+    logout();
+    navigate('/');
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
-        <Header
-          activeTab="objects"
-          onTabChange={handleTabChange}
-          user={user}
-          onAuthClick={() => navigate('/')}
-          onLogout={() => {
-            setUser(null);
-            localStorage.removeItem('investpro-user');
-            navigate('/');
-          }}
-          onRoleSwitch={() => {
-            if (user) {
-              const newUser = { ...user, role: user.role === 'broker' ? 'investor' as const : 'broker' as const };
-              setUser(newUser);
-              localStorage.setItem('investpro-user', JSON.stringify(newUser));
-            }
-          }}
-        />
-        <div className="min-h-[80vh] flex items-center justify-center">
-          <div className="text-center">
-            <Icon name="Loader2" size={64} className="mx-auto text-primary animate-spin mb-4" />
-            <p className="text-muted-foreground">Загрузка объекта...</p>
-          </div>
+        <Header user={user} onLogout={handleLogout} />
+        <div className="text-center py-16">
+          <Icon name="Loader2" size={48} className="mx-auto text-primary animate-spin mb-4" />
+          <p className="text-muted-foreground">Загрузка...</p>
         </div>
       </div>
     );
@@ -202,260 +105,188 @@ const ObjectDetailPage = () => {
   if (error || !object) {
     return (
       <div className="min-h-screen bg-background">
-        <Header
-          activeTab="objects"
-          onTabChange={handleTabChange}
-          user={user}
-          onAuthClick={() => navigate('/')}
-          onLogout={() => {
-            setUser(null);
-            localStorage.removeItem('investpro-user');
-            navigate('/');
-          }}
-          onRoleSwitch={() => {
-            if (user) {
-              const newUser = { ...user, role: user.role === 'broker' ? 'investor' as const : 'broker' as const };
-              setUser(newUser);
-              localStorage.setItem('investpro-user', JSON.stringify(newUser));
-            }
-          }}
-        />
-        <div className="min-h-[80vh] flex items-center justify-center">
-          <div className="text-center">
-            <Icon name="AlertCircle" size={64} className="mx-auto text-destructive mb-4" />
-            <h2 className="text-2xl font-semibold mb-2">Объект не найден</h2>
-            <p className="text-muted-foreground mb-4">{error || 'Объект был удален или не существует'}</p>
-            <Button onClick={() => navigate('/objects')}>
-              Вернуться к каталогу
-            </Button>
-          </div>
+        <Header user={user} onLogout={handleLogout} />
+        <div className="text-center py-16">
+          <Icon name="AlertCircle" size={48} className="mx-auto text-destructive mb-4" />
+          <h3 className="text-xl font-semibold mb-2">Объект не найден</h3>
+          <p className="text-muted-foreground mb-4">
+            {error ? error.toString() : 'Запрошенный объект не существует'}
+          </p>
+          <Button onClick={() => navigate('/objects')}>Вернуться к списку</Button>
         </div>
       </div>
     );
   }
 
-  const monthlyReturn = (object.price * object.yield / 100 / 12);
-
   return (
     <div className="min-h-screen bg-background">
-      <Header
-        activeTab="objects"
-        onTabChange={handleTabChange}
-        user={user}
-        onAuthClick={() => navigate('/')}
-        onLogout={() => {
-          setUser(null);
-          localStorage.removeItem('investpro-user');
-          navigate('/');
-        }}
-        onRoleSwitch={() => {
-          if (user) {
-            const newUser = { ...user, role: user.role === 'broker' ? 'investor' as const : 'broker' as const };
-            setUser(newUser);
-            localStorage.setItem('investpro-user', JSON.stringify(newUser));
-          }
-        }}
-      />
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        <Button variant="ghost" onClick={() => navigate('/objects')} className="mb-6">
-          <Icon name="ArrowLeft" size={18} className="mr-2" />
-          Вернуться к каталогу
+      <Header user={user} onLogout={handleLogout} />
+      
+      <div className="container mx-auto px-4 pt-20 pb-8">
+        <Button 
+          variant="ghost" 
+          className="mb-4"
+          onClick={() => navigate('/objects')}
+        >
+          <Icon name="ArrowLeft" size={16} className="mr-2" />
+          Назад к объектам
         </Button>
 
-        <div className="grid lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
-            <div>
-              <div className="relative bg-muted rounded-lg overflow-hidden mb-4" style={{ height: '400px' }}>
-                <img
-                  src={object.images[currentImageIndex] || 'https://via.placeholder.com/800x400'}
-                  alt={object.title}
-                  className="w-full h-full object-cover"
-                />
-                {object.images.length > 1 && (
-                  <>
-                    <Button
-                      variant="secondary"
-                      size="icon"
-                      className="absolute left-4 top-1/2 -translate-y-1/2"
-                      onClick={() => setCurrentImageIndex(prev => prev === 0 ? object.images.length - 1 : prev - 1)}
-                    >
-                      <Icon name="ChevronLeft" />
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      size="icon"
-                      className="absolute right-4 top-1/2 -translate-y-1/2"
-                      onClick={() => setCurrentImageIndex(prev => prev === object.images.length - 1 ? 0 : prev + 1)}
-                    >
-                      <Icon name="ChevronRight" />
-                    </Button>
-                  </>
-                )}
-              </div>
-
-              {object.images.length > 1 && (
-                <div className="flex gap-2 overflow-x-auto">
-                  {object.images.map((img, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => setCurrentImageIndex(idx)}
-                      className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 ${
-                        idx === currentImageIndex ? 'border-primary' : 'border-transparent'
-                      }`}
-                    >
-                      <img src={img} alt="" className="w-full h-full object-cover" />
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div>
-              <div className="flex items-start justify-between mb-4">
-                <div>
-                  <h1 className="text-3xl font-bold mb-2">{object.title}</h1>
-                  <p className="text-muted-foreground flex items-center">
-                    <Icon name="MapPin" size={18} className="mr-2" />
-                    {object.address}
-                  </p>
-                </div>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={toggleFavorite}
-                >
-                  <Icon 
-                    name="Heart" 
-                    size={20} 
-                    className={isFavorite ? 'fill-red-500 text-red-500' : ''} 
-                  />
-                </Button>
-              </div>
-
-              <div className="flex flex-wrap gap-2 mb-6">
-                <Badge variant={statusLabels[object.status].variant}>
-                  {statusLabels[object.status].label}
-                </Badge>
-                <Badge variant="outline">{propertyTypeLabels[object.type]}</Badge>
-                <Badge variant="outline">{object.area} м²</Badge>
-              </div>
-
-              <div className="grid grid-cols-3 gap-4 mb-6">
-                <Card>
-                  <CardContent className="p-4 text-center">
-                    <div className="text-2xl font-bold text-primary mb-1">{object.yield}%</div>
-                    <div className="text-sm text-muted-foreground">Доходность</div>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="p-4 text-center">
-                    <div className="text-2xl font-bold mb-1">{(object.price / 1000000).toFixed(1)} млн</div>
-                    <div className="text-sm text-muted-foreground">Сумма входа</div>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="p-4 text-center">
-                    <div className="text-2xl font-bold mb-1">{object.paybackPeriod} лет</div>
-                    <div className="text-sm text-muted-foreground">Окупаемость</div>
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
-
             <Card>
-              <CardHeader>
-                <CardTitle>Описание объекта</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground whitespace-pre-line">
-                  {object.description || 'Описание объекта будет добавлено позже.'}
-                </p>
-              </CardContent>
-            </Card>
+              <CardContent className="p-0">
+                <div className="relative aspect-video bg-muted">
+                  {object.images && object.images.length > 0 ? (
+                    <>
+                      <img 
+                        src={object.images[currentImageIndex]} 
+                        alt={object.title}
+                        className="w-full h-full object-cover rounded-t-lg"
+                      />
+                      {object.images.length > 1 && (
+                        <div className="absolute inset-0 flex items-center justify-between p-4">
+                          <Button
+                            size="icon"
+                            variant="secondary"
+                            onClick={() => setCurrentImageIndex((currentImageIndex - 1 + object.images.length) % object.images.length)}
+                          >
+                            <Icon name="ChevronLeft" size={20} />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="secondary"
+                            onClick={() => setCurrentImageIndex((currentImageIndex + 1) % object.images.length)}
+                          >
+                            <Icon name="ChevronRight" size={20} />
+                          </Button>
+                        </div>
+                      )}
+                      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-background/80 px-3 py-1 rounded-full text-sm">
+                        {currentImageIndex + 1} / {object.images.length}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex items-center justify-center h-full">
+                      <Icon name="ImageOff" size={48} className="text-muted-foreground" />
+                    </div>
+                  )}
+                </div>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Расчет доходности</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Стоимость объекта:</span>
-                    <span className="font-semibold">{object.price.toLocaleString('ru-RU')} ₽</span>
+                <div className="p-6">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex-1">
+                      <h1 className="text-3xl font-bold mb-2">{object.title}</h1>
+                      <p className="text-muted-foreground flex items-center">
+                        <Icon name="MapPin" size={16} className="mr-1" />
+                        {object.address}, {object.city}
+                      </p>
+                    </div>
+                    <Button
+                      size="icon"
+                      variant={isFavorite ? 'default' : 'outline'}
+                      onClick={handleToggleFavorite}
+                      disabled={addToFavorites.isPending || removeFromFavorites.isPending}
+                    >
+                      <Icon 
+                        name={isFavorite ? 'Heart' : 'HeartOff'} 
+                        size={20}
+                        className={isFavorite ? 'fill-current' : ''}
+                      />
+                    </Button>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Годовая доходность:</span>
-                    <span className="font-semibold">{object.yield}%</span>
+
+                  <div className="flex gap-2 mb-6">
+                    <Badge variant={statusLabels[object.status]?.variant || 'default'}>
+                      {statusLabels[object.status]?.label || object.status}
+                    </Badge>
+                    <Badge variant="outline">
+                      {propertyTypeLabels[object.type] || object.type}
+                    </Badge>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Доход в год:</span>
-                    <span className="font-semibold text-primary">
-                      {(object.price * object.yield / 100).toLocaleString('ru-RU')} ₽
-                    </span>
+
+                  <div className="grid grid-cols-3 gap-4 mb-6">
+                    <Card>
+                      <CardContent className="p-4 text-center">
+                        <p className="text-sm text-muted-foreground mb-1">Цена</p>
+                        <p className="text-xl font-bold">
+                          {(object.price / 1000000).toFixed(1)} млн ₽
+                        </p>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="p-4 text-center">
+                        <p className="text-sm text-muted-foreground mb-1">Доходность</p>
+                        <p className="text-xl font-bold text-primary">
+                          {object.yield}%
+                        </p>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="p-4 text-center">
+                        <p className="text-sm text-muted-foreground mb-1">Окупаемость</p>
+                        <p className="text-xl font-bold">
+                          {object.paybackPeriod} лет
+                        </p>
+                      </CardContent>
+                    </Card>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Доход в месяц:</span>
-                    <span className="font-semibold text-primary">
-                      {monthlyReturn.toLocaleString('ru-RU')} ₽
-                    </span>
-                  </div>
-                  <div className="flex justify-between pt-3 border-t">
-                    <span className="text-muted-foreground">Срок окупаемости:</span>
-                    <span className="font-semibold">{object.paybackPeriod} лет</span>
+
+                  <div>
+                    <h2 className="text-xl font-semibold mb-3">Описание</h2>
+                    <p className="text-muted-foreground leading-relaxed">
+                      Отличная инвестиционная возможность в {object.city}. 
+                      Объект расположен в развивающемся районе с хорошей инфраструктурой.
+                      Высокая доходность {object.yield}% годовых делает это предложение особенно привлекательным.
+                      Окупаемость составляет {object.paybackPeriod} года при текущих рыночных условиях.
+                    </p>
                   </div>
                 </div>
               </CardContent>
             </Card>
-
-            {object.coordinates && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Расположение на карте</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="bg-muted h-64 rounded-lg flex items-center justify-center">
-                    <p className="text-muted-foreground">Карта будет здесь</p>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
           </div>
 
           <div className="space-y-6">
             {broker && (
               <Card>
                 <CardHeader>
-                  <CardTitle>Ответственный брокер</CardTitle>
+                  <CardTitle>Брокер</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center gap-4">
-                    <img
-                      src={broker.photo}
-                      alt={broker.name}
-                      className="w-16 h-16 rounded-full object-cover"
-                    />
+                <CardContent>
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center overflow-hidden">
+                      {broker.photo ? (
+                        <img src={broker.photo} alt={broker.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <Icon name="User" size={32} className="text-muted-foreground" />
+                      )}
+                    </div>
                     <div>
-                      <h3 className="font-semibold">{broker.name}</h3>
+                      <p className="font-semibold">{broker.name}</p>
                       <p className="text-sm text-muted-foreground">{broker.company}</p>
-                      <div className="flex items-center gap-1 mt-1">
-                        <Icon name="Star" size={14} className="fill-yellow-400 text-yellow-400" />
-                        <span className="text-sm font-medium">{broker.rating}</span>
-                      </div>
                     </div>
                   </div>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <Icon name="Phone" size={16} />
-                      <span>{broker.phone}</span>
+
+                  <div className="space-y-2 mb-4">
+                    <div className="flex items-center gap-2">
+                      <Icon name="Star" size={16} className="text-yellow-500 fill-current" />
+                      <span className="text-sm">Рейтинг: {broker.rating}</span>
                     </div>
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <Icon name="Mail" size={16} />
-                      <span>{broker.email}</span>
+                    <div className="flex items-center gap-2">
+                      <Icon name="CheckCircle" size={16} className="text-green-500" />
+                      <span className="text-sm">Сделок: {broker.dealsCompleted}</span>
                     </div>
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <Icon name="Briefcase" size={16} />
-                      <span>Сделок: {broker.dealsCompleted}</span>
-                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Button variant="outline" className="w-full justify-start">
+                      <Icon name="Phone" size={16} className="mr-2" />
+                      {broker.phone}
+                    </Button>
+                    <Button variant="outline" className="w-full justify-start">
+                      <Icon name="Mail" size={16} className="mr-2" />
+                      {broker.email}
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
@@ -463,12 +294,12 @@ const ObjectDetailPage = () => {
 
             <Card>
               <CardHeader>
-                <CardTitle>Запрос на консультацию</CardTitle>
+                <CardTitle>Оставить заявку</CardTitle>
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div>
-                    <Label htmlFor="name">Имя</Label>
+                    <Label htmlFor="name">Ваше имя</Label>
                     <Input
                       id="name"
                       value={formData.name}
@@ -500,10 +331,9 @@ const ObjectDetailPage = () => {
                     <Label htmlFor="message">Сообщение</Label>
                     <Textarea
                       id="message"
-                      rows={4}
                       value={formData.message}
                       onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                      placeholder="Расскажите о своих пожеланиях..."
+                      rows={4}
                     />
                   </div>
                   <Button type="submit" className="w-full">
@@ -512,22 +342,6 @@ const ObjectDetailPage = () => {
                 </form>
               </CardContent>
             </Card>
-
-            {object.documents && object.documents.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Документы</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  {object.documents.map((doc, idx) => (
-                    <Button key={idx} variant="outline" className="w-full justify-start">
-                      <Icon name="FileText" size={18} className="mr-2" />
-                      {doc.title}
-                    </Button>
-                  ))}
-                </CardContent>
-              </Card>
-            )}
           </div>
         </div>
       </div>
