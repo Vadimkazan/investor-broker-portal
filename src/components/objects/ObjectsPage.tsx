@@ -111,6 +111,13 @@ const ObjectsPage = () => {
     return result;
   }, [objects, filters, sortBy]);
 
+  const handleTabChange = (tab: string) => {
+    if (tab === 'home') navigate('/');
+    else if (tab === 'objects') navigate('/objects');
+    else if (tab === 'calculator') navigate('/?tab=calculator');
+    else if (tab === 'dashboard') navigate('/?tab=dashboard');
+  };
+
   const handleLogout = () => {
     localStorage.removeItem('investpro-user');
     navigate('/');
@@ -119,7 +126,14 @@ const ObjectsPage = () => {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
-        <Header user={user} onLogout={handleLogout} />
+        <Header 
+          activeTab="objects" 
+          onTabChange={handleTabChange} 
+          user={user} 
+          onAuthClick={() => navigate('/')}
+          onLogout={handleLogout}
+          onRoleSwitch={() => {}}
+        />
         <div className="text-center py-16">
           <Icon name="Loader2" size={48} className="mx-auto text-primary animate-spin mb-4" />
           <p className="text-muted-foreground">Загрузка объектов...</p>
@@ -131,7 +145,14 @@ const ObjectsPage = () => {
   if (error) {
     return (
       <div className="min-h-screen bg-background">
-        <Header user={user} onLogout={handleLogout} />
+        <Header 
+          activeTab="objects" 
+          onTabChange={handleTabChange} 
+          user={user} 
+          onAuthClick={() => navigate('/')}
+          onLogout={handleLogout}
+          onRoleSwitch={() => {}}
+        />
         <div className="text-center py-16">
           <Icon name="AlertCircle" size={48} className="mx-auto text-destructive mb-4" />
           <h3 className="text-xl font-semibold mb-2">Ошибка загрузки</h3>
@@ -144,7 +165,14 @@ const ObjectsPage = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header user={user} onLogout={handleLogout} />
+      <Header 
+        activeTab="objects" 
+        onTabChange={handleTabChange} 
+        user={user} 
+        onAuthClick={() => navigate('/')}
+        onLogout={handleLogout}
+        onRoleSwitch={() => {}}
+      />
       
       <div className="container mx-auto px-4 pt-20 pb-8">
         <div className="mb-8">
