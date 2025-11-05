@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import Icon from '@/components/ui/icon';
+import { fetchGoogleSheetData } from '@/utils/googleSheets';
 import { InvestmentObject, Broker } from '@/types/investment-object';
 import { useToast } from '@/hooks/use-toast';
 
@@ -183,8 +184,43 @@ export const GoogleSheetsImport = () => {
     reader.readAsText(file, 'UTF-8');
   };
 
+  const handleGoogleSync = async () => {
+    setIsLoading(true);
+    try {
+      const sheetData = await fetchGoogleSheetData();
+      processData(sheetData);
+    } catch (error) {
+      console.error('Sync error:', error);
+      toast({
+        variant: "destructive",
+        title: "Ошибка синхронизации",
+        description: "Не удалось загрузить данные из Google Таблицы",
+      });
+      setIsLoading(false);
+    }
+  };
+
   return (
-    <>
+    <div className="flex gap-2">
+      <Button
+        onClick={handleGoogleSync}
+        disabled={isLoading}
+        variant="default"
+        size="sm"
+      >
+        {isLoading ? (
+          <>
+            <Icon name="Loader2" className="mr-2 animate-spin" size={16} />
+            Синхронизация...
+          </>
+        ) : (
+          <>
+            <Icon name="RefreshCw" className="mr-2" size={16} />
+            Синхронизация с Google
+          </>
+        )}
+      </Button>
+      
       <input
         ref={fileInputRef}
         type="file"
@@ -198,18 +234,9 @@ export const GoogleSheetsImport = () => {
         variant="outline"
         size="sm"
       >
-        {isLoading ? (
-          <>
-            <Icon name="Loader2" className="mr-2 animate-spin" size={16} />
-            Загрузка...
-          </>
-        ) : (
-          <>
-            <Icon name="Upload" className="mr-2" size={16} />
-            Загрузить CSV
-          </>
-        )}
+        <Icon name="Upload" className="mr-2" size={16} />
+        Загрузить CSV
       </Button>
-    </>
+    </div>
   );
 };
