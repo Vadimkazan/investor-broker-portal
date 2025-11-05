@@ -8,6 +8,7 @@ import { Progress } from '@/components/ui/progress';
 
 const SHEET_ID = '1jnOO6dUJ6z903U1IVd8eZRJR7l-gn_62oJ9y-sQUnaU';
 const SYNC_INTERVAL = 24 * 60 * 60 * 1000; // 24 часа
+const API_URL = 'https://functions.poehali.dev/fc00dc4e-18bf-4893-bb9d-331e8abda973';
 
 const SHEET_NAMES = [
   '2 Юрий Морозкин',
@@ -28,6 +29,35 @@ const GoogleSheetsSync = () => {
   const [lastSync, setLastSync] = useState<Date | null>(null);
   const [autoSyncEnabled, setAutoSyncEnabled] = useState(false);
   const { toast } = useToast();
+
+  const notifySubscribedUsers = async (newObject: any) => {
+    try {
+      const usersResponse = await fetch(`${API_URL}?resource=users`);
+      if (!usersResponse.ok) return;
+      
+      const users = await usersResponse.json();
+      const subscribedUsers = users.filter((u: any) => u.notify_new_objects && u.role === 'investor');
+      
+      for (const user of subscribedUsers) {
+        const notificationData = {
+          user_id: user.id,
+          type: 'new_object',
+          title: 'Новый объект на платформе',
+          message: `Добавлен новый объект: ${newObject.title} в ${newObject.city}. Доходность: ${newObject.yield_percent}%`,
+          object_id: newObject.id
+        };
+        
+        const notifUrl = `${API_URL}?resource=notifications`;
+        await fetch(notifUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(notificationData)
+        });
+      }
+    } catch (error) {
+      console.error('Ошибка отправки уведомлений:', error);
+    }
+  };
 
   useEffect(() => {
     const savedLastSync = localStorage.getItem('lastGoogleSheetsSync');
@@ -217,7 +247,6 @@ const GoogleSheetsSync = () => {
             continue;
           }
 
-          const API_URL = 'https://functions.poehali.dev/fc00dc4e-18bf-4893-bb9d-331e8abda973';
           const queryParams = new URLSearchParams({ resource: 'objects' });
           const url = `${API_URL}?${queryParams}`;
 
@@ -229,6 +258,8 @@ const GoogleSheetsSync = () => {
 
           if (apiResponse.ok) {
             successCount++;
+            const newObject = await apiResponse.json();
+            await notifySubscribedUsers(newObject);
           } else {
             console.error(`Ошибка создания объекта "${title}":`, await apiResponse.text());
             errorCount++;

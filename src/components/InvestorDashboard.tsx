@@ -5,6 +5,7 @@ import InvestmentsList from '@/components/investor/InvestmentsList';
 import EditInvestmentDialog from '@/components/investor/EditInvestmentDialog';
 import PersonalFinancesTab from '@/components/investor/PersonalFinancesTab';
 import EducationTab from '@/components/investor/EducationTab';
+import NotificationSettings from '@/components/investor/NotificationSettings';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { PropertyObject, UserInvestment } from '@/types/investment';
 
@@ -252,11 +253,12 @@ const InvestorDashboard = ({ userName }: InvestorDashboardProps) => {
       </div>
 
       <Tabs defaultValue="portfolio" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="portfolio">Портфель</TabsTrigger>
           <TabsTrigger value="finances">Финансы</TabsTrigger>
           <TabsTrigger value="objects">Мои объекты</TabsTrigger>
           <TabsTrigger value="education">Обучение</TabsTrigger>
+          <TabsTrigger value="settings">Настройки</TabsTrigger>
         </TabsList>
 
         <TabsContent value="portfolio" className="space-y-6 mt-6">
@@ -285,6 +287,10 @@ const InvestorDashboard = ({ userName }: InvestorDashboardProps) => {
 
         <TabsContent value="education" className="mt-6">
           <EducationTab />
+        </TabsContent>
+
+        <TabsContent value="settings" className="mt-6">
+          <NotificationSettings userId={1} />
         </TabsContent>
       </Tabs>
 

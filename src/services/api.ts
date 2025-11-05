@@ -6,6 +6,7 @@ export interface User {
   name: string;
   role: 'investor' | 'broker';
   is_admin?: boolean;
+  notify_new_objects?: boolean;
   created_at?: string;
 }
 
@@ -106,7 +107,7 @@ class ApiClient {
     return this.request<User>('users', 'POST', data);
   }
 
-  async updateUser(id: number, data: { name: string }): Promise<User> {
+  async updateUser(id: number, data: { name?: string; notify_new_objects?: boolean }): Promise<User> {
     return this.request<User>('users', 'PUT', { id, ...data });
   }
 
@@ -165,6 +166,10 @@ class ApiClient {
 
   async markNotificationAsRead(notificationId: number): Promise<Notification> {
     return this.request<Notification>('notifications', 'PUT', { id: notificationId });
+  }
+
+  async createNotification(data: { user_id: number; type: string; title: string; message: string; object_id?: number }): Promise<Notification> {
+    return this.request<Notification>('notifications', 'POST', data);
   }
 
   async uploadFile(file: File): Promise<{ url: string; fileName: string; fileType: string }> {
