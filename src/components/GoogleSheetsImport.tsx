@@ -2,14 +2,41 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import Icon from '@/components/ui/icon';
 import { fetchGoogleSheetData } from '@/utils/googleSheets';
-import { InvestmentObject } from '@/types/investment-object';
+import { InvestmentObject, Broker } from '@/types/investment-object';
 import { useToast } from '@/hooks/use-toast';
 
 interface GoogleSheetRow {
   [key: string]: string | number;
 }
 
-const mapSheetRowToObject = (row: GoogleSheetRow, index: number): InvestmentObject | null => {
+const parseNumber = (value: any): number => {
+  if (typeof value === 'number') return value;
+  const str = String(value).replace(/[^\d.,-]/g, '').replace(',', '.');
+  return parseFloat(str) || 0;
+};
+
+const mapSheetRowToBroker = (row: GoogleSheetRow, index: number): Broker | null => {
+  try {
+    const name = String(row['ФИО'] || row['Имя'] || row['Брокер'] || '').trim();
+    if (!name || name === 'ФИО') return null;
+
+    return {
+      id: index + 100,
+      name,
+      company: String(row['Компания'] || row['компания'] || 'Независимый брокер').trim(),
+      photo: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(name)}`,
+      rating: 4.5,
+      phone: String(row['Телефон'] || row['телефон'] || row['Контакт'] || '+7 (000) 000-00-00').trim(),
+      email: String(row['Email'] || row['email'] || row['Почта'] || `${name.toLowerCase().replace(/\s+/g, '.')}@broker.ru`).trim(),
+      dealsCompleted: parseNumber(row['Сделок'] || row['сделок'] || 0)
+    };
+  } catch (error) {
+    console.error('Error mapping row to broker:', error, row);
+    return null;
+  }
+};
+
+const mapSheetRowToObject = (row: GoogleSheetRow, index: number, brokerId: number): InvestmentObject | null => {
   try {
     const getPropertyType = (type: string): 'apartments' | 'flats' | 'commercial' | 'country' => {
       const typeLower = type.toLowerCase();
@@ -19,34 +46,28 @@ const mapSheetRowToObject = (row: GoogleSheetRow, index: number): InvestmentObje
       return 'flats';
     };
 
-    const parseNumber = (value: any): number => {
-      if (typeof value === 'number') return value;
-      const str = String(value).replace(/[^\d.,-]/g, '').replace(',', '.');
-      return parseFloat(str) || 0;
-    };
-
-    const title = String(row['Название'] || row['название'] || row['Объект'] || '').trim();
-    if (!title) return null;
+    const title = String(row['Название объекта'] || row['Объект'] || row['Название'] || '').trim();
+    if (!title || title === 'Название объекта') return null;
 
     return {
       id: index + 1000,
       title,
-      type: getPropertyType(String(row['Тип'] || row['тип'] || '')),
-      city: String(row['Город'] || row['город'] || row['Локация'] || 'Москва').trim(),
+      type: getPropertyType(String(row['Тип'] || row['тип'] || 'flats')),
+      city: String(row['Город'] || row['город'] || 'Москва').trim(),
       address: String(row['Адрес'] || row['адрес'] || row['Расположение'] || '').trim(),
       price: parseNumber(row['Цена'] || row['цена'] || row['Стоимость'] || 0),
-      yield: parseNumber(row['Доходность'] || row['доходность'] || row['Yield'] || 0),
-      paybackPeriod: parseNumber(row['Окупаемость'] || row['окупаемость'] || row['Payback'] || 0),
-      area: parseNumber(row['Площадь'] || row['площадь'] || row['Area'] || 0),
+      yield: parseNumber(row['Доходность %'] || row['доходность'] || row['Yield'] || 0),
+      paybackPeriod: parseNumber(row['Окупаемость'] || row['окупаемость'] || 0),
+      area: parseNumber(row['Площадь'] || row['площадь'] || 0),
       status: 'available',
       images: [
-        String(row['Изображение'] || row['изображение'] || row['Фото'] || 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800&h=600&fit=crop')
+        String(row['Фото'] || row['Изображение'] || 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800&h=600&fit=crop')
       ],
-      description: String(row['Описание'] || row['описание'] || row['Description'] || title).trim(),
-      brokerId: 1,
+      description: String(row['Описание'] || row['описание'] || title).trim(),
+      brokerId,
       createdAt: new Date().toISOString(),
-      monthlyIncome: parseNumber(row['Месячный доход'] || row['месячный доход'] || 0),
-      rentalYield: parseNumber(row['Доходность'] || row['доходность'] || 0),
+      monthlyIncome: parseNumber(row['Доход/мес'] || row['Месячный доход'] || 0),
+      rentalYield: parseNumber(row['Доходность %'] || row['доходность'] || 0),
     };
   } catch (error) {
     console.error('Error mapping row to object:', error, row);
@@ -61,27 +82,64 @@ export const GoogleSheetsImport = () => {
   const handleImport = async () => {
     setIsLoading(true);
     try {
+      console.log('Начинаем импорт из Google Таблицы...');
       const sheetData = await fetchGoogleSheetData();
       
+      console.log('Получено строк:', sheetData.length);
+      console.log('Первая строка:', sheetData[0]);
+      
       if (sheetData && sheetData.length > 0) {
-        const objects = sheetData
-          .map((row, index) => mapSheetRowToObject(row, index))
-          .filter((obj): obj is InvestmentObject => obj !== null);
+        const brokers = sheetData
+          .map((row, index) => mapSheetRowToBroker(row, index))
+          .filter((broker): broker is Broker => broker !== null);
         
-        if (objects.length > 0) {
-          localStorage.setItem('investment-objects', JSON.stringify(objects));
-          toast({
-            title: "Импорт выполнен!",
-            description: `Загружено ${objects.length} объектов из Google Таблицы`,
-          });
-          setTimeout(() => window.location.reload(), 1000);
-        } else {
-          toast({
-            variant: "destructive",
-            title: "Ошибка импорта",
-            description: "Не удалось распознать данные в таблице",
-          });
+        console.log('Распознано брокеров:', brokers.length);
+        
+        const allObjects: InvestmentObject[] = [];
+        
+        brokers.forEach((broker, brokerIndex) => {
+          const brokerRow = sheetData.find(row => 
+            String(row['ФИО'] || '').trim() === broker.name
+          );
+          
+          if (brokerRow) {
+            for (let i = 1; i <= 10; i++) {
+              const objectData: GoogleSheetRow = {};
+              const colPrefix = `Объект ${i}`;
+              
+              objectData['Название объекта'] = brokerRow[`${colPrefix} название`] || '';
+              objectData['Тип'] = brokerRow[`${colPrefix} тип`] || '';
+              objectData['Город'] = brokerRow[`${colPrefix} город`] || '';
+              objectData['Адрес'] = brokerRow[`${colPrefix} адрес`] || '';
+              objectData['Цена'] = brokerRow[`${colPrefix} цена`] || 0;
+              objectData['Площадь'] = brokerRow[`${colPrefix} площадь`] || 0;
+              objectData['Доходность %'] = brokerRow[`${colPrefix} доходность`] || 0;
+              objectData['Доход/мес'] = brokerRow[`${colPrefix} доход/мес`] || 0;
+              objectData['Фото'] = brokerRow[`${colPrefix} фото`] || '';
+              
+              const obj = mapSheetRowToObject(objectData, allObjects.length, broker.id);
+              if (obj) {
+                allObjects.push(obj);
+              }
+            }
+          }
+        });
+        
+        console.log('Распознано объектов:', allObjects.length);
+        
+        if (brokers.length > 0) {
+          localStorage.setItem('investment-brokers', JSON.stringify(brokers));
         }
+        
+        if (allObjects.length > 0) {
+          localStorage.setItem('investment-objects', JSON.stringify(allObjects));
+        }
+        
+        toast({
+          title: "Импорт выполнен!",
+          description: `Загружено ${brokers.length} брокеров и ${allObjects.length} объектов`,
+        });
+        setTimeout(() => window.location.reload(), 1000);
       }
     } catch (error) {
       console.error('Import error:', error);

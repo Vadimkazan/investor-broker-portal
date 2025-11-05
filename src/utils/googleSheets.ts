@@ -2,11 +2,17 @@ export interface GoogleSheetRow {
   [key: string]: string | number;
 }
 
-const SHEET_ID = '1jnOO6dUJ6z903U1IVd8eZRJR7l-gn_62oJ9y-sQUnaU';
-const SHEET_NAME = 'к5';
+export interface BrokerData {
+  name: string;
+  company: string;
+  phone: string;
+  email: string;
+}
 
-export async function fetchGoogleSheetData(): Promise<GoogleSheetRow[]> {
-  const csvUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(SHEET_NAME)}`;
+const SHEET_ID = '1jnOO6dUJ6z903U1IVd8eZRJR7l-gn_62oJ9y-sQUnaU';
+
+export async function fetchBrokersFromSheet(sheetName: string): Promise<GoogleSheetRow[]> {
+  const csvUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
   
   try {
     const response = await fetch(csvUrl);
@@ -20,6 +26,10 @@ export async function fetchGoogleSheetData(): Promise<GoogleSheetRow[]> {
     console.error('Error fetching Google Sheet:', error);
     throw error;
   }
+}
+
+export async function fetchGoogleSheetData(): Promise<GoogleSheetRow[]> {
+  return fetchBrokersFromSheet('2 Юрий Морозкин');
 }
 
 function parseCSV(csv: string): GoogleSheetRow[] {
