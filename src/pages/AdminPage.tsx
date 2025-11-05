@@ -23,6 +23,7 @@ const AdminPage = () => {
   const [newUser, setNewUser] = useState({ email: "", name: "", role: "investor" });
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [roleFilter, setRoleFilter] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState<string>("");
   const { toast } = useToast();
 
   const fetchUsers = async () => {
@@ -139,8 +140,11 @@ const AdminPage = () => {
   };
 
   const filteredUsers = users.filter(user => {
-    if (roleFilter === "all") return true;
-    return user.role === roleFilter;
+    const matchesRole = roleFilter === "all" || user.role === roleFilter;
+    const matchesSearch = searchQuery === "" || 
+      user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      user.email.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesRole && matchesSearch;
   });
 
   if (loading) {
@@ -208,26 +212,40 @@ const AdminPage = () => {
               </DialogContent>
             </Dialog>
             </div>
-            <div className="flex items-center gap-2">
-              <Label className="text-sm text-muted-foreground">Фильтр:</Label>
-              <Select value={roleFilter} onValueChange={setRoleFilter}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Все пользователи</SelectItem>
-                  <SelectItem value="investor">Только инвесторы</SelectItem>
-                  <SelectItem value="broker">Только брокеры</SelectItem>
-                </SelectContent>
-              </Select>
-              {roleFilter !== "all" && (
+            <div className="flex items-center gap-4 flex-wrap">
+              <div className="flex items-center gap-2 flex-1 min-w-[250px]">
+                <Icon name="Search" size={16} className="text-muted-foreground" />
+                <Input
+                  placeholder="Поиск по имени или email..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="max-w-sm"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <Label className="text-sm text-muted-foreground">Роль:</Label>
+                <Select value={roleFilter} onValueChange={setRoleFilter}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Все</SelectItem>
+                    <SelectItem value="investor">Инвесторы</SelectItem>
+                    <SelectItem value="broker">Брокеры</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {(roleFilter !== "all" || searchQuery !== "") && (
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   size="sm"
-                  onClick={() => setRoleFilter("all")}
+                  onClick={() => {
+                    setRoleFilter("all");
+                    setSearchQuery("");
+                  }}
                 >
                   <Icon name="X" size={16} className="mr-1" />
-                  Сбросить
+                  Сбросить фильтры
                 </Button>
               )}
             </div>
