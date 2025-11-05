@@ -15,13 +15,23 @@ export async function fetchBrokersFromSheet(sheetName: string): Promise<GoogleSh
   const csvUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
   
   try {
+    console.log('Fetching from URL:', csvUrl);
+    console.log('Sheet name:', sheetName);
     const response = await fetch(csvUrl);
     if (!response.ok) {
+      console.error('Failed to fetch:', response.status, response.statusText);
       throw new Error(`Failed to fetch Google Sheet: ${response.statusText}`);
     }
     
     const csvText = await response.text();
-    return parseCSV(csvText);
+    console.log('CSV first 500 chars:', csvText.substring(0, 500));
+    const parsed = parseCSV(csvText);
+    console.log('Parsed rows:', parsed.length);
+    if (parsed.length > 0) {
+      console.log('First row keys:', Object.keys(parsed[0]));
+      console.log('First row:', parsed[0]);
+    }
+    return parsed;
   } catch (error) {
     console.error('Error fetching Google Sheet:', error);
     throw error;
@@ -29,7 +39,32 @@ export async function fetchBrokersFromSheet(sheetName: string): Promise<GoogleSh
 }
 
 export async function fetchGoogleSheetData(): Promise<GoogleSheetRow[]> {
-  return fetchBrokersFromSheet('2 Юрий Морозкин');
+  const sheetNames = [
+    '2 Юрий Морозкин',
+    '2 Юрий Морозкин ',
+    'Юрий Морозкин',
+    'List2',
+    'Sheet2'
+  ];
+  
+  for (const name of sheetNames) {
+    try {
+      console.log(`Trying sheet name: "${name}"`);
+      const data = await fetchBrokersFromSheet(name);
+      if (data && data.length > 0) {
+        const firstRow = data[0];
+        if (firstRow['ФИО'] || firstRow['FIO'] || firstRow['Имя'] || Object.keys(firstRow).some(k => k.includes('ФИО'))) {
+          console.log('Found correct sheet!');
+          return data;
+        }
+      }
+    } catch (e) {
+      console.log(`Failed to load sheet "${name}"`);
+    }
+  }
+  
+  console.warn('Could not find broker sheet, loading first sheet');
+  return fetchBrokersFromSheet('Sheet1');
 }
 
 function parseCSV(csv: string): GoogleSheetRow[] {

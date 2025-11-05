@@ -86,7 +86,8 @@ export const GoogleSheetsImport = () => {
       const sheetData = await fetchGoogleSheetData();
       
       console.log('Получено строк:', sheetData.length);
-      console.log('Первая строка:', sheetData[0]);
+      console.log('Все заголовки колонок:', Object.keys(sheetData[0] || {}));
+      console.log('Первые 3 строки:', sheetData.slice(0, 3));
       
       if (sheetData && sheetData.length > 0) {
         const brokers = sheetData
