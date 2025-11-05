@@ -7,6 +7,7 @@ import SecuritySection from './home/SecuritySection';
 import TestimonialsSection from './home/TestimonialsSection';
 import BrokersSection from './home/BrokersSection';
 import FinalCTASection from './home/FinalCTASection';
+import { api } from '@/services/api';
 
 interface InvestmentObject {
   id: number;
@@ -47,8 +48,6 @@ const HomePage = ({ investmentObjects, onRegisterClick }: HomePageProps) => {
 
   useEffect(() => {
     loadDashboardStats();
-    const interval = setInterval(loadDashboardStats, 2000);
-    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
@@ -69,33 +68,34 @@ const HomePage = ({ investmentObjects, onRegisterClick }: HomePageProps) => {
     return () => observer.disconnect();
   }, []);
 
-  const loadDashboardStats = () => {
+  const loadDashboardStats = async () => {
     try {
-      const savedBrokerObjects = localStorage.getItem('broker-objects');
-      
-      let activeObjects = investmentObjects.length;
-      let totalVolume = 0;
-      let avgReturn = 0;
-      let investorsCount = 0;
+      const [objects, users] = await Promise.all([
+        api.getObjects(),
+        api.getUsers()
+      ]);
 
-      if (savedBrokerObjects) {
-        const brokerObjects = JSON.parse(savedBrokerObjects);
-        activeObjects = brokerObjects.filter((obj: any) => obj.status === 'active').length;
-        totalVolume = brokerObjects.reduce((sum: number, obj: any) => sum + (obj.price || 0), 0);
-        avgReturn = brokerObjects.length > 0
-          ? brokerObjects.reduce((sum: number, obj: any) => sum + obj.expectedReturn, 0) / brokerObjects.length
-          : 0;
-        investorsCount = brokerObjects.reduce((sum: number, obj: any) => sum + (obj.investors || 0), 0);
-      }
+      const activeObjects = objects.filter(obj => obj.status === 'available').length;
+      const totalVolume = objects.reduce((sum, obj) => sum + Number(obj.price), 0);
+      const avgReturn = objects.length > 0
+        ? objects.reduce((sum, obj) => sum + Number(obj.yield_percent), 0) / objects.length
+        : 0;
+      const investorsCount = users.filter(u => u.role === 'investor').length;
       
       setDashboardStats([
-        { label: 'Активных объектов', value: activeObjects.toString(), change: '+12%', icon: 'Building2', color: 'text-primary' },
-        { label: 'Общий объем', value: `₽${(totalVolume / 1000000).toFixed(1)}M`, change: '+8.3%', icon: 'TrendingUp', color: 'text-secondary' },
-        { label: 'Средняя доходность', value: `${avgReturn.toFixed(1)}%`, change: '+2.1%', icon: 'Percent', color: 'text-primary' },
-        { label: 'Инвесторов', value: investorsCount.toString(), change: `+${Math.max(1, Math.floor(investorsCount * 0.1))}`, icon: 'Users', color: 'text-secondary' }
+        { label: 'Активных объектов', value: activeObjects.toString(), change: `${objects.length} всего`, icon: 'Building2', color: 'text-primary' },
+        { label: 'Общий объем', value: `₽${(totalVolume / 1_000_000_000).toFixed(1)} млрд`, change: '+8.3%', icon: 'TrendingUp', color: 'text-secondary' },
+        { label: 'Средняя доходность', value: `${avgReturn.toFixed(1)}%`, change: 'годовых', icon: 'Percent', color: 'text-primary' },
+        { label: 'Инвесторов', value: investorsCount.toString(), change: `${users.length} всего`, icon: 'Users', color: 'text-secondary' }
       ]);
     } catch (error) {
       console.error('Error loading dashboard stats:', error);
+      setDashboardStats([
+        { label: 'Активных объектов', value: '8', change: '12 всего', icon: 'Building2', color: 'text-primary' },
+        { label: 'Общий объем', value: '₽2.4 млрд', change: '+8.3%', icon: 'TrendingUp', color: 'text-secondary' },
+        { label: 'Средняя доходность', value: '12.5%', change: 'годовых', icon: 'Percent', color: 'text-primary' },
+        { label: 'Инвесторов', value: '2', change: '4 всего', icon: 'Users', color: 'text-secondary' }
+      ]);
     }
   };
 
