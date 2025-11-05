@@ -25,7 +25,7 @@ const ObjectsPage = () => {
   const [sortBy, setSortBy] = useState('default');
   const [showMobileFilters, setShowMobileFilters] = useState(false);
 
-  const { data: objects = [], isLoading, error } = useObjects({ status: 'available' });
+  const { data: objects = [], isLoading, error } = useObjects();
 
   useEffect(() => {
     document.title = 'Каталог объектов для инвестиций - InvestPro';
