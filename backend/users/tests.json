@@ -1,0 +1,21 @@
+{
+  "tests": [
+    {
+      "name": "Получение списка пользователей",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 200
+    },
+    {
+      "name": "Создание нового пользователя",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "email": "unique_test_user_{{timestamp}}@example.com",
+        "name": "Test User",
+        "role": "investor"
+      },
+      "expectedStatus": 201
+    }
+  ]
+}

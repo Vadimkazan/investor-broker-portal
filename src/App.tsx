@@ -8,6 +8,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import ObjectsPage from "./components/objects/ObjectsPage";
 import ObjectDetailPage from "./components/objects/ObjectDetailPage";
+import AdminPage from "./pages/AdminPage";
 import NotFound from "./pages/NotFound";
 import { initMockObjects } from "./utils/initMockObjects";
 import { AuthProvider } from "@/contexts/AuthContext";
@@ -38,6 +39,7 @@ const App = () => {
               <Route path="/" element={<Index />} />
               <Route path="/objects" element={<ObjectsPage />} />
               <Route path="/objects/:id" element={<ObjectDetailPage />} />
+              <Route path="/admin" element={<AdminPage />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

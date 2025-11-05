@@ -1,0 +1,219 @@
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
+import Icon from "@/components/ui/icon";
+
+interface User {
+  id: number;
+  email: string;
+  name: string;
+  role: string;
+}
+
+const AdminPage = () => {
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [newUser, setNewUser] = useState({ email: "", name: "", role: "investor" });
+  const { toast } = useToast();
+
+  const fetchUsers = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch("/.netlify/functions/users");
+      if (!response.ok) throw new Error("Ошибка загрузки");
+      const data = await response.json();
+      setUsers(data.users);
+    } catch (error) {
+      toast({
+        title: "Ошибка",
+        description: "Не удалось загрузить список пользователей",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  const handleAddUser = async () => {
+    if (!newUser.email || !newUser.name) {
+      toast({
+        title: "Ошибка",
+        description: "Заполните все поля",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const response = await fetch("/.netlify/functions/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newUser),
+      });
+
+      if (!response.ok) throw new Error("Ошибка создания");
+
+      toast({
+        title: "Успешно",
+        description: "Пользователь добавлен",
+      });
+
+      setIsAddDialogOpen(false);
+      setNewUser({ email: "", name: "", role: "investor" });
+      fetchUsers();
+    } catch (error) {
+      toast({
+        title: "Ошибка",
+        description: "Не удалось добавить пользователя",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteUser = async (id: number) => {
+    if (!confirm("Удалить пользователя?")) return;
+
+    try {
+      const response = await fetch(`/.netlify/functions/users?id=${id}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) throw new Error("Ошибка удаления");
+
+      toast({
+        title: "Успешно",
+        description: "Пользователь удален",
+      });
+
+      fetchUsers();
+    } catch (error) {
+      toast({
+        title: "Ошибка",
+        description: "Не удалось удалить пользователя",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const getRoleLabel = (role: string) => {
+    return role === "broker" ? "Брокер" : "Инвестор";
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <p className="text-muted-foreground">Загрузка...</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-background">
+      <div className="container mx-auto p-6">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0">
+            <CardTitle className="text-2xl font-bold">Управление пользователями</CardTitle>
+            <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Icon name="UserPlus" size={16} className="mr-2" />
+                  Добавить
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Новый пользователь</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="email">Email</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={newUser.email}
+                      onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                      placeholder="user@example.com"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="name">Имя</Label>
+                    <Input
+                      id="name"
+                      value={newUser.name}
+                      onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
+                      placeholder="Иван Иванов"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="role">Роль</Label>
+                    <Select value={newUser.role} onValueChange={(value) => setNewUser({ ...newUser, role: value })}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="investor">Инвестор</SelectItem>
+                        <SelectItem value="broker">Брокер</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Button onClick={handleAddUser} className="w-full">
+                    Создать
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Имя</TableHead>
+                  <TableHead>Роль</TableHead>
+                  <TableHead className="text-right">Действия</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {users.map((user) => (
+                  <TableRow key={user.id}>
+                    <TableCell className="font-medium">{user.email}</TableCell>
+                    <TableCell>{user.name}</TableCell>
+                    <TableCell>
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        user.role === 'broker' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
+                      }`}>
+                        {getRoleLabel(user.role)}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDeleteUser(user.id)}
+                      >
+                        <Icon name="Trash2" size={16} />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+};
+
+export default AdminPage;
