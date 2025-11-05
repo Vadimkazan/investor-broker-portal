@@ -45,11 +45,9 @@ const PropertyCard = ({ property, onEdit, onDelete, onShare, getStatusBadge }: P
               <CardTitle className="text-lg">{property.title}</CardTitle>
               {getStatusBadge(property.status)}
             </div>
-            <CardDescription>
-              <div className="flex items-center gap-1 text-sm">
-                <Icon name="MapPin" size={14} />
-                {property.location.city}, {property.location.district}
-              </div>
+            <CardDescription className="flex items-center gap-1">
+              <Icon name="MapPin" size={14} />
+              {property.location.city}, {property.location.district}
             </CardDescription>
           </div>
         </div>
