@@ -61,7 +61,7 @@ def handle_users(cur, conn, method: str, event: Dict[str, Any]) -> Dict[str, Any
         
         if user_id:
             cur.execute(
-                "SELECT id, email, name, role, is_admin, created_at FROM users WHERE id = %s",
+                "SELECT id, email, name, role, is_admin, created_at, notify_new_objects, telegram_chat_id FROM users WHERE id = %s",
                 (int(user_id),)
             )
             row = cur.fetchone()
@@ -69,13 +69,15 @@ def handle_users(cur, conn, method: str, event: Dict[str, Any]) -> Dict[str, Any
                 return success_response({
                     'id': row[0], 'email': row[1], 'name': row[2],
                     'role': row[3], 'is_admin': row[4] or False,
-                    'created_at': row[5].isoformat() if row[5] else None
+                    'created_at': row[5].isoformat() if row[5] else None,
+                    'notify_new_objects': row[6] or False,
+                    'telegram_chat_id': row[7]
                 })
             return error_response('User not found', 404)
         
         elif email:
             cur.execute(
-                "SELECT id, email, name, role, is_admin, created_at FROM users WHERE email = %s",
+                "SELECT id, email, name, role, is_admin, created_at, notify_new_objects, telegram_chat_id FROM users WHERE email = %s",
                 (email,)
             )
             row = cur.fetchone()
@@ -83,17 +85,21 @@ def handle_users(cur, conn, method: str, event: Dict[str, Any]) -> Dict[str, Any
                 return success_response({
                     'id': row[0], 'email': row[1], 'name': row[2],
                     'role': row[3], 'is_admin': row[4] or False,
-                    'created_at': row[5].isoformat() if row[5] else None
+                    'created_at': row[5].isoformat() if row[5] else None,
+                    'notify_new_objects': row[6] or False,
+                    'telegram_chat_id': row[7]
                 })
             return error_response('User not found', 404)
         
         else:
-            cur.execute("SELECT id, email, name, role, is_admin, created_at FROM users ORDER BY created_at DESC LIMIT 100")
+            cur.execute("SELECT id, email, name, role, is_admin, created_at, notify_new_objects, telegram_chat_id FROM users ORDER BY created_at DESC LIMIT 100")
             rows = cur.fetchall()
             users = [{
                 'id': r[0], 'email': r[1], 'name': r[2],
                 'role': r[3], 'is_admin': r[4] or False,
-                'created_at': r[5].isoformat() if r[5] else None
+                'created_at': r[5].isoformat() if r[5] else None,
+                'notify_new_objects': r[6] or False,
+                'telegram_chat_id': r[7]
             } for r in rows]
             return success_response(users)
     
@@ -124,6 +130,48 @@ def handle_users(cur, conn, method: str, event: Dict[str, Any]) -> Dict[str, Any
             'role': row[3], 'is_admin': row[4] or False,
             'created_at': row[5].isoformat() if row[5] else None
         }, 201)
+    
+    elif method == 'PUT':
+        body = json.loads(event.get('body', '{}'))
+        user_id = body.get('id')
+        
+        if not user_id:
+            return error_response('User ID is required', 400)
+        
+        update_fields = []
+        update_values = []
+        
+        if 'name' in body:
+            update_fields.append('name = %s')
+            update_values.append(body['name'])
+        
+        if 'notify_new_objects' in body:
+            update_fields.append('notify_new_objects = %s')
+            update_values.append(body['notify_new_objects'])
+        
+        if 'telegram_chat_id' in body:
+            update_fields.append('telegram_chat_id = %s')
+            update_values.append(body['telegram_chat_id'])
+        
+        if not update_fields:
+            return error_response('No fields to update', 400)
+        
+        update_values.append(int(user_id))
+        update_query = f"UPDATE users SET {', '.join(update_fields)} WHERE id = %s RETURNING id, email, name, role, is_admin, created_at, notify_new_objects, telegram_chat_id"
+        
+        cur.execute(update_query, tuple(update_values))
+        row = cur.fetchone()
+        conn.commit()
+        
+        if row:
+            return success_response({
+                'id': row[0], 'email': row[1], 'name': row[2],
+                'role': row[3], 'is_admin': row[4] or False,
+                'created_at': row[5].isoformat() if row[5] else None,
+                'notify_new_objects': row[6] or False,
+                'telegram_chat_id': row[7]
+            })
+        return error_response('User not found', 404)
     
     return error_response('Method not allowed', 405)
 

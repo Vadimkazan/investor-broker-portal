@@ -53,6 +53,26 @@ const GoogleSheetsSync = () => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(notificationData)
         });
+
+        if (user.telegram_chat_id) {
+          const telegramMessage = `🏢 <b>Новый объект!</b>\n\n` +
+            `📍 ${newObject.title}\n` +
+            `🏙 ${newObject.city}\n` +
+            `📊 Доходность: ${newObject.yield_percent}%\n\n` +
+            `Посмотреть на платформе →`;
+
+          const TELEGRAM_FUNCTION_URL = 'https://functions.poehali.dev/416cd867-831b-48d3-b4a7-5c17b62c7e19';
+          
+          await fetch(TELEGRAM_FUNCTION_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              chat_id: user.telegram_chat_id,
+              message: telegramMessage,
+              parse_mode: 'HTML'
+            })
+          }).catch(err => console.error('Telegram error:', err));
+        }
       }
     } catch (error) {
       console.error('Ошибка отправки уведомлений:', error);

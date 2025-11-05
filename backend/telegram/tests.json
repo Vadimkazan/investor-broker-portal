@@ -1,0 +1,23 @@
+{
+  "tests": [
+    {
+      "name": "Reject request without chat_id",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "message": "Test"
+      },
+      "expectedStatus": 400,
+      "expectedBody": {
+        "error": "string"
+      },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Handle OPTIONS request",
+      "method": "OPTIONS",
+      "path": "/",
+      "expectedStatus": 200
+    }
+  ]
+}
