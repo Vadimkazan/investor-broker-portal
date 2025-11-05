@@ -6,6 +6,7 @@ import EditInvestmentDialog from '@/components/investor/EditInvestmentDialog';
 import PersonalFinancesTab from '@/components/investor/PersonalFinancesTab';
 import EducationTab from '@/components/investor/EducationTab';
 import NotificationSettings from '@/components/investor/NotificationSettings';
+import BrokerProfileSettings from '@/components/broker/BrokerProfileSettings';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { PropertyObject, UserInvestment } from '@/types/investment';
 
@@ -289,7 +290,8 @@ const InvestorDashboard = ({ userName }: InvestorDashboardProps) => {
           <EducationTab />
         </TabsContent>
 
-        <TabsContent value="settings" className="mt-6">
+        <TabsContent value="settings" className="mt-6 space-y-6">
+          <BrokerProfileSettings userId={1} />
           <NotificationSettings userId={1} />
         </TabsContent>
       </Tabs>

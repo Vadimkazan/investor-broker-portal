@@ -15,7 +15,7 @@ interface ObjectsFiltersProps {
 }
 
 const ObjectsFilters = ({ filters, onFiltersChange }: ObjectsFiltersProps) => {
-  const cities = ['Москва', 'Санкт-Петербург', 'Сочи', 'Казань', 'Екатеринбург'];
+  const cities = ['Москва', 'Санкт-Петербург', 'Сочи', 'Казань', 'Екатеринбург', 'Краснодар', 'Московская область'];
   
   const propertyTypes: { value: PropertyType; label: string }[] = [
     { value: 'flats', label: 'Квартиры' },
@@ -78,6 +78,27 @@ const ObjectsFilters = ({ filters, onFiltersChange }: ObjectsFiltersProps) => {
     onFiltersChange({ ...filters, status: status as ObjectStatus });
   };
 
+  const handleBrokerCityToggle = (city: string) => {
+    const newCities = (filters.brokerCities || []).includes(city)
+      ? (filters.brokerCities || []).filter(c => c !== city)
+      : [...(filters.brokerCities || []), city];
+    onFiltersChange({ ...filters, brokerCities: newCities });
+  };
+
+  const handleBrokerClubToggle = (club: string) => {
+    const newClubs = (filters.brokerClubs || []).includes(club)
+      ? (filters.brokerClubs || []).filter(c => c !== club)
+      : [...(filters.brokerClubs || []), club];
+    onFiltersChange({ ...filters, brokerClubs: newClubs });
+  };
+
+  const handleBrokerStreamToggle = (stream: string) => {
+    const newStreams = (filters.brokerStreams || []).includes(stream)
+      ? (filters.brokerStreams || []).filter(s => s !== stream)
+      : [...(filters.brokerStreams || []), stream];
+    onFiltersChange({ ...filters, brokerStreams: newStreams });
+  };
+
   const handleReset = () => {
     onFiltersChange({
       search: '',
@@ -86,7 +107,10 @@ const ObjectsFilters = ({ filters, onFiltersChange }: ObjectsFiltersProps) => {
       priceRange: [0, 500000000],
       yieldRanges: [],
       paybackRanges: [],
-      status: undefined
+      status: undefined,
+      brokerCities: [],
+      brokerClubs: [],
+      brokerStreams: []
     });
   };
 
@@ -228,6 +252,65 @@ const ObjectsFilters = ({ filters, onFiltersChange }: ObjectsFiltersProps) => {
               </label>
             </div>
           </RadioGroup>
+        </div>
+
+        <div className="border-t pt-6 space-y-4">
+          <h3 className="text-sm font-semibold flex items-center gap-2">
+            <Icon name="UserCircle" size={16} />
+            Фильтры по брокерам
+          </h3>
+
+          <div className="space-y-2">
+            <Label>Город брокера</Label>
+            <div className="space-y-2">
+              {cities.map((city) => (
+                <div key={`broker-city-${city}`} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`broker-city-${city}`}
+                    checked={(filters.brokerCities || []).includes(city)}
+                    onCheckedChange={() => handleBrokerCityToggle(city)}
+                  />
+                  <label htmlFor={`broker-city-${city}`} className="text-sm cursor-pointer">
+                    {city}
+                  </label>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Клуб брокера</Label>
+            <div className="space-y-2">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="broker-club-rib"
+                  checked={(filters.brokerClubs || []).includes('Real Invest Broker')}
+                  onCheckedChange={() => handleBrokerClubToggle('Real Invest Broker')}
+                />
+                <label htmlFor="broker-club-rib" className="text-sm cursor-pointer">
+                  Real Invest Broker
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Поток обучения</Label>
+            <div className="space-y-2">
+              {['Real invest broker 6.0', 'Real invest broker 7.0', 'Real invest broker 8.0'].map((stream) => (
+                <div key={`stream-${stream}`} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`stream-${stream}`}
+                    checked={(filters.brokerStreams || []).includes(stream)}
+                    onCheckedChange={() => handleBrokerStreamToggle(stream)}
+                  />
+                  <label htmlFor={`stream-${stream}`} className="text-sm cursor-pointer">
+                    {stream}
+                  </label>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </CardContent>
     </Card>

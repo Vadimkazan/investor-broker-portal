@@ -10,6 +10,18 @@ export interface User {
   created_at?: string;
 }
 
+export interface BrokerInfo {
+  id: number;
+  name: string;
+  email: string;
+  city?: string;
+  club?: string;
+  training_stream?: string;
+  country?: string;
+  surname?: string;
+  first_name?: string;
+}
+
 export interface InvestmentObjectDB {
   id: number;
   broker_id?: number;
@@ -27,6 +39,7 @@ export interface InvestmentObjectDB {
   documents?: string[];
   status: 'available' | 'reserved' | 'sold';
   created_at?: string;
+  broker?: BrokerInfo;
 }
 
 export interface Favorite {
@@ -119,6 +132,9 @@ class ApiClient {
     max_price?: number;
     min_yield?: number;
     max_yield?: number;
+    broker_city?: string;
+    broker_club?: string;
+    broker_stream?: string;
   }): Promise<InvestmentObjectDB[]> {
     const params: Record<string, string> = {};
     

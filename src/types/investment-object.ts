@@ -34,6 +34,9 @@ export interface ObjectFilters {
   yieldRanges: string[];
   paybackRanges: string[];
   status?: ObjectStatus;
+  brokerCities?: string[];
+  brokerClubs?: string[];
+  brokerStreams?: string[];
 }
 
 export interface Broker {
@@ -45,4 +48,16 @@ export interface Broker {
   phone: string;
   email: string;
   dealsCompleted: number;
+  surname?: string;
+  first_name?: string;
+  country?: string;
+  city?: string;
+  club?: string;
+  training_stream?: string;
+  telegram_username?: string;
+  photo_url?: string;
+  bio?: string;
+  telegram_channel?: string;
+  youtube_channel?: string;
+  vk_group?: string;
 }

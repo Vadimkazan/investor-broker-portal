@@ -20,7 +20,10 @@ const ObjectsPage = () => {
     priceRange: [0, 500000000],
     yieldRanges: [],
     paybackRanges: [],
-    status: undefined
+    status: undefined,
+    brokerCities: [],
+    brokerClubs: [],
+    brokerStreams: []
   });
   const [sortBy, setSortBy] = useState('default');
   const [showMobileFilters, setShowMobileFilters] = useState(false);
@@ -90,6 +93,33 @@ const ObjectsPage = () => {
           if (range === '7+') return obj.paybackPeriod >= 7;
           return false;
         });
+      });
+    }
+
+    if (filters.brokerCities && filters.brokerCities.length > 0 && objects.length > 0) {
+      result = result.filter(obj => {
+        const objWithBroker = objects.find(o => o.id === obj.id);
+        return objWithBroker?.brokerId && filters.brokerCities!.some(city => 
+          (objWithBroker as any).broker?.city === city
+        );
+      });
+    }
+
+    if (filters.brokerClubs && filters.brokerClubs.length > 0 && objects.length > 0) {
+      result = result.filter(obj => {
+        const objWithBroker = objects.find(o => o.id === obj.id);
+        return objWithBroker?.brokerId && filters.brokerClubs!.some(club => 
+          (objWithBroker as any).broker?.club === club
+        );
+      });
+    }
+
+    if (filters.brokerStreams && filters.brokerStreams.length > 0 && objects.length > 0) {
+      result = result.filter(obj => {
+        const objWithBroker = objects.find(o => o.id === obj.id);
+        return objWithBroker?.brokerId && filters.brokerStreams!.some(stream => 
+          (objWithBroker as any).broker?.training_stream === stream
+        );
       });
     }
 

@@ -183,28 +183,34 @@ def handle_objects(cur, conn, method: str, event: Dict[str, Any]) -> Dict[str, A
         
         if object_id:
             cur.execute("""
-                SELECT id, broker_id, title, city, address, property_type, area, price, 
-                       yield_percent, payback_years, description, images, videos, documents, status, created_at
-                FROM investment_objects WHERE id = %s
+                SELECT o.id, o.broker_id, o.title, o.city, o.address, o.property_type, o.area, o.price, 
+                       o.yield_percent, o.payback_years, o.description, o.images, o.videos, o.documents, o.status, o.created_at,
+                       u.id, u.name, u.email, u.city, u.club, u.training_stream, u.country, u.surname, u.first_name
+                FROM investment_objects o
+                LEFT JOIN users u ON o.broker_id = u.id
+                WHERE o.id = %s
             """, (int(object_id),))
             row = cur.fetchone()
             
             if row:
-                return success_response(format_object(row))
+                return success_response(format_object_with_broker(row))
             return error_response('Object not found', 404)
         
         else:
             filters = build_object_filters(params)
             query = f"""
-                SELECT id, broker_id, title, city, address, property_type, area, price, 
-                       yield_percent, payback_years, description, images, videos, documents, status, created_at
-                FROM investment_objects WHERE 1=1 {filters['query']}
-                ORDER BY created_at DESC LIMIT 100
+                SELECT o.id, o.broker_id, o.title, o.city, o.address, o.property_type, o.area, o.price, 
+                       o.yield_percent, o.payback_years, o.description, o.images, o.videos, o.documents, o.status, o.created_at,
+                       u.id, u.name, u.email, u.city, u.club, u.training_stream, u.country, u.surname, u.first_name
+                FROM investment_objects o
+                LEFT JOIN users u ON o.broker_id = u.id
+                WHERE 1=1 {filters['query']}
+                ORDER BY o.created_at DESC LIMIT 100
             """
             
             cur.execute(query, filters['params'])
             rows = cur.fetchall()
-            objects = [format_object(r) for r in rows]
+            objects = [format_object_with_broker(r) for r in rows]
             return success_response(objects)
     
     elif method == 'POST':
@@ -454,14 +460,43 @@ def format_object(row) -> Dict[str, Any]:
     }
 
 
+def format_object_with_broker(row) -> Dict[str, Any]:
+    obj = {
+        'id': row[0], 'broker_id': row[1], 'title': row[2], 'city': row[3],
+        'address': row[4], 'property_type': row[5],
+        'area': float(row[6]) if row[6] else 0,
+        'price': float(row[7]) if row[7] else 0,
+        'yield_percent': float(row[8]) if row[8] else 0,
+        'payback_years': float(row[9]) if row[9] else 0,
+        'description': row[10], 'images': row[11] or [],
+        'videos': row[12] or [], 'documents': row[13] or [],
+        'status': row[14], 'created_at': row[15].isoformat() if row[15] else None
+    }
+    
+    if row[16] is not None:
+        obj['broker'] = {
+            'id': row[16],
+            'name': row[17],
+            'email': row[18],
+            'city': row[19],
+            'club': row[20],
+            'training_stream': row[21],
+            'country': row[22],
+            'surname': row[23],
+            'first_name': row[24]
+        }
+    
+    return obj
+
+
 def build_object_filters(params: Dict[str, str]) -> Dict[str, Any]:
     query = ""
     query_params: List[Any] = []
     
     filters = {
-        'city': 'city = %s',
-        'property_type': 'property_type = %s',
-        'status': 'status = %s'
+        'city': 'o.city = %s',
+        'property_type': 'o.property_type = %s',
+        'status': 'o.status = %s'
     }
     
     for key, condition in filters.items():
@@ -470,12 +505,24 @@ def build_object_filters(params: Dict[str, str]) -> Dict[str, Any]:
             query_params.append(params[key])
     
     if 'min_price' in params:
-        query += " AND price >= %s"
+        query += " AND o.price >= %s"
         query_params.append(float(params['min_price']))
     
     if 'max_price' in params:
-        query += " AND price <= %s"
+        query += " AND o.price <= %s"
         query_params.append(float(params['max_price']))
+    
+    if 'broker_city' in params:
+        query += " AND u.city = %s"
+        query_params.append(params['broker_city'])
+    
+    if 'broker_club' in params:
+        query += " AND u.club = %s"
+        query_params.append(params['broker_club'])
+    
+    if 'broker_stream' in params:
+        query += " AND u.training_stream = %s"
+        query_params.append(params['broker_stream'])
     
     if 'min_yield' in params:
         query += " AND yield_percent >= %s"
