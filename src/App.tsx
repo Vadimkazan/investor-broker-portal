@@ -11,6 +11,7 @@ import ObjectDetailPage from "./components/objects/ObjectDetailPage";
 import AdminPage from "./pages/AdminPage";
 import NotFound from "./pages/NotFound";
 import { initMockObjects } from "./utils/initMockObjects";
+import { initMockBrokers } from "./utils/initMockBrokers";
 import { AuthProvider } from "@/contexts/AuthContext";
 
 const queryClient = new QueryClient({
@@ -26,6 +27,7 @@ const queryClient = new QueryClient({
 const App = () => {
   useEffect(() => {
     initMockObjects();
+    initMockBrokers();
   }, []);
 
   return (

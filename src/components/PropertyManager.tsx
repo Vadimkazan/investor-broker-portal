@@ -9,6 +9,7 @@ import TelegramPublisher from '@/components/TelegramPublisher';
 import PropertyStats from '@/components/property/PropertyStats';
 import PropertyCard from '@/components/property/PropertyCard';
 import PropertyFormDialog from '@/components/property/PropertyFormDialog';
+import { GoogleSheetsImport } from '@/components/GoogleSheetsImport';
 import type { PropertyObject, PropertyType, FinancingMethod, InvestmentStrategy, RiskLevel, PropertyStatus } from '@/types/investment';
 
 interface PropertyManagerProps {
@@ -335,10 +336,13 @@ const PropertyManager = ({ brokerId, brokerName }: PropertyManagerProps) => {
           <h2 className="text-3xl font-bold mb-2">Управление объектами</h2>
           <p className="text-muted-foreground">Брокер: {brokerName}</p>
         </div>
-        <Button onClick={handleAddProperty} size="lg" className="gap-2">
-          <Icon name="Plus" size={20} />
-          Добавить объект
-        </Button>
+        <div className="flex gap-2">
+          <GoogleSheetsImport />
+          <Button onClick={handleAddProperty} size="lg" className="gap-2">
+            <Icon name="Plus" size={20} />
+            Добавить объект
+          </Button>
+        </div>
       </div>
 
       <PropertyStats
