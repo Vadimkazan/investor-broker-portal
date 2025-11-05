@@ -157,7 +157,7 @@ const NotificationSettings = ({ userId }: NotificationSettingsProps) => {
                   Получайте мгновенные уведомления в Telegram:
                 </p>
                 <ol className="text-sm space-y-2 list-decimal list-inside text-muted-foreground">
-                  <li>Откройте бот <a href="https://t.me/vozduh_notify_bot" target="_blank" rel="noopener noreferrer" className="text-primary underline">@vozduh_notify_bot</a></li>
+                  <li>Откройте бот <a href="https://t.me/vozduh_notify_bot" target="_blank" rel="noopener noreferrer" className="text-primary underline">@rielvestor_bot</a></li>
                   <li>Отправьте команду /start</li>
                   <li>Скопируйте ваш Chat ID</li>
                   <li>Вставьте его в поле ниже</li>
