@@ -10,18 +10,21 @@ export interface BrokerData {
 }
 
 const PUBLISHED_SHEET_ID = '2PACX-1vTEeN8iRaVIy-nQ62ylGv0CWuz5PiFV8wkN_13gmEb1oLG-v30aJSHsKDphfzLEUxu-bZ7gY_0r3AR4';
+const BROKER_SHEET_GID = '629889399';
 
 export async function fetchGoogleSheetData(): Promise<GoogleSheetRow[]> {
-  const csvUrl = `https://docs.google.com/spreadsheets/d/e/${PUBLISHED_SHEET_ID}/pub?output=csv`;
+  const csvUrl = `https://docs.google.com/spreadsheets/d/e/${PUBLISHED_SHEET_ID}/pub?gid=${BROKER_SHEET_GID}&single=true&output=csv`;
   
   try {
     console.log('Синхронизация с Google Таблицей...');
+    console.log('URL:', csvUrl);
     const response = await fetch(csvUrl);
     if (!response.ok) {
       throw new Error(`Ошибка загрузки: ${response.statusText}`);
     }
     
     const csvText = await response.text();
+    console.log('CSV первые 300 символов:', csvText.substring(0, 300));
     const parsed = parseCSV(csvText);
     console.log('Загружено строк:', parsed.length);
     
