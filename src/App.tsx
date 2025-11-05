@@ -9,6 +9,7 @@ import Index from "./pages/Index";
 import ObjectsPage from "./components/objects/ObjectsPage";
 import ObjectDetailPage from "./components/objects/ObjectDetailPage";
 import AdminPage from "./pages/AdminPage";
+import AdminDashboard from "./pages/AdminDashboard";
 import NotFound from "./pages/NotFound";
 import { initMockObjects } from "./utils/initMockObjects";
 import { initMockBrokers } from "./utils/initMockBrokers";
@@ -42,6 +43,7 @@ const App = () => {
               <Route path="/objects" element={<ObjectsPage />} />
               <Route path="/objects/:id" element={<ObjectDetailPage />} />
               <Route path="/admin" element={<AdminPage />} />
+              <Route path="/admin/dashboard" element={<AdminDashboard />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
