@@ -9,6 +9,7 @@ import ObjectCard from './ObjectCard';
 import { InvestmentObject, ObjectFilters } from '@/types/investment-object';
 import { useObjects } from '@/hooks/useObjects';
 import { useAuth } from '@/contexts/AuthContext';
+import { GoogleSheetsImport } from '@/components/GoogleSheetsImport';
 
 const ObjectsPage = () => {
   const navigate = useNavigate();
@@ -176,7 +177,10 @@ const ObjectsPage = () => {
       
       <div className="container mx-auto px-4 pt-20 pb-8">
         <div className="mb-8">
-          <h1 className="text-4xl font-bold mb-4">Инвестиционные объекты</h1>
+          <div className="flex justify-between items-center mb-4">
+            <h1 className="text-4xl font-bold">Инвестиционные объекты</h1>
+            <GoogleSheetsImport />
+          </div>
           <p className="text-muted-foreground text-lg">
             Найдите лучшие предложения для инвестиций в недвижимость
           </p>
