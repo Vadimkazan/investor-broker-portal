@@ -1,7 +1,6 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import Icon from '@/components/ui/icon';
-import { fetchGoogleSheetData } from '@/utils/googleSheets';
 import { InvestmentObject, Broker } from '@/types/investment-object';
 import { useToast } from '@/hooks/use-toast';
 
@@ -75,103 +74,142 @@ const mapSheetRowToObject = (row: GoogleSheetRow, index: number, brokerId: numbe
   }
 };
 
+const parseCSV = (text: string): GoogleSheetRow[] => {
+  const lines = text.split('\n').filter(line => line.trim());
+  if (lines.length === 0) return [];
+  
+  const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+  
+  return lines.slice(1).map(line => {
+    const values = line.split(',').map(v => v.trim().replace(/^"|"$/g, ''));
+    const row: GoogleSheetRow = {};
+    headers.forEach((header, i) => {
+      row[header] = values[i] || '';
+    });
+    return row;
+  });
+};
+
 export const GoogleSheetsImport = () => {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleImport = async () => {
-    setIsLoading(true);
-    try {
-      console.log('Начинаем импорт из Google Таблицы...');
-      const sheetData = await fetchGoogleSheetData();
+  const processData = (sheetData: GoogleSheetRow[]) => {
       
-      console.log('Получено строк:', sheetData.length);
-      console.log('Все заголовки колонок:', Object.keys(sheetData[0] || {}));
-      console.log('Первые 3 строки:', sheetData.slice(0, 3));
+    console.log('Получено строк:', sheetData.length);
+    console.log('Все заголовки колонок:', Object.keys(sheetData[0] || {}));
+    console.log('Первые 3 строки:', sheetData.slice(0, 3));
+    
+    if (sheetData && sheetData.length > 0) {
+      const brokers = sheetData
+        .map((row, index) => mapSheetRowToBroker(row, index))
+        .filter((broker): broker is Broker => broker !== null);
       
-      if (sheetData && sheetData.length > 0) {
-        const brokers = sheetData
-          .map((row, index) => mapSheetRowToBroker(row, index))
-          .filter((broker): broker is Broker => broker !== null);
+      console.log('Распознано брокеров:', brokers.length);
+      
+      const allObjects: InvestmentObject[] = [];
         
-        console.log('Распознано брокеров:', brokers.length);
+      brokers.forEach((broker) => {
+        const brokerRow = sheetData.find(row => 
+          String(row['ФИО'] || '').trim() === broker.name
+        );
         
-        const allObjects: InvestmentObject[] = [];
-        
-        brokers.forEach((broker, brokerIndex) => {
-          const brokerRow = sheetData.find(row => 
-            String(row['ФИО'] || '').trim() === broker.name
-          );
-          
-          if (brokerRow) {
-            for (let i = 1; i <= 10; i++) {
-              const objectData: GoogleSheetRow = {};
-              const colPrefix = `Объект ${i}`;
-              
-              objectData['Название объекта'] = brokerRow[`${colPrefix} название`] || '';
-              objectData['Тип'] = brokerRow[`${colPrefix} тип`] || '';
-              objectData['Город'] = brokerRow[`${colPrefix} город`] || '';
-              objectData['Адрес'] = brokerRow[`${colPrefix} адрес`] || '';
-              objectData['Цена'] = brokerRow[`${colPrefix} цена`] || 0;
-              objectData['Площадь'] = brokerRow[`${colPrefix} площадь`] || 0;
-              objectData['Доходность %'] = brokerRow[`${colPrefix} доходность`] || 0;
-              objectData['Доход/мес'] = brokerRow[`${colPrefix} доход/мес`] || 0;
-              objectData['Фото'] = brokerRow[`${colPrefix} фото`] || '';
-              
-              const obj = mapSheetRowToObject(objectData, allObjects.length, broker.id);
-              if (obj) {
-                allObjects.push(obj);
-              }
+        if (brokerRow) {
+          for (let i = 1; i <= 10; i++) {
+            const objectData: GoogleSheetRow = {};
+            const colPrefix = `Объект ${i}`;
+            
+            objectData['Название объекта'] = brokerRow[`${colPrefix} название`] || '';
+            objectData['Тип'] = brokerRow[`${colPrefix} тип`] || '';
+            objectData['Город'] = brokerRow[`${colPrefix} город`] || '';
+            objectData['Адрес'] = brokerRow[`${colPrefix} адрес`] || '';
+            objectData['Цена'] = brokerRow[`${colPrefix} цена`] || 0;
+            objectData['Площадь'] = brokerRow[`${colPrefix} площадь`] || 0;
+            objectData['Доходность %'] = brokerRow[`${colPrefix} доходность`] || 0;
+            objectData['Доход/мес'] = brokerRow[`${colPrefix} доход/мес`] || 0;
+            objectData['Фото'] = brokerRow[`${colPrefix} фото`] || '';
+            
+            const obj = mapSheetRowToObject(objectData, allObjects.length, broker.id);
+            if (obj) {
+              allObjects.push(obj);
             }
           }
-        });
-        
-        console.log('Распознано объектов:', allObjects.length);
-        
-        if (brokers.length > 0) {
-          localStorage.setItem('investment-brokers', JSON.stringify(brokers));
         }
-        
-        if (allObjects.length > 0) {
-          localStorage.setItem('investment-objects', JSON.stringify(allObjects));
-        }
-        
-        toast({
-          title: "Импорт выполнен!",
-          description: `Загружено ${brokers.length} брокеров и ${allObjects.length} объектов`,
-        });
-        setTimeout(() => window.location.reload(), 1000);
-      }
-    } catch (error) {
-      console.error('Import error:', error);
-      toast({
-        variant: "destructive",
-        title: "Ошибка импорта",
-        description: error instanceof Error ? error.message : "Не удалось загрузить данные",
       });
-    } finally {
-      setIsLoading(false);
+      
+      console.log('Распознано объектов:', allObjects.length);
+      
+      if (brokers.length > 0) {
+        localStorage.setItem('investment-brokers', JSON.stringify(brokers));
+      }
+      
+      if (allObjects.length > 0) {
+        localStorage.setItem('investment-objects', JSON.stringify(allObjects));
+      }
+      
+      toast({
+        title: "Импорт выполнен!",
+        description: `Загружено ${brokers.length} брокеров и ${allObjects.length} объектов`,
+      });
+      setTimeout(() => window.location.reload(), 1000);
     }
   };
 
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setIsLoading(true);
+    const reader = new FileReader();
+    
+    reader.onload = (e) => {
+      try {
+        const text = e.target?.result as string;
+        const sheetData = parseCSV(text);
+        processData(sheetData);
+      } catch (error) {
+        console.error('File parse error:', error);
+        toast({
+          variant: "destructive",
+          title: "Ошибка чтения файла",
+          description: "Проверьте формат CSV файла",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    reader.readAsText(file, 'UTF-8');
+  };
+
   return (
-    <Button
-      onClick={handleImport}
-      disabled={isLoading}
-      variant="outline"
-      size="sm"
-    >
-      {isLoading ? (
-        <>
-          <Icon name="Loader2" className="mr-2 animate-spin" size={16} />
-          Загрузка...
-        </>
-      ) : (
-        <>
-          <Icon name="RefreshCw" className="mr-2" size={16} />
-          Импорт из Google Таблицы
-        </>
-      )}
-    </Button>
+    <>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".csv"
+        onChange={handleFileUpload}
+        className="hidden"
+      />
+      <Button
+        onClick={() => fileInputRef.current?.click()}
+        disabled={isLoading}
+        variant="outline"
+        size="sm"
+      >
+        {isLoading ? (
+          <>
+            <Icon name="Loader2" className="mr-2 animate-spin" size={16} />
+            Загрузка...
+          </>
+        ) : (
+          <>
+            <Icon name="Upload" className="mr-2" size={16} />
+            Загрузить CSV
+          </>
+        )}
+      </Button>
+    </>
   );
 };
