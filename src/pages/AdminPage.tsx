@@ -22,6 +22,7 @@ const AdminPage = () => {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [newUser, setNewUser] = useState({ email: "", name: "", role: "investor" });
   const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [roleFilter, setRoleFilter] = useState<string>("all");
   const { toast } = useToast();
 
   const fetchUsers = async () => {
@@ -137,6 +138,11 @@ const AdminPage = () => {
     return role === "broker" ? "Брокер" : "Инвестор";
   };
 
+  const filteredUsers = users.filter(user => {
+    if (roleFilter === "all") return true;
+    return user.role === roleFilter;
+  });
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -149,9 +155,10 @@ const AdminPage = () => {
     <div className="min-h-screen bg-background">
       <div className="container mx-auto p-6">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0">
-            <CardTitle className="text-2xl font-bold">Управление пользователями</CardTitle>
-            <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+          <CardHeader className="space-y-4">
+            <div className="flex flex-row items-center justify-between">
+              <CardTitle className="text-2xl font-bold">Управление пользователями</CardTitle>
+              <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
               <DialogTrigger asChild>
                 <Button>
                   <Icon name="UserPlus" size={16} className="mr-2" />
@@ -200,6 +207,30 @@ const AdminPage = () => {
                 </div>
               </DialogContent>
             </Dialog>
+            </div>
+            <div className="flex items-center gap-2">
+              <Label className="text-sm text-muted-foreground">Фильтр:</Label>
+              <Select value={roleFilter} onValueChange={setRoleFilter}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Все пользователи</SelectItem>
+                  <SelectItem value="investor">Только инвесторы</SelectItem>
+                  <SelectItem value="broker">Только брокеры</SelectItem>
+                </SelectContent>
+              </Select>
+              {roleFilter !== "all" && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setRoleFilter("all")}
+                >
+                  <Icon name="X" size={16} className="mr-1" />
+                  Сбросить
+                </Button>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
             <Table>
@@ -212,7 +243,7 @@ const AdminPage = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {users.map((user) => (
+                {filteredUsers.map((user) => (
                   <TableRow key={user.id}>
                     {editingUser?.id === user.id ? (
                       <>
