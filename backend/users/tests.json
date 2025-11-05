@@ -16,6 +16,18 @@
         "role": "investor"
       },
       "expectedStatus": 201
+    },
+    {
+      "name": "Обновление пользователя",
+      "method": "PUT",
+      "path": "/",
+      "body": {
+        "id": 1,
+        "email": "updated@example.com",
+        "name": "Updated Name",
+        "role": "broker"
+      },
+      "expectedStatus": 200
     }
   ]
 }

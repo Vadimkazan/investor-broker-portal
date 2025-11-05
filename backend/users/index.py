@@ -1,5 +1,5 @@
 '''
-Business: Управление пользователями (создание, просмотр, удаление брокеров и инвесторов)
+Business: Управление пользователями (создание, просмотр, редактирование, удаление брокеров и инвесторов)
 Args: event - dict с httpMethod, body, queryStringParameters
       context - объект с атрибутами: request_id, function_name
 Returns: HTTP response dict с данными пользователей или статусом операции
@@ -41,6 +41,22 @@ def create_user(email: str, name: str, role: str) -> Dict[str, Any]:
     
     return {'id': row[0], 'email': row[1], 'name': row[2], 'role': row[3]}
 
+def update_user(user_id: int, email: str, name: str, role: str) -> Optional[Dict[str, Any]]:
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute(
+        "UPDATE users SET email = %s, name = %s, role = %s WHERE id = %s RETURNING id, email, name, role",
+        (email, name, role, user_id)
+    )
+    row = cur.fetchone()
+    conn.commit()
+    cur.close()
+    conn.close()
+    
+    if row:
+        return {'id': row[0], 'email': row[1], 'name': row[2], 'role': row[3]}
+    return None
+
 def delete_user(user_id: int) -> bool:
     conn = get_db_connection()
     cur = conn.cursor()
@@ -59,7 +75,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             'statusCode': 200,
             'headers': {
                 'Access-Control-Allow-Origin': '*',
-                'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
+                'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
                 'Access-Control-Allow-Headers': 'Content-Type',
                 'Access-Control-Max-Age': '86400'
             },
@@ -104,6 +120,47 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             },
             'isBase64Encoded': False,
             'body': json.dumps({'user': user})
+        }
+    
+    if method == 'PUT':
+        body_data = json.loads(event.get('body', '{}'))
+        user_id = body_data.get('id')
+        email = body_data.get('email')
+        name = body_data.get('name')
+        role = body_data.get('role')
+        
+        if not user_id or not email or not name or not role:
+            return {
+                'statusCode': 400,
+                'headers': {
+                    'Content-Type': 'application/json',
+                    'Access-Control-Allow-Origin': '*'
+                },
+                'isBase64Encoded': False,
+                'body': json.dumps({'error': 'Все поля обязательны'})
+            }
+        
+        updated_user = update_user(int(user_id), email, name, role)
+        
+        if not updated_user:
+            return {
+                'statusCode': 404,
+                'headers': {
+                    'Content-Type': 'application/json',
+                    'Access-Control-Allow-Origin': '*'
+                },
+                'isBase64Encoded': False,
+                'body': json.dumps({'error': 'Пользователь не найден'})
+            }
+        
+        return {
+            'statusCode': 200,
+            'headers': {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*'
+            },
+            'isBase64Encoded': False,
+            'body': json.dumps({'user': updated_user})
         }
     
     if method == 'DELETE':

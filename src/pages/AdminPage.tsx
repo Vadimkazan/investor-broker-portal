@@ -21,12 +21,13 @@ const AdminPage = () => {
   const [loading, setLoading] = useState(true);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [newUser, setNewUser] = useState({ email: "", name: "", role: "investor" });
+  const [editingUser, setEditingUser] = useState<User | null>(null);
   const { toast } = useToast();
 
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      const response = await fetch("/.netlify/functions/users");
+      const response = await fetch("https://functions.poehali.dev/8fa7915b-2477-4216-a766-2d8d39c34a78");
       if (!response.ok) throw new Error("Ошибка загрузки");
       const data = await response.json();
       setUsers(data.users);
@@ -56,7 +57,7 @@ const AdminPage = () => {
     }
 
     try {
-      const response = await fetch("/.netlify/functions/users", {
+      const response = await fetch("https://functions.poehali.dev/8fa7915b-2477-4216-a766-2d8d39c34a78", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(newUser),
@@ -81,11 +82,37 @@ const AdminPage = () => {
     }
   };
 
+  const handleUpdateUser = async (user: User) => {
+    try {
+      const response = await fetch("https://functions.poehali.dev/8fa7915b-2477-4216-a766-2d8d39c34a78", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(user),
+      });
+
+      if (!response.ok) throw new Error("Ошибка обновления");
+
+      toast({
+        title: "Успешно",
+        description: "Изменения сохранены",
+      });
+
+      setEditingUser(null);
+      fetchUsers();
+    } catch (error) {
+      toast({
+        title: "Ошибка",
+        description: "Не удалось обновить данные",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleDeleteUser = async (id: number) => {
     if (!confirm("Удалить пользователя?")) return;
 
     try {
-      const response = await fetch(`/.netlify/functions/users?id=${id}`, {
+      const response = await fetch(`https://functions.poehali.dev/8fa7915b-2477-4216-a766-2d8d39c34a78?id=${id}`, {
         method: "DELETE",
       });
 
@@ -187,24 +214,82 @@ const AdminPage = () => {
               <TableBody>
                 {users.map((user) => (
                   <TableRow key={user.id}>
-                    <TableCell className="font-medium">{user.email}</TableCell>
-                    <TableCell>{user.name}</TableCell>
-                    <TableCell>
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        user.role === 'broker' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
-                      }`}>
-                        {getRoleLabel(user.role)}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDeleteUser(user.id)}
-                      >
-                        <Icon name="Trash2" size={16} />
-                      </Button>
-                    </TableCell>
+                    {editingUser?.id === user.id ? (
+                      <>
+                        <TableCell>
+                          <Input
+                            value={editingUser.email}
+                            onChange={(e) => setEditingUser({ ...editingUser, email: e.target.value })}
+                            className="h-8"
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Input
+                            value={editingUser.name}
+                            onChange={(e) => setEditingUser({ ...editingUser, name: e.target.value })}
+                            className="h-8"
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Select 
+                            value={editingUser.role} 
+                            onValueChange={(value) => setEditingUser({ ...editingUser, role: value })}
+                          >
+                            <SelectTrigger className="h-8">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="investor">Инвестор</SelectItem>
+                              <SelectItem value="broker">Брокер</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                        <TableCell className="text-right space-x-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleUpdateUser(editingUser)}
+                          >
+                            <Icon name="Check" size={16} />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setEditingUser(null)}
+                          >
+                            <Icon name="X" size={16} />
+                          </Button>
+                        </TableCell>
+                      </>
+                    ) : (
+                      <>
+                        <TableCell className="font-medium">{user.email}</TableCell>
+                        <TableCell>{user.name}</TableCell>
+                        <TableCell>
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            user.role === 'broker' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
+                          }`}>
+                            {getRoleLabel(user.role)}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-right space-x-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setEditingUser(user)}
+                          >
+                            <Icon name="Pencil" size={16} />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteUser(user.id)}
+                          >
+                            <Icon name="Trash2" size={16} />
+                          </Button>
+                        </TableCell>
+                      </>
+                    )}
                   </TableRow>
                 ))}
               </TableBody>
