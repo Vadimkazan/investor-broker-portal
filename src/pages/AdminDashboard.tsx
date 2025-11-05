@@ -10,6 +10,7 @@ import Icon from '@/components/ui/icon';
 import { useToast } from '@/hooks/use-toast';
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { api, User, InvestmentObjectDB } from '@/services/api';
+import GoogleSheetsSync from '@/components/admin/GoogleSheetsSync';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
 
@@ -144,7 +145,67 @@ const AdminDashboard = () => {
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-4 md:grid-cols-3">
+              <div className="md:col-span-2 grid gap-4 md:grid-cols-2">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Всего пользователей</CardTitle>
+                  <Icon name="Users" className="text-muted-foreground" size={16} />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{stats.totalUsers}</div>
+                  <p className="text-xs text-muted-foreground">
+                    {stats.investors} инвесторов, {stats.brokers} брокеров
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Всего объектов</CardTitle>
+                  <Icon name="Building" className="text-muted-foreground" size={16} />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{stats.totalObjects}</div>
+                  <p className="text-xs text-muted-foreground">
+                    {stats.availableObjects} свободно
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Общая стоимость</CardTitle>
+                  <Icon name="DollarSign" className="text-muted-foreground" size={16} />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">
+                    {(stats.totalValue / 1_000_000_000).toFixed(1)} млрд ₽
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Портфель платформы
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Средняя доходность</CardTitle>
+                  <Icon name="TrendingUp" className="text-muted-foreground" size={16} />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{stats.averageYield.toFixed(1)}%</div>
+                  <p className="text-xs text-muted-foreground">
+                    По всем объектам
+                  </p>
+                </CardContent>
+              </Card>
+              </div>
+
+              <GoogleSheetsSync />
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4" style={{display: 'none'}}>
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Всего пользователей</CardTitle>

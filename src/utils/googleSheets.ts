@@ -9,11 +9,10 @@ export interface BrokerData {
   email: string;
 }
 
-const PUBLISHED_SHEET_ID = '2PACX-1vTEeN8iRaVIy-nQ62ylGv0CWuz5PiFV8wkN_13gmEb1oLG-v30aJSHsKDphfzLEUxu-bZ7gY_0r3AR4';
-const BROKER_SHEET_GID = '629889399';
+const SHEET_ID = '1jnOO6dUJ6z903U1IVd8eZRJR7l-gn_62oJ9y-sQUnaU';
 
 export async function fetchGoogleSheetData(): Promise<GoogleSheetRow[]> {
-  const csvUrl = `https://docs.google.com/spreadsheets/d/e/${PUBLISHED_SHEET_ID}/pub?gid=${BROKER_SHEET_GID}&single=true&output=csv`;
+  const csvUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=2%20Юрий%20Морозкин`;
   
   try {
     console.log('Синхронизация с Google Таблицей...');

@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import Icon from "@/components/ui/icon";
+import { useNavigate } from "react-router-dom";
 
 interface User {
   id: number;
@@ -17,6 +18,7 @@ interface User {
 }
 
 const AdminPage = () => {
+  const navigate = useNavigate();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -157,7 +159,18 @@ const AdminPage = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto p-6">
+      <div className="container mx-auto p-6 space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">Админ-панель</h1>
+            <p className="text-muted-foreground">Управление платформой</p>
+          </div>
+          <Button onClick={() => navigate('/admin/dashboard')}>
+            <Icon name="LayoutDashboard" size={16} className="mr-2" />
+            Полная панель
+          </Button>
+        </div>
+
         <Card>
           <CardHeader className="space-y-4">
             <div className="flex flex-row items-center justify-between">
