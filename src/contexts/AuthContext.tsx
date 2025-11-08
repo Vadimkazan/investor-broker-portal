@@ -4,6 +4,7 @@ import { api, User } from '@/services/api';
 interface AuthContextType {
   user: User | null;
   loading: boolean;
+  syncing: boolean;
   login: (email: string, name: string, role: 'investor' | 'broker') => Promise<void>;
   logout: () => void;
   switchRole: () => Promise<void>;
@@ -26,6 +27,7 @@ interface AuthProviderProps {
 export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
 
   useEffect(() => {
     loadUser();
@@ -34,12 +36,16 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       const savedUser = localStorage.getItem('investpro-user');
       if (savedUser) {
         const userData = JSON.parse(savedUser);
+        setSyncing(true);
         api.getUserByEmail(userData.email)
           .then(dbUser => {
             setUser(dbUser);
             localStorage.setItem('investpro-user', JSON.stringify(dbUser));
           })
-          .catch(() => {});
+          .catch(() => {})
+          .finally(() => {
+            setTimeout(() => setSyncing(false), 1000);
+          });
       }
     }, 5 * 60 * 1000);
     
@@ -108,7 +114,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, switchRole }}>
+    <AuthContext.Provider value={{ user, loading, syncing, login, logout, switchRole }}>
       {children}
     </AuthContext.Provider>
   );

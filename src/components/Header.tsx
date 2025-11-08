@@ -2,6 +2,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import Icon from '@/components/ui/icon';
 import { useEffect, useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,6 +23,7 @@ interface HeaderProps {
 
 const Header = ({ activeTab, onTabChange, user, onAuthClick, onLogout, onRoleSwitch }: HeaderProps) => {
   const [favoritesCount, setFavoritesCount] = useState(0);
+  const { syncing } = useAuth();
 
   useEffect(() => {
     const updateFavorites = () => {
@@ -99,6 +101,12 @@ const Header = ({ activeTab, onTabChange, user, onAuthClick, onLogout, onRoleSwi
           </nav>
           {user ? (
             <div className="flex items-center gap-3">
+              {syncing && (
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Icon name="RefreshCw" size={14} className="animate-spin" />
+                  <span className="hidden sm:inline">Синхронизация...</span>
+                </div>
+              )}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" className="gap-2">
