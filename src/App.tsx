@@ -8,6 +8,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import ObjectsPage from "./components/objects/ObjectsPage";
 import ObjectDetailPage from "./components/objects/ObjectDetailPage";
+import AddObjectPage from "./components/objects/AddObjectPage";
 import AdminPage from "./pages/AdminPage";
 import AdminDashboard from "./pages/AdminDashboard";
 import NotFound from "./pages/NotFound";
@@ -41,6 +42,7 @@ const App = () => {
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/objects" element={<ObjectsPage />} />
+              <Route path="/objects/add" element={<AddObjectPage />} />
               <Route path="/objects/:id" element={<ObjectDetailPage />} />
               <Route path="/admin" element={<AdminPage />} />
               <Route path="/admin/dashboard" element={<AdminDashboard />} />

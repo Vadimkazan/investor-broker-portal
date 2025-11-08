@@ -205,11 +205,19 @@ const ObjectsPage = () => {
       />
       
       <div className="container mx-auto px-4 pt-20 pb-8">
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold mb-4">Инвестиционные объекты</h1>
-          <p className="text-muted-foreground text-lg">
-            Найдите лучшие предложения для инвестиций в недвижимость
-          </p>
+        <div className="mb-8 flex justify-between items-center">
+          <div>
+            <h1 className="text-4xl font-bold mb-4">Инвестиционные объекты</h1>
+            <p className="text-muted-foreground text-lg">
+              Найдите лучшие предложения для инвестиций в недвижимость
+            </p>
+          </div>
+          {user?.role === 'broker' && (
+            <Button onClick={() => navigate('/objects/add')} size="lg">
+              <Icon name="Plus" className="mr-2" size={20} />
+              Добавить объект
+            </Button>
+          )}
         </div>
 
         <div className="flex flex-col lg:flex-row gap-6">
