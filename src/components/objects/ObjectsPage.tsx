@@ -13,6 +13,7 @@ import { useAuth } from '@/contexts/AuthContext';
 const ObjectsPage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const [importing, setImporting] = useState(false);
   const [filters, setFilters] = useState<ObjectFilters>({
     search: '',
     cities: [],
@@ -153,6 +154,35 @@ const ObjectsPage = () => {
     navigate('/');
   };
 
+  const handleImport = async () => {
+    if (!confirm('Импортировать объекты из Google Таблиц? Все существующие тестовые объекты будут удалены.')) {
+      return;
+    }
+
+    setImporting(true);
+    try {
+      const response = await fetch('https://functions.poehali.dev/e865a471-57fb-43e5-a1fb-3f259c247580', {
+        method: 'POST',
+        headers: {
+          'X-User-Id': user!.id.toString()
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Ошибка импорта');
+      }
+
+      const result = await response.json();
+      alert(`Импорт завершен!\nУдалено: ${result.deleted}\nИмпортировано: ${result.imported}`);
+      window.location.reload();
+    } catch (error) {
+      console.error('Import error:', error);
+      alert('Ошибка при импорте данных');
+    } finally {
+      setImporting(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
@@ -212,12 +242,20 @@ const ObjectsPage = () => {
               Найдите лучшие предложения для инвестиций в недвижимость
             </p>
           </div>
-          {user?.role === 'broker' && (
-            <Button onClick={() => navigate('/objects/add')} size="lg">
-              <Icon name="Plus" className="mr-2" size={20} />
-              Добавить объект
-            </Button>
-          )}
+          <div className="flex gap-2">
+            {user?.role === 'broker' && (
+              <Button onClick={() => navigate('/objects/add')} size="lg">
+                <Icon name="Plus" className="mr-2" size={20} />
+                Добавить объект
+              </Button>
+            )}
+            {user?.is_admin && (
+              <Button onClick={handleImport} size="lg" variant="outline" disabled={importing}>
+                <Icon name="Download" className="mr-2" size={20} />
+                {importing ? 'Импорт...' : 'Импорт из Google Sheets'}
+              </Button>
+            )}
+          </div>
         </div>
 
         <div className="flex flex-col lg:flex-row gap-6">
