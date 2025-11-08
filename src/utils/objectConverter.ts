@@ -18,7 +18,13 @@ export const convertDBObjectToFrontend = (obj: InvestmentObjectDB): InvestmentOb
     description: obj.description || '',
     status: obj.status,
     createdAt: obj.created_at || new Date().toISOString(),
-    brokerId: obj.broker_id || 1
+    brokerId: obj.broker_id || 1,
+    minInvestment: obj.min_investment,
+    monthlyPayment: obj.monthly_payment,
+    strategy: obj.strategy,
+    dealCycle: obj.deal_cycle,
+    presentationLink: obj.presentation_link,
+    investmentDecision: obj.investment_decision
   };
 };
 

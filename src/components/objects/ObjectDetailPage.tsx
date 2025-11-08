@@ -205,41 +205,100 @@ const ObjectDetailPage = () => {
                     </Badge>
                   </div>
 
-                  <div className="grid grid-cols-3 gap-4 mb-6">
-                    <Card>
-                      <CardContent className="p-4 text-center">
-                        <p className="text-sm text-muted-foreground mb-1">Цена</p>
-                        <p className="text-xl font-bold">
-                          {(object.price / 1000000).toFixed(1)} млн ₽
-                        </p>
-                      </CardContent>
-                    </Card>
-                    <Card>
-                      <CardContent className="p-4 text-center">
-                        <p className="text-sm text-muted-foreground mb-1">Доходность</p>
-                        <p className="text-xl font-bold text-primary">
-                          {object.yield}%
-                        </p>
-                      </CardContent>
-                    </Card>
-                    <Card>
-                      <CardContent className="p-4 text-center">
-                        <p className="text-sm text-muted-foreground mb-1">Окупаемость</p>
-                        <p className="text-xl font-bold">
-                          {object.paybackPeriod} лет
-                        </p>
-                      </CardContent>
-                    </Card>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+                    {object.minInvestment ? (
+                      <Card>
+                        <CardContent className="p-4 text-center">
+                          <p className="text-sm text-muted-foreground mb-1">Сумма входа</p>
+                          <p className="text-xl font-bold">
+                            {(object.minInvestment / 1000000).toFixed(1)} млн ₽
+                          </p>
+                        </CardContent>
+                      </Card>
+                    ) : null}
+                    {object.price ? (
+                      <Card>
+                        <CardContent className="p-4 text-center">
+                          <p className="text-sm text-muted-foreground mb-1">Стоимость</p>
+                          <p className="text-xl font-bold">
+                            {(object.price / 1000000).toFixed(1)} млн ₽
+                          </p>
+                        </CardContent>
+                      </Card>
+                    ) : null}
+                    {object.monthlyPayment ? (
+                      <Card>
+                        <CardContent className="p-4 text-center">
+                          <p className="text-sm text-muted-foreground mb-1">Платёж/мес</p>
+                          <p className="text-xl font-bold">
+                            {(object.monthlyPayment / 1000).toFixed(0)} тыс ₽
+                          </p>
+                        </CardContent>
+                      </Card>
+                    ) : null}
+                    {object.yield ? (
+                      <Card>
+                        <CardContent className="p-4 text-center">
+                          <p className="text-sm text-muted-foreground mb-1">Доходность</p>
+                          <p className="text-xl font-bold text-primary">
+                            {object.yield}%
+                          </p>
+                        </CardContent>
+                      </Card>
+                    ) : null}
+                    {object.strategy ? (
+                      <Card>
+                        <CardContent className="p-4 text-center">
+                          <p className="text-sm text-muted-foreground mb-1">Стратегия</p>
+                          <p className="text-base font-semibold">
+                            {object.strategy}
+                          </p>
+                        </CardContent>
+                      </Card>
+                    ) : null}
+                    {object.dealCycle ? (
+                      <Card>
+                        <CardContent className="p-4 text-center">
+                          <p className="text-sm text-muted-foreground mb-1">Цикл сделки</p>
+                          <p className="text-base font-semibold">
+                            {object.dealCycle}
+                          </p>
+                        </CardContent>
+                      </Card>
+                    ) : null}
                   </div>
 
-                  <div>
-                    <h2 className="text-xl font-semibold mb-3">Описание</h2>
-                    <p className="text-muted-foreground leading-relaxed">
-                      Отличная инвестиционная возможность в {object.city}. 
-                      Объект расположен в развивающемся районе с хорошей инфраструктурой.
-                      Высокая доходность {object.yield}% годовых делает это предложение особенно привлекательным.
-                      Окупаемость составляет {object.paybackPeriod} года при текущих рыночных условиях.
-                    </p>
+                  <div className="space-y-4">
+                    <div className="flex gap-3">
+                      {object.presentationLink && (
+                        <Button 
+                          className="flex-1"
+                          onClick={() => window.open(object.presentationLink, '_blank')}
+                        >
+                          <Icon name="FileText" size={18} className="mr-2" />
+                          Презентация
+                        </Button>
+                      )}
+                      {object.investmentDecision && (
+                        <Button 
+                          variant="outline"
+                          className="flex-1"
+                          onClick={() => window.open(object.investmentDecision, '_blank')}
+                        >
+                          <Icon name="FileCheck" size={18} className="mr-2" />
+                          Инвест-решение
+                        </Button>
+                      )}
+                    </div>
+
+                    <div>
+                      <h2 className="text-xl font-semibold mb-3">Описание</h2>
+                      <p className="text-muted-foreground leading-relaxed">
+                        {object.description || `Отличная инвестиционная возможность в ${object.city}. 
+                        Объект расположен в развивающемся районе с хорошей инфраструктурой.
+                        Высокая доходность ${object.yield}% годовых делает это предложение особенно привлекательным.`}
+                      </p>
+                    </div>
                   </div>
                 </div>
               </CardContent>

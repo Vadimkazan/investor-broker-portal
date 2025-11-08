@@ -24,6 +24,12 @@ export interface InvestmentObject {
     lat: number;
     lng: number;
   };
+  minInvestment?: number;
+  monthlyPayment?: number;
+  strategy?: string;
+  dealCycle?: string;
+  presentationLink?: string;
+  investmentDecision?: string;
 }
 
 export interface ObjectFilters {

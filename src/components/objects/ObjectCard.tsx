@@ -107,18 +107,42 @@ const ObjectCard = ({ object }: ObjectCardProps) => {
         </div>
 
         <div className="space-y-1.5 pt-2 border-t">
-          <div className="flex justify-between items-center">
-            <span className="text-sm text-muted-foreground">Доходность:</span>
-            <span className="font-semibold text-primary">~{object.yield}% годовых</span>
-          </div>
-          <div className="flex justify-between items-center">
-            <span className="text-sm text-muted-foreground">Сумма входа:</span>
-            <span className="font-semibold">{(object.price / 1000000).toFixed(1)} млн ₽</span>
-          </div>
-          <div className="flex justify-between items-center">
-            <span className="text-sm text-muted-foreground">Окупаемость:</span>
-            <span className="font-medium">~{object.paybackPeriod} лет</span>
-          </div>
+          {object.minInvestment ? (
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-muted-foreground">Сумма входа:</span>
+              <span className="font-semibold">{(object.minInvestment / 1000000).toFixed(1)} млн ₽</span>
+            </div>
+          ) : null}
+          {object.price ? (
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-muted-foreground">Стоимость:</span>
+              <span className="font-semibold">{(object.price / 1000000).toFixed(1)} млн ₽</span>
+            </div>
+          ) : null}
+          {object.monthlyPayment ? (
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-muted-foreground">Платёж/мес:</span>
+              <span className="font-medium">{(object.monthlyPayment / 1000).toFixed(0)} тыс ₽</span>
+            </div>
+          ) : null}
+          {object.yield ? (
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-muted-foreground">Доходность:</span>
+              <span className="font-semibold text-primary">{object.yield}%</span>
+            </div>
+          ) : null}
+          {object.strategy ? (
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-muted-foreground">Стратегия:</span>
+              <span className="font-medium text-xs">{object.strategy}</span>
+            </div>
+          ) : null}
+          {object.dealCycle ? (
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-muted-foreground">Цикл сделки:</span>
+              <span className="font-medium">{object.dealCycle}</span>
+            </div>
+          ) : null}
         </div>
 
         <div className="flex gap-2 pt-2">
