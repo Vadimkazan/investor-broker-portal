@@ -38,7 +38,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         if not user_id:
             return error_response('Authentication required', 401)
         
-        cur.execute("SELECT is_admin FROM users WHERE id = %s", (int(user_id),))
+        cur.execute(f"SELECT is_admin FROM users WHERE id = {int(user_id)}")
         user_row = cur.fetchone()
         
         if not user_row or not user_row[0]:
@@ -63,17 +63,31 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             obj = map_row_to_object(row, int(user_id))
             if obj:
                 try:
-                    cur.execute("""
+                    title_safe = obj['title'].replace("'", "''")
+                    city_safe = obj['city'].replace("'", "''")
+                    address_safe = obj['address'].replace("'", "''")
+                    desc_safe = obj['description'].replace("'", "''")
+                    images_json = json.dumps(obj['images']).replace("'", "''")
+                    
+                    cur.execute(f"""
                         INSERT INTO investment_objects 
                         (broker_id, title, city, address, property_type, area, price, 
                          yield_percent, payback_years, description, images, status)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                    """, (
-                        obj['broker_id'], obj['title'], obj['city'], obj['address'],
-                        obj['property_type'], obj['area'], obj['price'], 
-                        obj['yield_percent'], obj['payback_years'], obj['description'],
-                        obj['images'], obj['status']
-                    ))
+                        VALUES (
+                            {obj['broker_id']}, 
+                            '{title_safe}', 
+                            '{city_safe}', 
+                            '{address_safe}',
+                            '{obj['property_type']}', 
+                            {obj['area']}, 
+                            {obj['price']}, 
+                            {obj['yield_percent']}, 
+                            {obj['payback_years']}, 
+                            '{desc_safe}',
+                            '{images_json}', 
+                            '{obj['status']}'
+                        )
+                    """)
                     imported_count += 1
                 except Exception as e:
                     print(f"Error importing object: {e}, row: {row}")
