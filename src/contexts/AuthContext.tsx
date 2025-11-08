@@ -29,6 +29,21 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   useEffect(() => {
     loadUser();
+    
+    const interval = setInterval(() => {
+      const savedUser = localStorage.getItem('investpro-user');
+      if (savedUser) {
+        const userData = JSON.parse(savedUser);
+        api.getUserByEmail(userData.email)
+          .then(dbUser => {
+            setUser(dbUser);
+            localStorage.setItem('investpro-user', JSON.stringify(dbUser));
+          })
+          .catch(() => {});
+      }
+    }, 5 * 60 * 1000);
+    
+    return () => clearInterval(interval);
   }, []);
 
   const loadUser = async () => {
