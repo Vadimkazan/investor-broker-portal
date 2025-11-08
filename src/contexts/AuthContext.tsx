@@ -5,7 +5,7 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   syncing: boolean;
-  login: (email: string, name: string, role: 'investor' | 'broker') => Promise<void>;
+  login: (email: string, name: string, role: 'investor' | 'broker' | 'admin' | 'manager') => Promise<void>;
   logout: () => void;
   switchRole: () => Promise<void>;
 }
@@ -74,7 +74,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
   };
 
-  const login = async (email: string, name: string, role: 'investor' | 'broker') => {
+  const login = async (email: string, name: string, role: 'investor' | 'broker' | 'admin' | 'manager') => {
     try {
       setLoading(true);
       

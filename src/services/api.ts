@@ -4,7 +4,7 @@ export interface User {
   id: number;
   email: string;
   name: string;
-  role: 'investor' | 'broker';
+  role: 'investor' | 'broker' | 'admin' | 'manager';
   is_admin?: boolean;
   notify_new_objects?: boolean;
   created_at?: string;
@@ -122,7 +122,7 @@ class ApiClient {
     return this.request<User>('users', 'GET', undefined, { id: id.toString() });
   }
 
-  async createUser(data: { email: string; name: string; role: 'investor' | 'broker' }): Promise<User> {
+  async createUser(data: { email: string; name: string; role: 'investor' | 'broker' | 'admin' | 'manager' }): Promise<User> {
     return this.request<User>('users', 'POST', data);
   }
 

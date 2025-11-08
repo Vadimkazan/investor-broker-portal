@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import Icon from "@/components/ui/icon";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface User {
   id: number;
@@ -19,6 +20,7 @@ interface User {
 
 const AdminPage = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -47,8 +49,17 @@ const AdminPage = () => {
   };
 
   useEffect(() => {
+    if (!user || (user.role !== 'admin' && user.role !== 'manager')) {
+      toast({
+        title: 'Доступ запрещен',
+        description: 'У вас нет прав для доступа к админ-панели',
+        variant: 'destructive'
+      });
+      navigate('/');
+      return;
+    }
     fetchUsers();
-  }, []);
+  }, [user, navigate]);
 
   const handleAddUser = async () => {
     if (!newUser.email || !newUser.name) {

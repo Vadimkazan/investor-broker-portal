@@ -11,6 +11,8 @@ import { useToast } from '@/hooks/use-toast';
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { api, User, InvestmentObjectDB } from '@/services/api';
 import GoogleSheetsSync from '@/components/admin/GoogleSheetsSync';
+import { useAuth } from '@/contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
 
@@ -21,10 +23,21 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const { toast } = useToast();
+  const { user } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
+    if (!user || (user.role !== 'admin' && user.role !== 'manager')) {
+      toast({
+        title: 'Доступ запрещен',
+        description: 'У вас нет прав для доступа к админ-панели',
+        variant: 'destructive'
+      });
+      navigate('/');
+      return;
+    }
     loadData();
-  }, []);
+  }, [user, navigate]);
 
   const loadData = async () => {
     try {

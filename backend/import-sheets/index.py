@@ -38,11 +38,11 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         if not user_id:
             return error_response('Authentication required', 401)
         
-        cur.execute(f"SELECT is_admin FROM users WHERE id = {int(user_id)}")
+        cur.execute(f"SELECT role FROM users WHERE id = {int(user_id)}")
         user_row = cur.fetchone()
         
-        if not user_row or not user_row[0]:
-            return error_response('Admin access required', 403)
+        if not user_row or user_row[0] not in ['admin', 'manager']:
+            return error_response('Admin or Manager access required', 403)
         
         cur.execute("SELECT id, name, email FROM users WHERE role = 'broker' ORDER BY id")
         brokers = cur.fetchall()

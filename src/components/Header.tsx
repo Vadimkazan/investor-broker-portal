@@ -15,7 +15,7 @@ import {
 interface HeaderProps {
   activeTab: string;
   onTabChange: (tab: string) => void;
-  user: { name: string; email: string; role: 'investor' | 'broker' } | null;
+  user: { name: string; email: string; role: 'investor' | 'broker' | 'admin' | 'manager' } | null;
   onAuthClick: () => void;
   onLogout: () => void;
   onRoleSwitch: () => void;
@@ -113,7 +113,7 @@ const Header = ({ activeTab, onTabChange, user, onAuthClick, onLogout, onRoleSwi
                     <div className="text-left">
                       <p className="text-sm font-semibold">{user.name}</p>
                       <p className="text-xs text-muted-foreground">
-                        {user.role === 'broker' ? 'Брокер' : 'Инвестор'}
+                        {user.role === 'admin' ? 'Администратор' : user.role === 'manager' ? 'Менеджер' : user.role === 'broker' ? 'Брокер' : 'Инвестор'}
                       </p>
                     </div>
                     <Icon name="ChevronDown" size={16} />
@@ -122,18 +122,34 @@ const Header = ({ activeTab, onTabChange, user, onAuthClick, onLogout, onRoleSwi
                 <DropdownMenuContent align="end" className="w-56">
                   <DropdownMenuLabel>Мой аккаунт</DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={onRoleSwitch} className="gap-2">
-                    <Icon name="RefreshCw" size={16} />
-                    <div>
-                      <p className="font-medium">
-                        {user.role === 'broker' ? 'Режим инвестора' : 'Режим брокера'}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {user.role === 'broker' ? 'Инвестировать в объекты' : 'Управлять объектами'}
-                      </p>
-                    </div>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
+                  {(user.role === 'admin' || user.role === 'manager') && (
+                    <>
+                      <DropdownMenuItem onClick={() => window.location.href = '/admin/dashboard'} className="gap-2">
+                        <Icon name="Shield" size={16} />
+                        <div>
+                          <p className="font-medium">Админ-панель</p>
+                          <p className="text-xs text-muted-foreground">Управление платформой</p>
+                        </div>
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                    </>
+                  )}
+                  {(user.role === 'investor' || user.role === 'broker') && (
+                    <>
+                      <DropdownMenuItem onClick={onRoleSwitch} className="gap-2">
+                        <Icon name="RefreshCw" size={16} />
+                        <div>
+                          <p className="font-medium">
+                            {user.role === 'broker' ? 'Режим инвестора' : 'Режим брокера'}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {user.role === 'broker' ? 'Инвестировать в объекты' : 'Управлять объектами'}
+                          </p>
+                        </div>
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                    </>
+                  )}
                   <DropdownMenuItem onClick={onLogout} className="gap-2 text-destructive">
                     <Icon name="LogOut" size={16} />
                     Выйти
