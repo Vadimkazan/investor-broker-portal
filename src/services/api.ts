@@ -40,6 +40,12 @@ export interface InvestmentObjectDB {
   status: 'available' | 'reserved' | 'sold';
   created_at?: string;
   broker?: BrokerInfo;
+  min_investment?: number;
+  monthly_payment?: number;
+  strategy?: string;
+  deal_cycle?: string;
+  presentation_link?: string;
+  investment_decision?: string;
 }
 
 export interface Favorite {
