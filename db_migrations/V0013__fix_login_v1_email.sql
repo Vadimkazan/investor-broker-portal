@@ -1,0 +1,1 @@
+UPDATE users SET email = 'login.v1@yandex.ru' WHERE email = 'login.v1';
