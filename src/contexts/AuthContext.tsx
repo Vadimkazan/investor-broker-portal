@@ -36,14 +36,14 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       const savedUser = localStorage.getItem('investpro-user');
       if (savedUser) {
         const userData = JSON.parse(savedUser);
+        setUser(userData);
         
         try {
           const dbUser = await api.getUserByEmail(userData.email);
           setUser(dbUser);
           localStorage.setItem('investpro-user', JSON.stringify(dbUser));
         } catch (err) {
-          console.log('User not in DB yet, using local data');
-          setUser(userData);
+          console.log('User not in DB yet, keeping local data');
         }
       }
     } catch (err) {
