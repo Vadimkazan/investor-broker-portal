@@ -288,6 +288,40 @@ def handle_objects(cur, conn, method: str, event: Dict[str, Any]) -> Dict[str, A
             return success_response(format_object(row))
         return error_response('Object not found', 404)
     
+    elif method == 'DELETE':
+        params = event.get('queryStringParameters') or {}
+        object_id = params.get('id')
+        
+        if not object_id:
+            return error_response('Object ID is required', 400)
+        
+        user_id = event.get('headers', {}).get('x-user-id')
+        
+        if not user_id:
+            return error_response('User authentication required', 401)
+        
+        cur.execute("SELECT is_admin, role FROM users WHERE id = %s", (int(user_id),))
+        user_row = cur.fetchone()
+        
+        if not user_row:
+            return error_response('User not found', 404)
+        
+        is_admin, user_role = user_row[0], user_row[1]
+        
+        cur.execute("SELECT broker_id FROM investment_objects WHERE id = %s", (int(object_id),))
+        obj_row = cur.fetchone()
+        
+        if not obj_row:
+            return error_response('Object not found', 404)
+        
+        if obj_row[0] != int(user_id) and not is_admin:
+            return error_response('Access denied: only object owner or admin can delete', 403)
+        
+        cur.execute("DELETE FROM investment_objects WHERE id = %s", (int(object_id),))
+        conn.commit()
+        
+        return success_response({'message': 'Object deleted successfully'})
+    
     return error_response('Method not allowed', 405)
 
 

@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import Icon from '@/components/ui/icon';
 import { InvestmentObject } from '@/types/investment-object';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface ObjectCardProps {
   object: InvestmentObject;
@@ -12,10 +13,13 @@ interface ObjectCardProps {
 
 const ObjectCard = ({ object }: ObjectCardProps) => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [isFavorite, setIsFavorite] = useState(() => {
     const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
     return favorites.includes(object.id);
   });
+
+  const isOwner = user && object.brokerId === user.id;
 
   const propertyTypeLabels: Record<string, string> = {
     flats: 'Квартиры',
@@ -121,6 +125,18 @@ const ObjectCard = ({ object }: ObjectCardProps) => {
           <Button className="flex-1" onClick={handleCardClick}>
             Подробнее
           </Button>
+          {isOwner && (
+            <Button 
+              variant="outline" 
+              size="icon"
+              onClick={(e) => {
+                e.stopPropagation();
+                navigate(`/objects/${object.id}/edit`);
+              }}
+            >
+              <Icon name="Pencil" size={18} />
+            </Button>
+          )}
         </div>
       </CardContent>
     </Card>
