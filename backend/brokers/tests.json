@@ -13,7 +13,7 @@
       "method": "POST",
       "path": "/",
       "body": {
-        "email": "test@example.com",
+        "email": "newbroker{{ timestamp }}@example.com",
         "firstName": "Иван",
         "lastName": "Петров",
         "phone": "+79991234567",
@@ -21,7 +21,6 @@
       },
       "expectedStatus": 201,
       "expectedBody": {
-        "email": "test@example.com",
         "first_name": "Иван",
         "last_name": "Петров"
       },

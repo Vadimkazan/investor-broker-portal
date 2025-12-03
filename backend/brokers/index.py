@@ -5,6 +5,18 @@ from typing import Dict, Any
 import psycopg2
 from psycopg2.extras import RealDictCursor
 
+def escape_sql(value):
+    '''Escape values for Simple Query Protocol'''
+    if value is None:
+        return 'NULL'
+    if isinstance(value, bool):
+        return 'true' if value else 'false'
+    if isinstance(value, (int, float)):
+        return str(value)
+    if isinstance(value, str):
+        return "'" + value.replace("'", "''").replace('\\', '\\\\') + "'"
+    return "'" + str(value).replace("'", "''").replace('\\', '\\\\') + "'"
+
 def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     '''
     Business: API для управления брокерами
@@ -36,7 +48,8 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
                 if broker_id:
-                    cur.execute("SELECT * FROM brokers WHERE id = %s", (broker_id,))
+                    query = f"SELECT * FROM brokers WHERE id = {escape_sql(broker_id)}"
+                    cur.execute(query)
                     broker = cur.fetchone()
                     if not broker:
                         return {
@@ -66,24 +79,21 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             broker_id = str(uuid.uuid4())
             referral_code = f"REF-{uuid.uuid4().hex[:8].upper()}"
             
+            query = f"""
+                INSERT INTO brokers (id, email, first_name, last_name, phone, avatar, company, referral_code)
+                VALUES (
+                    {escape_sql(broker_id)}, {escape_sql(body_data['email'])}, 
+                    {escape_sql(body_data['firstName'])}, {escape_sql(body_data['lastName'])}, 
+                    {escape_sql(body_data.get('phone'))}, {escape_sql(body_data.get('avatar'))}, 
+                    {escape_sql(body_data.get('company'))}, {escape_sql(referral_code)}
+                )
+            """
+            
             with conn.cursor() as cur:
-                cur.execute("""
-                    INSERT INTO brokers (id, email, first_name, last_name, phone, avatar, company, referral_code)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-                    RETURNING id
-                """, (
-                    broker_id,
-                    body_data['email'],
-                    body_data['firstName'],
-                    body_data['lastName'],
-                    body_data.get('phone'),
-                    body_data.get('avatar'),
-                    body_data.get('company'),
-                    referral_code
-                ))
+                cur.execute(query)
                 
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
-                cur.execute("SELECT * FROM brokers WHERE id = %s", (broker_id,))
+                cur.execute(f"SELECT * FROM brokers WHERE id = {escape_sql(broker_id)}")
                 broker = cur.fetchone()
             
             return {
@@ -105,22 +115,22 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                     'isBase64Encoded': False
                 }
             
+            query = f"""
+                UPDATE brokers 
+                SET first_name = {escape_sql(body_data.get('firstName'))}, 
+                    last_name = {escape_sql(body_data.get('lastName'))}, 
+                    phone = {escape_sql(body_data.get('phone'))}, 
+                    avatar = {escape_sql(body_data.get('avatar'))}, 
+                    company = {escape_sql(body_data.get('company'))}, 
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = {escape_sql(broker_id)}
+            """
+            
             with conn.cursor() as cur:
-                cur.execute("""
-                    UPDATE brokers 
-                    SET first_name = %s, last_name = %s, phone = %s, avatar = %s, company = %s, updated_at = CURRENT_TIMESTAMP
-                    WHERE id = %s
-                """, (
-                    body_data.get('firstName'),
-                    body_data.get('lastName'),
-                    body_data.get('phone'),
-                    body_data.get('avatar'),
-                    body_data.get('company'),
-                    broker_id
-                ))
+                cur.execute(query)
             
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
-                cur.execute("SELECT * FROM brokers WHERE id = %s", (broker_id,))
+                cur.execute(f"SELECT * FROM brokers WHERE id = {escape_sql(broker_id)}")
                 broker = cur.fetchone()
             
             return {

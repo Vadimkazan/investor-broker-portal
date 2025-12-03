@@ -3,6 +3,18 @@ import os
 import psycopg2
 from typing import Dict, Any, List, Optional
 
+def escape_sql(value):
+    '''Escape values for Simple Query Protocol'''
+    if value is None:
+        return 'NULL'
+    if isinstance(value, bool):
+        return 'true' if value else 'false'
+    if isinstance(value, (int, float)):
+        return str(value)
+    if isinstance(value, str):
+        return "'" + value.replace("'", "''").replace('\\', '\\\\') + "'"
+    return "'" + str(value).replace("'", "''").replace('\\', '\\\\') + "'"
+
 def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     '''
     Business: Main API - users, objects, favorites management
@@ -30,76 +42,57 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     try:
         dsn = os.environ.get('DATABASE_URL')
         conn = psycopg2.connect(dsn)
+        conn.autocommit = True
         cur = conn.cursor()
         
         if resource == 'users':
-            return handle_users(cur, conn, method, event)
+            return handle_users(cur, method, event)
         elif resource == 'objects':
-            return handle_objects(cur, conn, method, event)
+            return handle_objects(cur, method, event)
         elif resource == 'favorites':
-            return handle_favorites(cur, conn, method, event)
-        elif resource == 'notifications':
-            return handle_notifications(cur, conn, method, event)
+            return handle_favorites(cur, method, event)
         else:
-            return {
-                'statusCode': 404,
-                'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-                'body': json.dumps({'error': 'Resource not found'}),
-                'isBase64Encoded': False
-            }
+            return error_response('Resource not found', 404)
     
     finally:
         if conn:
             conn.close()
 
 
-def handle_users(cur, conn, method: str, event: Dict[str, Any]) -> Dict[str, Any]:
+def handle_users(cur, method: str, event: Dict[str, Any]) -> Dict[str, Any]:
     if method == 'GET':
         params = event.get('queryStringParameters') or {}
         user_id = params.get('id')
         email = params.get('email')
         
         if user_id:
-            cur.execute(
-                "SELECT id, email, name, role, is_admin, created_at, notify_new_objects, telegram_chat_id FROM users WHERE id = %s",
-                (int(user_id),)
-            )
+            query = f"SELECT id, email, name, role, created_at FROM users WHERE id = {escape_sql(int(user_id))}"
+            cur.execute(query)
             row = cur.fetchone()
             if row:
                 return success_response({
                     'id': row[0], 'email': row[1], 'name': row[2],
-                    'role': row[3], 'is_admin': row[4] or False,
-                    'created_at': row[5].isoformat() if row[5] else None,
-                    'notify_new_objects': row[6] or False,
-                    'telegram_chat_id': row[7]
+                    'role': row[3], 'created_at': row[4].isoformat() if row[4] else None
                 })
             return error_response('User not found', 404)
         
         elif email:
-            cur.execute(
-                "SELECT id, email, name, role, is_admin, created_at, notify_new_objects, telegram_chat_id FROM users WHERE email = %s",
-                (email,)
-            )
+            query = f"SELECT id, email, name, role, created_at FROM users WHERE email = {escape_sql(email)}"
+            cur.execute(query)
             row = cur.fetchone()
             if row:
                 return success_response({
                     'id': row[0], 'email': row[1], 'name': row[2],
-                    'role': row[3], 'is_admin': row[4] or False,
-                    'created_at': row[5].isoformat() if row[5] else None,
-                    'notify_new_objects': row[6] or False,
-                    'telegram_chat_id': row[7]
+                    'role': row[3], 'created_at': row[4].isoformat() if row[4] else None
                 })
             return error_response('User not found', 404)
         
         else:
-            cur.execute("SELECT id, email, name, role, is_admin, created_at, notify_new_objects, telegram_chat_id FROM users ORDER BY created_at DESC LIMIT 100")
+            cur.execute("SELECT id, email, name, role, created_at FROM users ORDER BY created_at DESC LIMIT 100")
             rows = cur.fetchall()
             users = [{
                 'id': r[0], 'email': r[1], 'name': r[2],
-                'role': r[3], 'is_admin': r[4] or False,
-                'created_at': r[5].isoformat() if r[5] else None,
-                'notify_new_objects': r[6] or False,
-                'telegram_chat_id': r[7]
+                'role': r[3], 'created_at': r[4].isoformat() if r[4] else None
             } for r in rows]
             return success_response(users)
     
@@ -112,84 +105,40 @@ def handle_users(cur, conn, method: str, event: Dict[str, Any]) -> Dict[str, Any
         if not email or not name:
             return error_response('Email and name are required', 400)
         
-        cur.execute("SELECT id FROM users WHERE email = %s", (email,))
+        query = f"SELECT id FROM users WHERE email = {escape_sql(email)}"
+        cur.execute(query)
         existing = cur.fetchone()
         
         if existing:
             return success_response({'id': existing[0], 'message': 'User already exists'})
         
-        cur.execute(
-            "INSERT INTO users (email, name, role) VALUES (%s, %s, %s) RETURNING id, email, name, role, is_admin, created_at",
-            (email, name, role)
-        )
+        query = f"INSERT INTO users (email, name, role) VALUES ({escape_sql(email)}, {escape_sql(name)}, {escape_sql(role)}) RETURNING id, email, name, role, created_at"
+        cur.execute(query)
         row = cur.fetchone()
-        conn.commit()
         
         return success_response({
             'id': row[0], 'email': row[1], 'name': row[2],
-            'role': row[3], 'is_admin': row[4] or False,
-            'created_at': row[5].isoformat() if row[5] else None
+            'role': row[3], 'created_at': row[4].isoformat() if row[4] else None
         }, 201)
-    
-    elif method == 'PUT':
-        body = json.loads(event.get('body', '{}'))
-        user_id = body.get('id')
-        
-        if not user_id:
-            return error_response('User ID is required', 400)
-        
-        update_fields = []
-        update_values = []
-        
-        if 'name' in body:
-            update_fields.append('name = %s')
-            update_values.append(body['name'])
-        
-        if 'notify_new_objects' in body:
-            update_fields.append('notify_new_objects = %s')
-            update_values.append(body['notify_new_objects'])
-        
-        if 'telegram_chat_id' in body:
-            update_fields.append('telegram_chat_id = %s')
-            update_values.append(body['telegram_chat_id'])
-        
-        if not update_fields:
-            return error_response('No fields to update', 400)
-        
-        update_values.append(int(user_id))
-        update_query = f"UPDATE users SET {', '.join(update_fields)} WHERE id = %s RETURNING id, email, name, role, is_admin, created_at, notify_new_objects, telegram_chat_id"
-        
-        cur.execute(update_query, tuple(update_values))
-        row = cur.fetchone()
-        conn.commit()
-        
-        if row:
-            return success_response({
-                'id': row[0], 'email': row[1], 'name': row[2],
-                'role': row[3], 'is_admin': row[4] or False,
-                'created_at': row[5].isoformat() if row[5] else None,
-                'notify_new_objects': row[6] or False,
-                'telegram_chat_id': row[7]
-            })
-        return error_response('User not found', 404)
     
     return error_response('Method not allowed', 405)
 
 
-def handle_objects(cur, conn, method: str, event: Dict[str, Any]) -> Dict[str, Any]:
+def handle_objects(cur, method: str, event: Dict[str, Any]) -> Dict[str, Any]:
     if method == 'GET':
         params = event.get('queryStringParameters') or {}
         object_id = params.get('id')
         
         if object_id:
-            cur.execute("""
+            query = f"""
                 SELECT o.id, o.broker_id, o.title, o.city, o.address, o.property_type, o.area, o.price, 
-                       o.yield_percent, o.payback_years, o.description, o.images, o.videos, o.documents, o.status, o.created_at,
-                       u.id, u.name, u.email, u.city, u.club, u.training_stream, u.country, u.surname, u.first_name
+                       o.yield_percent, o.description, o.images, o.status, o.created_at,
+                       u.id, u.name, u.email
                 FROM investment_objects o
                 LEFT JOIN users u ON o.broker_id = u.id
-                WHERE o.id = %s
-            """, (int(object_id),))
+                WHERE o.id = {escape_sql(int(object_id))}
+            """
+            cur.execute(query)
             row = cur.fetchone()
             
             if row:
@@ -197,383 +146,117 @@ def handle_objects(cur, conn, method: str, event: Dict[str, Any]) -> Dict[str, A
             return error_response('Object not found', 404)
         
         else:
-            filters = build_object_filters(params)
-            query = f"""
+            query = """
                 SELECT o.id, o.broker_id, o.title, o.city, o.address, o.property_type, o.area, o.price, 
-                       o.yield_percent, o.payback_years, o.description, o.images, o.videos, o.documents, o.status, o.created_at,
-                       u.id, u.name, u.email, u.city, u.club, u.training_stream, u.country, u.surname, u.first_name
+                       o.yield_percent, o.description, o.images, o.status, o.created_at,
+                       u.id, u.name, u.email
                 FROM investment_objects o
                 LEFT JOIN users u ON o.broker_id = u.id
-                WHERE 1=1 {filters['query']}
+                WHERE o.status = 'available'
                 ORDER BY o.created_at DESC LIMIT 100
             """
-            
-            cur.execute(query, filters['params'])
+            cur.execute(query)
             rows = cur.fetchall()
             objects = [format_object_with_broker(r) for r in rows]
             return success_response(objects)
     
-    elif method == 'POST':
-        body = json.loads(event.get('body', '{}'))
-        
-        required_fields = ['title', 'city', 'address', 'property_type', 'area', 'price', 'yield_percent', 'payback_years']
-        if not all(body.get(f) for f in required_fields):
-            return error_response('Missing required fields', 400)
-        
-        cur.execute("""
-            INSERT INTO investment_objects 
-            (broker_id, title, city, address, property_type, area, price, yield_percent, 
-             payback_years, description, images, videos, documents, status)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-            RETURNING id, broker_id, title, city, address, property_type, area, price, 
-                      yield_percent, payback_years, description, images, videos, documents, status, created_at
-        """, (
-            body.get('broker_id'), body['title'], body['city'], body['address'],
-            body['property_type'], body['area'], body['price'], body['yield_percent'],
-            body['payback_years'], body.get('description', ''), body.get('images', []),
-            body.get('videos', []), body.get('documents', []), body.get('status', 'available')
-        ))
-        
-        row = cur.fetchone()
-        conn.commit()
-        return success_response(format_object(row), 201)
-    
-    elif method == 'PUT':
-        body = json.loads(event.get('body', '{}'))
-        object_id = body.get('id')
-        
-        if not object_id:
-            return error_response('Object ID is required', 400)
-        
-        updates = []
-        params = []
-        
-        user_id = event.get('headers', {}).get('x-user-id')
-        
-        if user_id:
-            cur.execute("SELECT is_admin, role, id FROM users WHERE id = %s", (int(user_id),))
-            user_row = cur.fetchone()
-            if user_row:
-                is_admin, user_role, uid = user_row[0], user_row[1], user_row[2]
-                
-                cur.execute("SELECT broker_id FROM investment_objects WHERE id = %s", (int(object_id),))
-                obj_row = cur.fetchone()
-                
-                if obj_row and obj_row[0] != uid and not is_admin:
-                    return error_response('Access denied: only object owner or admin can edit', 403)
-        
-        for field in ['status', 'price', 'yield_percent', 'description', 'images', 'videos', 'documents']:
-            if field in body:
-                updates.append(f"{field} = %s")
-                params.append(body[field])
-        
-        if not updates:
-            return error_response('No fields to update', 400)
-        
-        updates.append("updated_at = CURRENT_TIMESTAMP")
-        params.append(int(object_id))
-        
-        query = f"""
-            UPDATE investment_objects SET {', '.join(updates)}
-            WHERE id = %s
-            RETURNING id, broker_id, title, city, address, property_type, area, price, 
-                      yield_percent, payback_years, description, images, videos, documents, status, created_at
-        """
-        
-        cur.execute(query, params)
-        row = cur.fetchone()
-        conn.commit()
-        
-        if row:
-            return success_response(format_object(row))
-        return error_response('Object not found', 404)
-    
-    elif method == 'DELETE':
-        params = event.get('queryStringParameters') or {}
-        object_id = params.get('id')
-        
-        if not object_id:
-            return error_response('Object ID is required', 400)
-        
-        user_id = event.get('headers', {}).get('x-user-id')
-        
-        if not user_id:
-            return error_response('User authentication required', 401)
-        
-        cur.execute("SELECT is_admin, role FROM users WHERE id = %s", (int(user_id),))
-        user_row = cur.fetchone()
-        
-        if not user_row:
-            return error_response('User not found', 404)
-        
-        is_admin, user_role = user_row[0], user_row[1]
-        
-        cur.execute("SELECT broker_id FROM investment_objects WHERE id = %s", (int(object_id),))
-        obj_row = cur.fetchone()
-        
-        if not obj_row:
-            return error_response('Object not found', 404)
-        
-        if obj_row[0] != int(user_id) and not is_admin:
-            return error_response('Access denied: only object owner or admin can delete', 403)
-        
-        cur.execute("DELETE FROM investment_objects WHERE id = %s", (int(object_id),))
-        conn.commit()
-        
-        return success_response({'message': 'Object deleted successfully'})
-    
     return error_response('Method not allowed', 405)
 
 
-def handle_favorites(cur, conn, method: str, event: Dict[str, Any]) -> Dict[str, Any]:
+def handle_favorites(cur, method: str, event: Dict[str, Any]) -> Dict[str, Any]:
     if method == 'GET':
         params = event.get('queryStringParameters') or {}
-        user_id = params.get('user_id')
+        user_id = params.get('userId')
         
         if not user_id:
-            return error_response('user_id is required', 400)
+            return error_response('User ID required', 400)
         
-        cur.execute("""
+        query = f"""
             SELECT f.id, f.user_id, f.object_id, f.created_at,
-                   o.title, o.city, o.price, o.yield_percent, o.images
+                   o.id, o.broker_id, o.title, o.city, o.address, o.property_type, o.area, o.price, 
+                   o.yield_percent, o.description, o.images, o.status, o.created_at
             FROM favorites f
             JOIN investment_objects o ON f.object_id = o.id
-            WHERE f.user_id = %s
+            WHERE f.user_id = {escape_sql(int(user_id))}
             ORDER BY f.created_at DESC
-        """, (int(user_id),))
-        
+        """
+        cur.execute(query)
         rows = cur.fetchall()
-        favorites = [{
-            'id': r[0], 'user_id': r[1], 'object_id': r[2],
-            'created_at': r[3].isoformat() if r[3] else None,
-            'object': {
-                'title': r[4], 'city': r[5], 'price': float(r[6]) if r[6] else 0,
-                'yield_percent': float(r[7]) if r[7] else 0, 'images': r[8] or []
-            }
-        } for r in rows]
+        
+        favorites = []
+        for r in rows:
+            favorites.append({
+                'id': r[0],
+                'userId': r[1],
+                'objectId': r[2],
+                'createdAt': r[3].isoformat() if r[3] else None,
+                'object': {
+                    'id': r[4], 'brokerId': r[5], 'title': r[6], 'city': r[7],
+                    'address': r[8], 'propertyType': r[9], 'area': r[10], 'price': r[11],
+                    'yieldPercent': r[12], 'description': r[13], 'images': r[14],
+                    'status': r[15], 'createdAt': r[16].isoformat() if r[16] else None
+                }
+            })
         
         return success_response(favorites)
     
     elif method == 'POST':
         body = json.loads(event.get('body', '{}'))
-        user_id = body.get('user_id')
-        object_id = body.get('object_id')
+        user_id = body.get('userId')
+        object_id = body.get('objectId')
         
         if not user_id or not object_id:
-            return error_response('user_id and object_id are required', 400)
+            return error_response('User ID and Object ID required', 400)
         
-        cur.execute(
-            "SELECT id FROM favorites WHERE user_id = %s AND object_id = %s",
-            (int(user_id), int(object_id))
-        )
+        query = f"SELECT id FROM favorites WHERE user_id = {escape_sql(int(user_id))} AND object_id = {escape_sql(int(object_id))}"
+        cur.execute(query)
         existing = cur.fetchone()
         
         if existing:
-            return success_response({'message': 'Already in favorites', 'id': existing[0]})
+            return success_response({'id': existing[0], 'message': 'Already in favorites'})
         
-        cur.execute(
-            "INSERT INTO favorites (user_id, object_id) VALUES (%s, %s) RETURNING id, user_id, object_id, created_at",
-            (int(user_id), int(object_id))
-        )
+        query = f"INSERT INTO favorites (user_id, object_id) VALUES ({escape_sql(int(user_id))}, {escape_sql(int(object_id))}) RETURNING id, user_id, object_id, created_at"
+        cur.execute(query)
         row = cur.fetchone()
         
-        cur.execute("""
-            SELECT o.broker_id, o.title, u.name as investor_name
-            FROM investment_objects o
-            JOIN users u ON u.id = %s
-            WHERE o.id = %s AND o.broker_id IS NOT NULL
-        """, (int(user_id), int(object_id)))
-        
-        notify_data = cur.fetchone()
-        if notify_data and notify_data[0]:
-            broker_id, object_title, investor_name = notify_data
-            
-            cur.execute("""
-                INSERT INTO notifications (user_id, type, title, message, object_id)
-                VALUES (%s, %s, %s, %s, %s)
-            """, (
-                broker_id,
-                'favorite_added',
-                'Новое избранное',
-                f'{investor_name} добавил объект "{object_title}" в избранное',
-                int(object_id)
-            ))
-        
-        conn.commit()
-        
         return success_response({
-            'id': row[0], 'user_id': row[1], 'object_id': row[2],
-            'created_at': row[3].isoformat() if row[3] else None
+            'id': row[0], 'userId': row[1], 'objectId': row[2],
+            'createdAt': row[3].isoformat() if row[3] else None
         }, 201)
     
     elif method == 'DELETE':
-        params = event.get('queryStringParameters') or {}
-        user_id = params.get('user_id')
-        object_id = params.get('object_id')
-        
-        if not user_id or not object_id:
-            return error_response('user_id and object_id are required', 400)
-        
-        cur.execute(
-            "SELECT id FROM favorites WHERE user_id = %s AND object_id = %s",
-            (int(user_id), int(object_id))
-        )
-        row = cur.fetchone()
-        
-        if not row:
-            return error_response('Favorite not found', 404)
-        
-        return success_response({'message': 'Favorite removed', 'id': row[0]})
-    
-    return error_response('Method not allowed', 405)
-
-
-def handle_notifications(cur, conn, method: str, event: Dict[str, Any]) -> Dict[str, Any]:
-    if method == 'GET':
-        params = event.get('queryStringParameters') or {}
-        user_id = params.get('user_id')
-        
-        if not user_id:
-            return error_response('user_id is required', 400)
-        
-        cur.execute("""
-            SELECT id, user_id, type, title, message, object_id, is_read, created_at
-            FROM notifications
-            WHERE user_id = %s
-            ORDER BY created_at DESC
-            LIMIT 50
-        """, (int(user_id),))
-        
-        rows = cur.fetchall()
-        notifications = [{
-            'id': r[0], 'user_id': r[1], 'type': r[2], 'title': r[3],
-            'message': r[4], 'object_id': r[5], 'is_read': r[6],
-            'created_at': r[7].isoformat() if r[7] else None
-        } for r in rows]
-        
-        return success_response(notifications)
-    
-    elif method == 'PUT':
         body = json.loads(event.get('body', '{}'))
-        notification_id = body.get('id')
+        favorite_id = body.get('id')
         
-        if not notification_id:
-            return error_response('Notification ID is required', 400)
+        if not favorite_id:
+            return error_response('Favorite ID required', 400)
         
-        cur.execute("""
-            UPDATE notifications SET is_read = TRUE
-            WHERE id = %s
-            RETURNING id, user_id, type, title, message, object_id, is_read, created_at
-        """, (int(notification_id),))
+        query = f"DELETE FROM favorites WHERE id = {escape_sql(int(favorite_id))}"
+        cur.execute(query)
         
-        row = cur.fetchone()
-        conn.commit()
-        
-        if row:
-            return success_response({
-                'id': row[0], 'user_id': row[1], 'type': row[2], 'title': row[3],
-                'message': row[4], 'object_id': row[5], 'is_read': row[6],
-                'created_at': row[7].isoformat() if row[7] else None
-            })
-        return error_response('Notification not found', 404)
+        return success_response({'message': 'Favorite removed'})
     
     return error_response('Method not allowed', 405)
-
-
-def format_object(row) -> Dict[str, Any]:
-    return {
-        'id': row[0], 'broker_id': row[1], 'title': row[2], 'city': row[3],
-        'address': row[4], 'property_type': row[5],
-        'area': float(row[6]) if row[6] else 0,
-        'price': float(row[7]) if row[7] else 0,
-        'yield_percent': float(row[8]) if row[8] else 0,
-        'payback_years': float(row[9]) if row[9] else 0,
-        'description': row[10], 'images': row[11] or [],
-        'videos': row[12] or [], 'documents': row[13] or [],
-        'status': row[14], 'created_at': row[15].isoformat() if row[15] else None
-    }
 
 
 def format_object_with_broker(row) -> Dict[str, Any]:
-    obj = {
-        'id': row[0], 'broker_id': row[1], 'title': row[2], 'city': row[3],
-        'address': row[4], 'property_type': row[5],
-        'area': float(row[6]) if row[6] else 0,
-        'price': float(row[7]) if row[7] else 0,
-        'yield_percent': float(row[8]) if row[8] else 0,
-        'payback_years': float(row[9]) if row[9] else 0,
-        'description': row[10], 'images': row[11] or [],
-        'videos': row[12] or [], 'documents': row[13] or [],
-        'status': row[14], 'created_at': row[15].isoformat() if row[15] else None
+    return {
+        'id': row[0], 'brokerId': row[1], 'title': row[2], 'city': row[3],
+        'address': row[4], 'propertyType': row[5], 'area': row[6], 'price': row[7],
+        'yieldPercent': row[8], 'description': row[9], 'images': row[10],
+        'status': row[11], 'createdAt': row[12].isoformat() if row[12] else None,
+        'broker': {'id': row[13], 'name': row[14], 'email': row[15]} if row[13] else None
     }
-    
-    if row[16] is not None:
-        obj['broker'] = {
-            'id': row[16],
-            'name': row[17],
-            'email': row[18],
-            'city': row[19],
-            'club': row[20],
-            'training_stream': row[21],
-            'country': row[22],
-            'surname': row[23],
-            'first_name': row[24]
-        }
-    
-    return obj
-
-
-def build_object_filters(params: Dict[str, str]) -> Dict[str, Any]:
-    query = ""
-    query_params: List[Any] = []
-    
-    filters = {
-        'city': 'o.city = %s',
-        'property_type': 'o.property_type = %s',
-        'status': 'o.status = %s'
-    }
-    
-    for key, condition in filters.items():
-        if key in params:
-            query += f" AND {condition}"
-            query_params.append(params[key])
-    
-    if 'min_price' in params:
-        query += " AND o.price >= %s"
-        query_params.append(float(params['min_price']))
-    
-    if 'max_price' in params:
-        query += " AND o.price <= %s"
-        query_params.append(float(params['max_price']))
-    
-    if 'broker_city' in params:
-        query += " AND u.city = %s"
-        query_params.append(params['broker_city'])
-    
-    if 'broker_club' in params:
-        query += " AND u.club = %s"
-        query_params.append(params['broker_club'])
-    
-    if 'broker_stream' in params:
-        query += " AND u.training_stream = %s"
-        query_params.append(params['broker_stream'])
-    
-    if 'min_yield' in params:
-        query += " AND yield_percent >= %s"
-        query_params.append(float(params['min_yield']))
-    
-    if 'max_yield' in params:
-        query += " AND yield_percent <= %s"
-        query_params.append(float(params['max_yield']))
-    
-    return {'query': query, 'params': query_params}
 
 
 def success_response(data: Any, status: int = 200) -> Dict[str, Any]:
     return {
         'statusCode': status,
-        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-        'body': json.dumps(data),
+        'headers': {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*'
+        },
+        'body': json.dumps(data, default=str),
         'isBase64Encoded': False
     }
 
@@ -581,7 +264,10 @@ def success_response(data: Any, status: int = 200) -> Dict[str, Any]:
 def error_response(message: str, status: int = 400) -> Dict[str, Any]:
     return {
         'statusCode': status,
-        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+        'headers': {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*'
+        },
         'body': json.dumps({'error': message}),
         'isBase64Encoded': False
     }

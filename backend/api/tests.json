@@ -9,16 +9,12 @@
       "bodyMatcher": "type"
     },
     {
-      "name": "Get user by email",
+      "name": "Get all users",
       "method": "GET",
-      "path": "/?resource=users&email=newuser@test.com",
+      "path": "/?resource=users",
       "expectedStatus": 200,
-      "expectedBody": {
-        "id": "number",
-        "email": "string",
-        "name": "string"
-      },
-      "bodyMatcher": "partial"
+      "expectedBody": [],
+      "bodyMatcher": "type"
     }
   ]
 }

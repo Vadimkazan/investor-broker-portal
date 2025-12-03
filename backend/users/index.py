@@ -1,73 +1,27 @@
-'''
-Business: Управление пользователями (создание, просмотр, редактирование, удаление брокеров и инвесторов)
-Args: event - dict с httpMethod, body, queryStringParameters
-      context - объект с атрибутами: request_id, function_name
-Returns: HTTP response dict с данными пользователей или статусом операции
-'''
-
 import json
 import os
 import psycopg2
 from typing import Dict, Any, List, Optional
 
-def get_db_connection():
-    dsn = os.environ.get('DATABASE_URL')
-    return psycopg2.connect(dsn)
-
-def get_all_users() -> List[Dict[str, Any]]:
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("SELECT id, email, name, role FROM users ORDER BY id")
-    rows = cur.fetchall()
-    cur.close()
-    conn.close()
-    
-    return [
-        {'id': row[0], 'email': row[1], 'name': row[2], 'role': row[3]}
-        for row in rows
-    ]
-
-def create_user(email: str, name: str, role: str) -> Dict[str, Any]:
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute(
-        "INSERT INTO users (email, name, role) VALUES (%s, %s, %s) ON CONFLICT (email) DO UPDATE SET name = EXCLUDED.name, role = EXCLUDED.role RETURNING id, email, name, role",
-        (email, name, role)
-    )
-    row = cur.fetchone()
-    conn.commit()
-    cur.close()
-    conn.close()
-    
-    return {'id': row[0], 'email': row[1], 'name': row[2], 'role': row[3]}
-
-def update_user(user_id: int, email: str, name: str, role: str) -> Optional[Dict[str, Any]]:
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute(
-        "UPDATE users SET email = %s, name = %s, role = %s WHERE id = %s RETURNING id, email, name, role",
-        (email, name, role, user_id)
-    )
-    row = cur.fetchone()
-    conn.commit()
-    cur.close()
-    conn.close()
-    
-    if row:
-        return {'id': row[0], 'email': row[1], 'name': row[2], 'role': row[3]}
-    return None
-
-def delete_user(user_id: int) -> bool:
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("DELETE FROM users WHERE id = %s", (user_id,))
-    deleted = cur.rowcount > 0
-    conn.commit()
-    cur.close()
-    conn.close()
-    return deleted
+def escape_sql(value):
+    '''Escape values for Simple Query Protocol'''
+    if value is None:
+        return 'NULL'
+    if isinstance(value, bool):
+        return 'true' if value else 'false'
+    if isinstance(value, (int, float)):
+        return str(value)
+    if isinstance(value, str):
+        return "'" + value.replace("'", "''").replace('\\', '\\\\') + "'"
+    return "'" + str(value).replace("'", "''").replace('\\', '\\\\') + "'"
 
 def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
+    '''
+    Business: Управление пользователями (создание, просмотр, редактирование, удаление брокеров и инвесторов)
+    Args: event - dict с httpMethod, body, queryStringParameters
+          context - объект с атрибутами: request_id, function_name
+    Returns: HTTP response dict с данными пользователей или статусом операции
+    '''
     method: str = event.get('httpMethod', 'GET')
     
     if method == 'OPTIONS':
@@ -79,134 +33,135 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                 'Access-Control-Allow-Headers': 'Content-Type',
                 'Access-Control-Max-Age': '86400'
             },
-            'body': ''
+            'body': '',
+            'isBase64Encoded': False
         }
     
-    if method == 'GET':
-        users = get_all_users()
+    dsn = os.environ.get('DATABASE_URL')
+    conn = psycopg2.connect(dsn)
+    conn.autocommit = True
+    
+    try:
+        cur = conn.cursor()
+        
+        if method == 'GET':
+            cur.execute("SELECT id, email, name, role FROM users ORDER BY id")
+            rows = cur.fetchall()
+            users = [{'id': row[0], 'email': row[1], 'name': row[2], 'role': row[3]} for row in rows]
+            return {
+                'statusCode': 200,
+                'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                'isBase64Encoded': False,
+                'body': json.dumps({'users': users})
+            }
+        
+        if method == 'POST':
+            body_data = json.loads(event.get('body', '{}'))
+            email = body_data.get('email')
+            name = body_data.get('name')
+            role = body_data.get('role', 'investor')
+            
+            if not email or not name:
+                return {
+                    'statusCode': 400,
+                    'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                    'isBase64Encoded': False,
+                    'body': json.dumps({'error': 'Email и имя обязательны'})
+                }
+            
+            query = f"""
+                INSERT INTO users (email, name, role) 
+                VALUES ({escape_sql(email)}, {escape_sql(name)}, {escape_sql(role)}) 
+                ON CONFLICT (email) 
+                DO UPDATE SET name = EXCLUDED.name, role = EXCLUDED.role 
+                RETURNING id, email, name, role
+            """
+            cur.execute(query)
+            row = cur.fetchone()
+            
+            return {
+                'statusCode': 201,
+                'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                'isBase64Encoded': False,
+                'body': json.dumps({'user': {'id': row[0], 'email': row[1], 'name': row[2], 'role': row[3]}})
+            }
+        
+        if method == 'PUT':
+            body_data = json.loads(event.get('body', '{}'))
+            user_id = body_data.get('id')
+            email = body_data.get('email')
+            name = body_data.get('name')
+            role = body_data.get('role')
+            
+            if not user_id or not email or not name or not role:
+                return {
+                    'statusCode': 400,
+                    'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                    'isBase64Encoded': False,
+                    'body': json.dumps({'error': 'Все поля обязательны'})
+                }
+            
+            query = f"""
+                UPDATE users 
+                SET email = {escape_sql(email)}, name = {escape_sql(name)}, role = {escape_sql(role)} 
+                WHERE id = {escape_sql(int(user_id))} 
+                RETURNING id, email, name, role
+            """
+            cur.execute(query)
+            row = cur.fetchone()
+            
+            if not row:
+                return {
+                    'statusCode': 404,
+                    'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                    'isBase64Encoded': False,
+                    'body': json.dumps({'error': 'Пользователь не найден'})
+                }
+            
+            return {
+                'statusCode': 200,
+                'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                'isBase64Encoded': False,
+                'body': json.dumps({'user': {'id': row[0], 'email': row[1], 'name': row[2], 'role': row[3]}})
+            }
+        
+        if method == 'DELETE':
+            params = event.get('queryStringParameters', {})
+            user_id = params.get('id')
+            
+            if not user_id:
+                return {
+                    'statusCode': 400,
+                    'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                    'isBase64Encoded': False,
+                    'body': json.dumps({'error': 'ID пользователя обязателен'})
+                }
+            
+            query = f"DELETE FROM users WHERE id = {escape_sql(int(user_id))}"
+            cur.execute(query)
+            deleted = cur.rowcount > 0
+            
+            if not deleted:
+                return {
+                    'statusCode': 404,
+                    'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                    'isBase64Encoded': False,
+                    'body': json.dumps({'error': 'Пользователь не найден'})
+                }
+            
+            return {
+                'statusCode': 200,
+                'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                'isBase64Encoded': False,
+                'body': json.dumps({'success': True})
+            }
+        
         return {
-            'statusCode': 200,
-            'headers': {
-                'Content-Type': 'application/json',
-                'Access-Control-Allow-Origin': '*'
-            },
+            'statusCode': 405,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
             'isBase64Encoded': False,
-            'body': json.dumps({'users': users})
+            'body': json.dumps({'error': 'Метод не поддерживается'})
         }
     
-    if method == 'POST':
-        body_data = json.loads(event.get('body', '{}'))
-        email = body_data.get('email')
-        name = body_data.get('name')
-        role = body_data.get('role', 'investor')
-        
-        if not email or not name:
-            return {
-                'statusCode': 400,
-                'headers': {
-                    'Content-Type': 'application/json',
-                    'Access-Control-Allow-Origin': '*'
-                },
-                'isBase64Encoded': False,
-                'body': json.dumps({'error': 'Email и имя обязательны'})
-            }
-        
-        user = create_user(email, name, role)
-        return {
-            'statusCode': 201,
-            'headers': {
-                'Content-Type': 'application/json',
-                'Access-Control-Allow-Origin': '*'
-            },
-            'isBase64Encoded': False,
-            'body': json.dumps({'user': user})
-        }
-    
-    if method == 'PUT':
-        body_data = json.loads(event.get('body', '{}'))
-        user_id = body_data.get('id')
-        email = body_data.get('email')
-        name = body_data.get('name')
-        role = body_data.get('role')
-        
-        if not user_id or not email or not name or not role:
-            return {
-                'statusCode': 400,
-                'headers': {
-                    'Content-Type': 'application/json',
-                    'Access-Control-Allow-Origin': '*'
-                },
-                'isBase64Encoded': False,
-                'body': json.dumps({'error': 'Все поля обязательны'})
-            }
-        
-        updated_user = update_user(int(user_id), email, name, role)
-        
-        if not updated_user:
-            return {
-                'statusCode': 404,
-                'headers': {
-                    'Content-Type': 'application/json',
-                    'Access-Control-Allow-Origin': '*'
-                },
-                'isBase64Encoded': False,
-                'body': json.dumps({'error': 'Пользователь не найден'})
-            }
-        
-        return {
-            'statusCode': 200,
-            'headers': {
-                'Content-Type': 'application/json',
-                'Access-Control-Allow-Origin': '*'
-            },
-            'isBase64Encoded': False,
-            'body': json.dumps({'user': updated_user})
-        }
-    
-    if method == 'DELETE':
-        params = event.get('queryStringParameters', {})
-        user_id = params.get('id')
-        
-        if not user_id:
-            return {
-                'statusCode': 400,
-                'headers': {
-                    'Content-Type': 'application/json',
-                    'Access-Control-Allow-Origin': '*'
-                },
-                'isBase64Encoded': False,
-                'body': json.dumps({'error': 'ID пользователя обязателен'})
-            }
-        
-        deleted = delete_user(int(user_id))
-        
-        if not deleted:
-            return {
-                'statusCode': 404,
-                'headers': {
-                    'Content-Type': 'application/json',
-                    'Access-Control-Allow-Origin': '*'
-                },
-                'isBase64Encoded': False,
-                'body': json.dumps({'error': 'Пользователь не найден'})
-            }
-        
-        return {
-            'statusCode': 200,
-            'headers': {
-                'Content-Type': 'application/json',
-                'Access-Control-Allow-Origin': '*'
-            },
-            'isBase64Encoded': False,
-            'body': json.dumps({'success': True})
-        }
-    
-    return {
-        'statusCode': 405,
-        'headers': {
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*'
-        },
-        'isBase64Encoded': False,
-        'body': json.dumps({'error': 'Метод не поддерживается'})
-    }
+    finally:
+        conn.close()

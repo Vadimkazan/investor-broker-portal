@@ -2,7 +2,20 @@ import json
 import os
 import psycopg2
 import urllib.request
+import urllib.parse
 from typing import Dict, Any, List
+
+def escape_sql(value):
+    '''Escape values for Simple Query Protocol'''
+    if value is None:
+        return 'NULL'
+    if isinstance(value, bool):
+        return 'true' if value else 'false'
+    if isinstance(value, (int, float)):
+        return str(value)
+    if isinstance(value, str):
+        return "'" + value.replace("'", "''").replace('\\', '\\\\') + "'"
+    return "'" + str(value).replace("'", "''").replace('\\', '\\\\') + "'"
 
 def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     '''
@@ -32,6 +45,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     try:
         dsn = os.environ.get('DATABASE_URL')
         conn = psycopg2.connect(dsn)
+        conn.autocommit = True
         cur = conn.cursor()
         
         user_id = event.get('headers', {}).get('x-user-id')
@@ -83,14 +97,9 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                     obj = map_row_to_object(row, broker_id)
                     if obj:
                         try:
-                            title_safe = obj['title'].replace("'", "''")
-                            strategy_safe = obj['strategy'].replace("'", "''")
-                            deal_cycle_safe = obj['deal_cycle'].replace("'", "''")
-                            presentation_safe = obj['presentation_link'].replace("'", "''")
-                            decision_safe = obj['investment_decision'].replace("'", "''")
-                            images_json = json.dumps(obj['images']).replace("'", "''")
+                            images_json = escape_sql(json.dumps(obj['images']))
                             
-                            cur.execute(f"""
+                            query = f"""
                                 INSERT INTO investment_objects 
                                 (broker_id, title, price, yield_percent, min_investment, 
                                  monthly_payment, strategy, deal_cycle, presentation_link, 
@@ -98,27 +107,25 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                                  property_type, area, description)
                                 VALUES (
                                     {obj['broker_id']}, 
-                                    '{title_safe}',
+                                    {escape_sql(obj['title'])},
                                     {obj['price']}, 
                                     {obj['yield_percent']}, 
                                     {obj['min_investment']},
                                     {obj['monthly_payment']},
-                                    '{strategy_safe}',
-                                    '{deal_cycle_safe}',
-                                    '{presentation_safe}',
-                                    '{decision_safe}',
-                                    '{images_json}', 
-                                    '{obj['status']}',
-                                    'Москва',
-                                    '',
-                                    'flats',
-                                    0,
+                                    {escape_sql(obj['strategy'])},
+                                    {escape_sql(obj['deal_cycle'])},
+                                    {escape_sql(obj['presentation_link'])},
+                                    {escape_sql(obj['investment_decision'])},
+                                    {images_json}, 
+                                    {escape_sql(obj['status'])},
+                                    'Москва', '', 'flats', 0,
                                     'Описание будет добавлено брокером'
                                 )
-                            """)
+                            """
+                            cur.execute(query)
                             imported_count += 1
                         except Exception as e:
-                            print(f"Error importing object for {broker_name}: {e}, row: {row}")
+                            print(f"Error importing object for {broker_name}: {e}")
                 
                 total_imported += imported_count
                 broker_results.append({
@@ -135,8 +142,6 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                     'message': str(e)
                 })
         
-        conn.commit()
-        
         return success_response({
             'message': 'Import completed',
             'total_deleted': total_deleted,
@@ -145,8 +150,6 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         })
     
     except Exception as e:
-        if conn:
-            conn.rollback()
         return error_response(f'Import failed: {str(e)}', 500)
     
     finally:
@@ -234,18 +237,18 @@ def success_response(data: Any, status: int = 200) -> Dict[str, Any]:
             'Content-Type': 'application/json',
             'Access-Control-Allow-Origin': '*'
         },
-        'body': json.dumps(data, ensure_ascii=False),
+        'body': json.dumps(data, default=str),
         'isBase64Encoded': False
     }
 
 
-def error_response(message: str, status: int) -> Dict[str, Any]:
+def error_response(message: str, status: int = 400) -> Dict[str, Any]:
     return {
         'statusCode': status,
         'headers': {
             'Content-Type': 'application/json',
             'Access-Control-Allow-Origin': '*'
         },
-        'body': json.dumps({'error': message}, ensure_ascii=False),
+        'body': json.dumps({'error': message}),
         'isBase64Encoded': False
     }
