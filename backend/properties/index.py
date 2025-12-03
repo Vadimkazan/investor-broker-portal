@@ -5,6 +5,18 @@ from typing import Dict, Any
 import psycopg2
 from psycopg2.extras import RealDictCursor
 
+def escape_sql(value):
+    '''Escape values for Simple Query Protocol'''
+    if value is None:
+        return 'NULL'
+    if isinstance(value, bool):
+        return 'true' if value else 'false'
+    if isinstance(value, (int, float)):
+        return str(value)
+    if isinstance(value, str):
+        return "'" + value.replace("'", "''") + "'"
+    return "'" + str(value).replace("'", "''") + "'"
+
 def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     '''
     Business: API для управления объектами недвижимости
@@ -37,7 +49,8 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
                 if property_id:
-                    cur.execute("SELECT * FROM properties WHERE id = %s", (property_id,))
+                    query = f"SELECT * FROM properties WHERE id = {escape_sql(property_id)}"
+                    cur.execute(query)
                     prop = cur.fetchone()
                     if not prop:
                         return {
@@ -53,7 +66,8 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                         'isBase64Encoded': False
                     }
                 elif broker_id:
-                    cur.execute("SELECT * FROM properties WHERE broker_id = %s ORDER BY created_at DESC", (broker_id,))
+                    query = f"SELECT * FROM properties WHERE broker_id = {escape_sql(broker_id)} ORDER BY created_at DESC"
+                    cur.execute(query)
                     props = cur.fetchall()
                     return {
                         'statusCode': 200,
@@ -75,59 +89,44 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             body_data = json.loads(event.get('body', '{}'))
             property_id = str(uuid.uuid4())
             
+            strategies_json = escape_sql(json.dumps(body_data['investment']['strategy']))
+            images_json = escape_sql(json.dumps(body_data.get('media', {}).get('images', [])))
+            
+            query = f"""
+                INSERT INTO properties (
+                    id, broker_id, title, description, property_type, status,
+                    location_city, location_district, location_address, location_metro, location_metro_distance,
+                    pricing_total_price, pricing_price_per_meter, pricing_min_investment, pricing_currency,
+                    financing_method, financing_mortgage_rate, financing_down_payment,
+                    investment_strategies, investment_expected_return, investment_term, 
+                    investment_risk_level, investment_target_investment,
+                    details_area, details_rooms, details_floor, details_total_floors,
+                    media_images
+                ) VALUES (
+                    {escape_sql(property_id)}, {escape_sql(body_data['brokerId'])}, 
+                    {escape_sql(body_data['title'])}, {escape_sql(body_data['description'])}, 
+                    {escape_sql(body_data['propertyType'])}, {escape_sql(body_data.get('status', 'draft'))},
+                    {escape_sql(body_data['location']['city'])}, {escape_sql(body_data['location'].get('district'))}, 
+                    {escape_sql(body_data['location']['address'])}, {escape_sql(body_data['location'].get('metro'))}, 
+                    {escape_sql(body_data['location'].get('metroDistance'))},
+                    {escape_sql(body_data['pricing']['totalPrice'])}, {escape_sql(body_data['pricing'].get('pricePerMeter'))}, 
+                    {escape_sql(body_data['pricing']['minInvestment'])}, {escape_sql(body_data['pricing'].get('currency', 'RUB'))},
+                    {escape_sql(body_data['financing']['method'])}, {escape_sql(body_data['financing'].get('mortgageRate'))}, 
+                    {escape_sql(body_data['financing'].get('downPayment'))},
+                    {strategies_json}, {escape_sql(body_data['investment']['expectedReturn'])}, 
+                    {escape_sql(body_data['investment']['term'])}, {escape_sql(body_data['investment']['riskLevel'])}, 
+                    {escape_sql(body_data['investment']['targetInvestment'])},
+                    {escape_sql(body_data['details'].get('area'))}, {escape_sql(body_data['details'].get('rooms'))}, 
+                    {escape_sql(body_data['details'].get('floor'))}, {escape_sql(body_data['details'].get('totalFloors'))},
+                    {images_json}
+                )
+            """
+            
             with conn.cursor() as cur:
-                cur.execute("""
-                    INSERT INTO properties (
-                        id, broker_id, title, description, property_type, status,
-                        location_city, location_district, location_address, location_metro, location_metro_distance,
-                        pricing_total_price, pricing_price_per_meter, pricing_min_investment, pricing_currency,
-                        financing_method, financing_mortgage_rate, financing_down_payment,
-                        investment_strategies, investment_expected_return, investment_term, 
-                        investment_risk_level, investment_target_investment,
-                        details_area, details_rooms, details_floor, details_total_floors,
-                        media_images
-                    ) VALUES (
-                        %s, %s, %s, %s, %s, %s,
-                        %s, %s, %s, %s, %s,
-                        %s, %s, %s, %s,
-                        %s, %s, %s,
-                        %s, %s, %s, %s, %s,
-                        %s, %s, %s, %s,
-                        %s
-                    )
-                """, (
-                    property_id,
-                    body_data['brokerId'],
-                    body_data['title'],
-                    body_data['description'],
-                    body_data['propertyType'],
-                    body_data.get('status', 'draft'),
-                    body_data['location']['city'],
-                    body_data['location'].get('district'),
-                    body_data['location']['address'],
-                    body_data['location'].get('metro'),
-                    body_data['location'].get('metroDistance'),
-                    body_data['pricing']['totalPrice'],
-                    body_data['pricing'].get('pricePerMeter'),
-                    body_data['pricing']['minInvestment'],
-                    body_data['pricing'].get('currency', 'RUB'),
-                    body_data['financing']['method'],
-                    body_data['financing'].get('mortgageRate'),
-                    body_data['financing'].get('downPayment'),
-                    json.dumps(body_data['investment']['strategy']),
-                    body_data['investment']['expectedReturn'],
-                    body_data['investment']['term'],
-                    body_data['investment']['riskLevel'],
-                    body_data['investment']['targetInvestment'],
-                    body_data['details'].get('area'),
-                    body_data['details'].get('rooms'),
-                    body_data['details'].get('floor'),
-                    body_data['details'].get('totalFloors'),
-                    json.dumps(body_data.get('media', {}).get('images', []))
-                ))
+                cur.execute(query)
             
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
-                cur.execute("SELECT * FROM properties WHERE id = %s", (property_id,))
+                cur.execute(f"SELECT * FROM properties WHERE id = {escape_sql(property_id)}")
                 prop = cur.fetchone()
             
             return {
@@ -149,24 +148,22 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                     'isBase64Encoded': False
                 }
             
+            query = f"""
+                UPDATE properties 
+                SET title = {escape_sql(body_data['title'])}, 
+                    description = {escape_sql(body_data['description'])}, 
+                    status = {escape_sql(body_data['status'])},
+                    pricing_total_price = {escape_sql(body_data['pricing']['totalPrice'])}, 
+                    pricing_min_investment = {escape_sql(body_data['pricing']['minInvestment'])},
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = {escape_sql(property_id)}
+            """
+            
             with conn.cursor() as cur:
-                cur.execute("""
-                    UPDATE properties 
-                    SET title = %s, description = %s, status = %s,
-                        pricing_total_price = %s, pricing_min_investment = %s,
-                        updated_at = CURRENT_TIMESTAMP
-                    WHERE id = %s
-                """, (
-                    body_data['title'],
-                    body_data['description'],
-                    body_data['status'],
-                    body_data['pricing']['totalPrice'],
-                    body_data['pricing']['minInvestment'],
-                    property_id
-                ))
+                cur.execute(query)
             
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
-                cur.execute("SELECT * FROM properties WHERE id = %s", (property_id,))
+                cur.execute(f"SELECT * FROM properties WHERE id = {escape_sql(property_id)}")
                 prop = cur.fetchone()
             
             return {
