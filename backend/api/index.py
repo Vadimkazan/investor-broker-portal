@@ -140,7 +140,6 @@ def handle_objects(cur, method: str, event: Dict[str, Any]) -> Dict[str, Any]:
             """
             cur.execute(query)
             row = cur.fetchone()
-            
             if row:
                 return success_response(format_object_with_broker(row))
             return error_response('Object not found', 404)
@@ -152,14 +151,90 @@ def handle_objects(cur, method: str, event: Dict[str, Any]) -> Dict[str, Any]:
                        u.id, u.name, u.email
                 FROM investment_objects o
                 LEFT JOIN users u ON o.broker_id = u.id
-                WHERE o.status = 'available'
                 ORDER BY o.created_at DESC LIMIT 100
             """
             cur.execute(query)
             rows = cur.fetchall()
-            objects = [format_object_with_broker(r) for r in rows]
-            return success_response(objects)
-    
+            return success_response([format_object_with_broker(r) for r in rows])
+
+    elif method == 'POST':
+        body = json.loads(event.get('body', '{}'))
+        images_json = escape_sql(json.dumps(body.get('images', [])))
+        query = f"""
+            INSERT INTO investment_objects (
+                broker_id, title, city, address, property_type, area, price,
+                yield_percent, payback_years, description, images, status
+            ) VALUES (
+                {escape_sql(body.get('broker_id'))},
+                {escape_sql(body.get('title'))},
+                {escape_sql(body.get('city'))},
+                {escape_sql(body.get('address'))},
+                {escape_sql(body.get('property_type', 'flats'))},
+                {escape_sql(body.get('area', 0))},
+                {escape_sql(body.get('price', 0))},
+                {escape_sql(body.get('yield_percent', 0))},
+                {escape_sql(body.get('payback_years', 0))},
+                {escape_sql(body.get('description', ''))},
+                ARRAY(SELECT json_array_elements_text({images_json}::json)),
+                {escape_sql(body.get('status', 'available'))}
+            ) RETURNING id
+        """
+        cur.execute(query)
+        row = cur.fetchone()
+        new_id = row[0]
+
+        cur.execute(f"""
+            SELECT o.id, o.broker_id, o.title, o.city, o.address, o.property_type, o.area, o.price, 
+                   o.yield_percent, o.description, o.images, o.status, o.created_at,
+                   u.id, u.name, u.email
+            FROM investment_objects o
+            LEFT JOIN users u ON o.broker_id = u.id
+            WHERE o.id = {escape_sql(new_id)}
+        """)
+        return success_response(format_object_with_broker(cur.fetchone()), 201)
+
+    elif method == 'PUT':
+        body = json.loads(event.get('body', '{}'))
+        object_id = body.get('id')
+        if not object_id:
+            return error_response('Object ID required', 400)
+
+        images_json = escape_sql(json.dumps(body.get('images', [])))
+        query = f"""
+            UPDATE investment_objects SET
+                title = {escape_sql(body.get('title'))},
+                city = {escape_sql(body.get('city'))},
+                address = {escape_sql(body.get('address'))},
+                property_type = {escape_sql(body.get('property_type'))},
+                area = {escape_sql(body.get('area'))},
+                price = {escape_sql(body.get('price'))},
+                yield_percent = {escape_sql(body.get('yield_percent'))},
+                payback_years = {escape_sql(body.get('payback_years'))},
+                description = {escape_sql(body.get('description'))},
+                images = ARRAY(SELECT json_array_elements_text({images_json}::json)),
+                status = {escape_sql(body.get('status'))}
+            WHERE id = {escape_sql(int(object_id))}
+        """
+        cur.execute(query)
+
+        cur.execute(f"""
+            SELECT o.id, o.broker_id, o.title, o.city, o.address, o.property_type, o.area, o.price, 
+                   o.yield_percent, o.description, o.images, o.status, o.created_at,
+                   u.id, u.name, u.email
+            FROM investment_objects o
+            LEFT JOIN users u ON o.broker_id = u.id
+            WHERE o.id = {escape_sql(int(object_id))}
+        """)
+        return success_response(format_object_with_broker(cur.fetchone()))
+
+    elif method == 'DELETE':
+        params = event.get('queryStringParameters') or {}
+        object_id = params.get('id')
+        if not object_id:
+            return error_response('Object ID required', 400)
+        cur.execute(f"DELETE FROM investment_objects WHERE id = {escape_sql(int(object_id))}")
+        return success_response({'message': 'Deleted'})
+
     return error_response('Method not allowed', 405)
 
 

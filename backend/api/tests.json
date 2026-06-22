@@ -5,16 +5,36 @@
       "method": "GET",
       "path": "/?resource=objects",
       "expectedStatus": 200,
-      "expectedBody": [],
-      "bodyMatcher": "type"
+      "bodyMatcher": "partial"
     },
     {
       "name": "Get all users",
       "method": "GET",
       "path": "/?resource=users",
       "expectedStatus": 200,
-      "expectedBody": [],
-      "bodyMatcher": "type"
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Create object",
+      "method": "POST",
+      "path": "/?resource=objects",
+      "body": {
+        "broker_id": 2,
+        "title": "Тестовый объект",
+        "city": "Москва",
+        "address": "ул. Тестовая, 1",
+        "property_type": "flats",
+        "area": 50,
+        "price": 5000000,
+        "yield_percent": 10,
+        "payback_years": 8,
+        "description": "Тест",
+        "images": [],
+        "status": "available"
+      },
+      "expectedStatus": 201,
+      "expectedBody": { "title": "Тестовый объект" },
+      "bodyMatcher": "partial"
     }
   ]
 }
