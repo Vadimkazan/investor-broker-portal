@@ -5,72 +5,54 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import Icon from '@/components/ui/icon';
 import ImageUploader from '@/components/ui/image-uploader';
-import { InvestmentObject, PropertyType, ObjectStatus } from '@/types/investment-object';
+import { useCreateObject } from '@/hooks/useObjects';
+import { PropertyType, ObjectStatus } from '@/types/investment-object';
 
 interface AddNewObjectDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
+  brokerId: number;
 }
 
-const AddNewObjectDialog = ({ open, onOpenChange, onSuccess }: AddNewObjectDialogProps) => {
-  const [formData, setFormData] = useState({
-    title: '',
-    type: 'apartments' as PropertyType,
-    city: '',
-    address: '',
-    price: '',
-    yield: '',
-    paybackPeriod: '',
-    area: '',
-    status: 'available' as ObjectStatus,
-    description: '',
-    images: ['']
-  });
+const EMPTY_FORM = {
+  title: '',
+  type: 'apartments' as PropertyType,
+  city: '',
+  address: '',
+  price: '',
+  yield: '',
+  paybackPeriod: '',
+  area: '',
+  status: 'available' as ObjectStatus,
+  description: '',
+  images: [] as string[]
+};
 
-  const handleSubmit = (e: React.FormEvent) => {
+const AddNewObjectDialog = ({ open, onOpenChange, onSuccess, brokerId }: AddNewObjectDialogProps) => {
+  const [formData, setFormData] = useState(EMPTY_FORM);
+  const createObject = useCreateObject();
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const savedObjects = localStorage.getItem('investment-objects');
-    const objects: InvestmentObject[] = savedObjects ? JSON.parse(savedObjects) : [];
-    
-    const newObject: InvestmentObject = {
-      id: Math.max(0, ...objects.map(o => o.id)) + 1,
+    await createObject.mutateAsync({
+      broker_id: brokerId,
       title: formData.title,
-      type: formData.type,
+      property_type: formData.type,
       city: formData.city,
       address: formData.address,
       price: parseFloat(formData.price),
-      yield: parseFloat(formData.yield),
-      paybackPeriod: parseFloat(formData.paybackPeriod),
+      yield_percent: parseFloat(formData.yield),
+      payback_years: parseFloat(formData.paybackPeriod),
       area: parseFloat(formData.area),
       status: formData.status,
-      images: formData.images.filter(img => img.trim() !== ''),
+      images: formData.images,
       description: formData.description,
-      brokerId: 1,
-      createdAt: new Date().toISOString(),
-      monthlyIncome: (parseFloat(formData.price) * parseFloat(formData.yield) / 100 / 12)
-    };
-
-    objects.push(newObject);
-    localStorage.setItem('investment-objects', JSON.stringify(objects));
-
-    setFormData({
-      title: '',
-      type: 'apartments',
-      city: '',
-      address: '',
-      price: '',
-      yield: '',
-      paybackPeriod: '',
-      area: '',
-      status: 'available',
-      description: '',
-      images: ['']
     });
 
+    setFormData(EMPTY_FORM);
     onSuccess();
     onOpenChange(false);
   };
@@ -100,9 +82,9 @@ const AddNewObjectDialog = ({ open, onOpenChange, onSuccess }: AddNewObjectDialo
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="type">Тип недвижимости *</Label>
-              <Select 
-                value={formData.type} 
-                onValueChange={(value) => setFormData({ ...formData, type: value as PropertyType })}
+              <Select
+                value={formData.type}
+                onValueChange={(value: PropertyType) => setFormData({ ...formData, type: value })}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -118,8 +100,8 @@ const AddNewObjectDialog = ({ open, onOpenChange, onSuccess }: AddNewObjectDialo
 
             <div className="space-y-2">
               <Label htmlFor="city">Город *</Label>
-              <Select 
-                value={formData.city} 
+              <Select
+                value={formData.city}
                 onValueChange={(value) => setFormData({ ...formData, city: value })}
               >
                 <SelectTrigger>
@@ -203,9 +185,9 @@ const AddNewObjectDialog = ({ open, onOpenChange, onSuccess }: AddNewObjectDialo
 
           <div className="space-y-2">
             <Label htmlFor="status">Статус</Label>
-            <Select 
-              value={formData.status} 
-              onValueChange={(value) => setFormData({ ...formData, status: value as ObjectStatus })}
+            <Select
+              value={formData.status}
+              onValueChange={(value: ObjectStatus) => setFormData({ ...formData, status: value })}
             >
               <SelectTrigger>
                 <SelectValue />
@@ -232,20 +214,23 @@ const AddNewObjectDialog = ({ open, onOpenChange, onSuccess }: AddNewObjectDialo
           <div className="space-y-2">
             <Label>Фотографии объекта</Label>
             <ImageUploader
-              images={formData.images.filter(img => img.trim() !== '')}
+              images={formData.images}
               onChange={(imgs) => setFormData({ ...formData, images: imgs })}
             />
           </div>
 
-          <div className="flex gap-2 pt-4">
-            <Button type="submit" className="flex-1">
-              <Icon name="Plus" size={18} className="mr-2" />
-              Добавить объект
+          <div className="flex gap-3 pt-2">
+            <Button type="submit" disabled={createObject.isPending} className="flex-1">
+              {createObject.isPending ? 'Сохранение...' : 'Добавить объект'}
             </Button>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Отмена
             </Button>
           </div>
+
+          {createObject.isError && (
+            <p className="text-sm text-destructive">Ошибка при сохранении. Попробуйте снова.</p>
+          )}
         </form>
       </DialogContent>
     </Dialog>

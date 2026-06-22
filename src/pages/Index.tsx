@@ -205,7 +205,7 @@ const Index = () => {
           {activeTab === 'dashboard' && user && (
             <>
               {user.role === 'broker' ? (
-                <NewBrokerDashboard userName={user.name} brokerId={`broker-${Date.now()}`} />
+                <NewBrokerDashboard userName={user.name} brokerId={user.id} />
               ) : (
                 <InvestorDashboard userName={user.name} />
               )}
