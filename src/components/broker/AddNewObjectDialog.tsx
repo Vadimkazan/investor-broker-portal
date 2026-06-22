@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import Icon from '@/components/ui/icon';
+import ImageUploader from '@/components/ui/image-uploader';
 import { InvestmentObject, PropertyType, ObjectStatus } from '@/types/investment-object';
 
 interface AddNewObjectDialogProps {
@@ -229,16 +230,11 @@ const AddNewObjectDialog = ({ open, onOpenChange, onSuccess }: AddNewObjectDialo
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="image">URL изображения</Label>
-            <Input
-              id="image"
-              value={formData.images[0]}
-              onChange={(e) => setFormData({ ...formData, images: [e.target.value] })}
-              placeholder="https://example.com/image.jpg"
+            <Label>Фотографии объекта</Label>
+            <ImageUploader
+              images={formData.images.filter(img => img.trim() !== '')}
+              onChange={(imgs) => setFormData({ ...formData, images: imgs })}
             />
-            <p className="text-xs text-muted-foreground">
-              Вставьте ссылку на изображение из Unsplash или другого источника
-            </p>
           </div>
 
           <div className="flex gap-2 pt-4">

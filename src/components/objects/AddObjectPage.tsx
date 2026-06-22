@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import Icon from '@/components/ui/icon';
+import ImageUploader from '@/components/ui/image-uploader';
 
 const AddObjectPage = () => {
   const navigate = useNavigate();
@@ -122,7 +123,7 @@ const AddObjectPage = () => {
 
               <div className="space-y-2">
                 <Label htmlFor="type">Тип недвижимости *</Label>
-                <Select value={formData.type} onValueChange={(value: any) => setFormData(prev => ({ ...prev, type: value }))}>
+                <Select value={formData.type} onValueChange={(value: 'apartments' | 'flats' | 'commercial' | 'country') => setFormData(prev => ({ ...prev, type: value }))}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -234,25 +235,11 @@ const AddObjectPage = () => {
             </div>
 
             <div className="space-y-2">
-              <Label>Изображения (URL)</Label>
-              {formData.images.map((image, index) => (
-                <div key={index} className="flex gap-2">
-                  <Input
-                    value={image}
-                    onChange={(e) => updateImageField(index, e.target.value)}
-                    placeholder="https://example.com/image.jpg"
-                  />
-                  {formData.images.length > 1 && (
-                    <Button type="button" variant="outline" onClick={() => removeImageField(index)}>
-                      <Icon name="Trash2" size={20} />
-                    </Button>
-                  )}
-                </div>
-              ))}
-              <Button type="button" variant="outline" onClick={addImageField} className="w-full">
-                <Icon name="Plus" className="mr-2" size={20} />
-                Добавить изображение
-              </Button>
+              <Label>Фотографии объекта</Label>
+              <ImageUploader
+                images={formData.images.filter(img => img.trim() !== '')}
+                onChange={(imgs) => setFormData(prev => ({ ...prev, images: imgs }))}
+              />
             </div>
 
             <div className="flex gap-4">
