@@ -1,11 +1,4 @@
 {
-  "import-sheets": "https://functions.poehali.dev/e865a471-57fb-43e5-a1fb-3f259c247580",
-  "telegram-bot": "https://functions.poehali.dev/b76a15ab-1b34-41a9-8483-6cc599dc758d",
-  "telegram": "https://functions.poehali.dev/416cd867-831b-48d3-b4a7-5c17b62c7e19",
-  "users": "https://functions.poehali.dev/8fa7915b-2477-4216-a766-2d8d39c34a78",
   "upload": "https://functions.poehali.dev/c8226cd3-1426-487a-8f8f-0b22ed0be84e",
-  "api": "https://functions.poehali.dev/fc00dc4e-18bf-4893-bb9d-331e8abda973",
-  "brokers": "https://functions.poehali.dev/cb16d664-e144-4d1f-93ed-60969d30246e",
-  "investors": "https://functions.poehali.dev/ab62c89e-df9b-45ad-8dc8-b74fa5eff638",
-  "properties": "https://functions.poehali.dev/1a93e595-02fc-47f0-9d6a-6f2712cb5118"
+  "api": "https://functions.poehali.dev/fc00dc4e-18bf-4893-bb9d-331e8abda973"
 }
