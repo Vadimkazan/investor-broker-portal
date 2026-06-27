@@ -7,7 +7,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Slider } from '@/components/ui/slider';
 import { Button } from '@/components/ui/button';
 import Icon from '@/components/ui/icon';
-import { ObjectFilters, PropertyType, ObjectStatus } from '@/types/investment-object';
+import { ObjectFilters, PropertyType, ObjectStatus, PROPERTY_TYPE_LABELS } from '@/types/investment-object';
 
 interface ObjectsFiltersProps {
   filters: ObjectFilters;
@@ -17,12 +17,9 @@ interface ObjectsFiltersProps {
 const ObjectsFilters = ({ filters, onFiltersChange }: ObjectsFiltersProps) => {
   const cities = ['Москва', 'Санкт-Петербург', 'Сочи', 'Казань', 'Екатеринбург', 'Краснодар', 'Московская область'];
   
-  const propertyTypes: { value: PropertyType; label: string }[] = [
-    { value: 'flats', label: 'Квартиры' },
-    { value: 'apartments', label: 'Апартаменты' },
-    { value: 'commercial', label: 'Коммерческая' },
-    { value: 'country', label: 'Загородная' }
-  ];
+  const propertyTypes = (Object.entries(PROPERTY_TYPE_LABELS) as [PropertyType, string][]).map(
+    ([value, label]) => ({ value, label })
+  );
 
   const yieldRanges = [
     { value: '0-30', label: 'до 30%' },

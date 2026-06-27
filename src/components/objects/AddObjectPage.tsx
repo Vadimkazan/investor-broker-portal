@@ -5,9 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import Icon from '@/components/ui/icon';
 import ImageUploader from '@/components/ui/image-uploader';
+import PropertyTypeSelect from '@/components/ui/property-type-select';
 
 const AddObjectPage = () => {
   const navigate = useNavigate();
@@ -15,7 +15,7 @@ const AddObjectPage = () => {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
-    type: 'flats' as 'apartments' | 'flats' | 'commercial' | 'country',
+    type: 'apartments' as import('@/types/investment-object').PropertyType,
     city: '',
     address: '',
     price: '',
@@ -101,17 +101,10 @@ const AddObjectPage = () => {
 
               <div className="space-y-2">
                 <Label htmlFor="type">Тип недвижимости *</Label>
-                <Select value={formData.type} onValueChange={(value: 'apartments' | 'flats' | 'commercial' | 'country') => setFormData(prev => ({ ...prev, type: value }))}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="flats">Квартиры</SelectItem>
-                    <SelectItem value="apartments">Апартаменты</SelectItem>
-                    <SelectItem value="commercial">Коммерческая</SelectItem>
-                    <SelectItem value="country">Загородная</SelectItem>
-                  </SelectContent>
-                </Select>
+                <PropertyTypeSelect
+                  value={formData.type}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, type: value as typeof formData.type }))}
+                />
               </div>
 
               <div className="space-y-2">

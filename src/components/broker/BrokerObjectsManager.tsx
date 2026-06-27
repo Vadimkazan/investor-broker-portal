@@ -9,6 +9,7 @@ import { useNavigate } from 'react-router-dom';
 import { useObjects, useUpdateObject } from '@/hooks/useObjects';
 import { useAuth } from '@/contexts/AuthContext';
 import { PropertyType } from '@/types/investment-object';
+import PropertyTypeSelect from '@/components/ui/property-type-select';
 
 interface BrokerObjectsManagerProps {
   onAddClick: () => void;
@@ -110,18 +111,12 @@ const BrokerObjectsManager = ({ onAddClick }: BrokerObjectsManagerProps) => {
               </div>
             </div>
             
-            <Select value={filterType} onValueChange={(v) => setFilterType(v as PropertyType | 'all')}>
-              <SelectTrigger>
-                <SelectValue placeholder="Тип объекта" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Все типы</SelectItem>
-                <SelectItem value="apartments">Апартаменты</SelectItem>
-                <SelectItem value="flats">Квартиры</SelectItem>
-                <SelectItem value="commercial">Коммерция</SelectItem>
-                <SelectItem value="country">Загородная</SelectItem>
-              </SelectContent>
-            </Select>
+            <PropertyTypeSelect
+              value={filterType}
+              onValueChange={(v) => setFilterType(v as PropertyType | 'all')}
+              includeAll
+              placeholder="Тип объекта"
+            />
             
             <Select value={filterCity} onValueChange={setFilterCity}>
               <SelectTrigger>

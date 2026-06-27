@@ -6,6 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
+import PropertyTypeSelect from '@/components/ui/property-type-select';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import Icon from '@/components/ui/icon';
 import type { PropertyObject, InvestmentStrategy } from '@/types/investment';
@@ -14,7 +15,7 @@ interface PropertyFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   formData: Partial<PropertyObject>;
-  onFormDataChange: (field: string, value: any) => void;
+  onFormDataChange: (field: string, value: unknown) => void;
   onToggleStrategy: (strategy: InvestmentStrategy) => void;
   onSubmit: () => void;
   isEdit?: boolean;
@@ -60,20 +61,11 @@ const PropertyFormDialog = ({
 
                 <div className="space-y-2">
                   <Label htmlFor="propertyType">Тип недвижимости *</Label>
-                  <Select
-                    value={formData.propertyType || 'apartment'}
+                  <PropertyTypeSelect
+                    value={formData.propertyType || 'apartments'}
                     onValueChange={(value) => onFormDataChange('propertyType', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Выберите тип" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="apartment">Квартира</SelectItem>
-                      <SelectItem value="house">Дом</SelectItem>
-                      <SelectItem value="commercial">Коммерческая</SelectItem>
-                      <SelectItem value="land">Земельный участок</SelectItem>
-                    </SelectContent>
-                  </Select>
+                    placeholder="Выберите тип"
+                  />
                 </div>
               </div>
 

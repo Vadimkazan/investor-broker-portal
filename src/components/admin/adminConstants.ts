@@ -13,11 +13,6 @@ export const STATUS_LABELS: Record<string, string> = {
   sold: 'Продано'
 };
 
-export const TYPE_LABELS: Record<string, string> = {
-  flats: 'Квартиры',
-  apartments: 'Апартаменты',
-  commercial: 'Коммерция',
-  country: 'Загородная'
-};
+export { PROPERTY_TYPE_LABELS as TYPE_LABELS } from '@/types/investment-object';
 
 export type DeleteConfirm = { type: 'user' | 'object'; id: number; name: string };

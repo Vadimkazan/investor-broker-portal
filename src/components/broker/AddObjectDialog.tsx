@@ -6,6 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import Icon from '@/components/ui/icon';
+import PropertyTypeSelect from '@/components/ui/property-type-select';
 
 interface NewObjectForm {
   title: string;
@@ -69,15 +70,10 @@ const AddObjectDialog = ({ open, onOpenChange, newObject, onNewObjectChange, onS
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="type">Тип недвижимости</Label>
-              <Select value={newObject.type} onValueChange={(v) => onNewObjectChange({ ...newObject, type: v })}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="residential">Жилая</SelectItem>
-                  <SelectItem value="commercial">Коммерческая</SelectItem>
-                </SelectContent>
-              </Select>
+              <PropertyTypeSelect
+                value={newObject.type}
+                onValueChange={(v) => onNewObjectChange({ ...newObject, type: v })}
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="risk">Уровень риска</Label>

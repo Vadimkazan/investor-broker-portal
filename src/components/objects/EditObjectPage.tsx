@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import Icon from '@/components/ui/icon';
 import ImageUploader from '@/components/ui/image-uploader';
+import { PROPERTY_TYPE_LABELS } from '@/types/investment-object';
 
 const EditObjectPage = () => {
   const navigate = useNavigate();
@@ -17,7 +18,7 @@ const EditObjectPage = () => {
   const [loadingObject, setLoadingObject] = useState(true);
   const [formData, setFormData] = useState({
     title: '',
-    type: 'flats' as 'apartments' | 'flats' | 'commercial' | 'country',
+    type: 'apartments' as import('@/types/investment-object').PropertyType,
     city: '',
     address: '',
     price: '',
@@ -199,7 +200,7 @@ const EditObjectPage = () => {
                 <Label htmlFor="type">Тип недвижимости</Label>
                 <Input
                   id="type"
-                  value={formData.type === 'flats' ? 'Квартиры' : formData.type === 'apartments' ? 'Апартаменты' : formData.type === 'commercial' ? 'Коммерческая' : 'Загородная'}
+                  value={PROPERTY_TYPE_LABELS[formData.type] || formData.type}
                   disabled
                   className="bg-muted"
                 />

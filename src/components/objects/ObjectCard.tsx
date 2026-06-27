@@ -3,7 +3,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import Icon from '@/components/ui/icon';
-import { InvestmentObject } from '@/types/investment-object';
+import { InvestmentObject, PROPERTY_TYPE_LABELS } from '@/types/investment-object';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -21,12 +21,7 @@ const ObjectCard = ({ object }: ObjectCardProps) => {
 
   const isOwner = user && object.brokerId === user.id;
 
-  const propertyTypeLabels: Record<string, string> = {
-    flats: 'Квартиры',
-    apartments: 'Апартаменты',
-    commercial: 'Коммерческая',
-    country: 'Загородная'
-  };
+  const propertyTypeLabels = PROPERTY_TYPE_LABELS;
 
   const statusLabels: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' }> = {
     available: { label: 'Свободен', variant: 'default' },

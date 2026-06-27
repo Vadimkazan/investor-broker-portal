@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import ImageUploader from '@/components/ui/image-uploader';
+import PropertyTypeSelect from '@/components/ui/property-type-select';
 import { useCreateObject } from '@/hooks/useObjects';
 import { PropertyType, ObjectStatus } from '@/types/investment-object';
 
@@ -82,20 +83,10 @@ const AddNewObjectDialog = ({ open, onOpenChange, onSuccess, brokerId }: AddNewO
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="type">Тип недвижимости *</Label>
-              <Select
+              <PropertyTypeSelect
                 value={formData.type}
-                onValueChange={(value: PropertyType) => setFormData({ ...formData, type: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="flats">Квартиры</SelectItem>
-                  <SelectItem value="apartments">Апартаменты</SelectItem>
-                  <SelectItem value="commercial">Коммерческая</SelectItem>
-                  <SelectItem value="country">Загородная</SelectItem>
-                </SelectContent>
-              </Select>
+                onValueChange={(value) => setFormData({ ...formData, type: value as PropertyType })}
+              />
             </div>
 
             <div className="space-y-2">

@@ -1,4 +1,33 @@
-export type PropertyType = 'apartments' | 'flats' | 'commercial' | 'country';
+export type PropertyType =
+  | 'apartments'
+  | 'new_flat'
+  | 'secondary_flat'
+  | 'houses'
+  | 'commercial'
+  | 'land'
+  | 'abroad'
+  | 'parking'
+  | 'storage'
+  | 'rooms'
+  | 'gab'
+  | 'land_development'
+  | 'buildings_redevelopment';
+
+export const PROPERTY_TYPE_LABELS: Record<PropertyType, string> = {
+  apartments: 'Апартаменты',
+  new_flat: 'Квартира в новостройке',
+  secondary_flat: 'Квартира во вторичке',
+  houses: 'Дома, дачи, коттеджи, виллы',
+  commercial: 'Коммерческая недвижимость',
+  land: 'Земельные участки',
+  abroad: 'Недвижимость за рубежом',
+  parking: 'Парковочные места',
+  storage: 'Кладовые помещения',
+  rooms: 'Комнаты',
+  gab: 'ГАБы',
+  land_development: 'Земля под девелопмент',
+  buildings_redevelopment: 'Здания под редевелопмент',
+};
 export type ObjectStatus = 'available' | 'reserved' | 'sold';
 
 export interface InvestmentObject {
