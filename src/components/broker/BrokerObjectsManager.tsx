@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import Icon from '@/components/ui/icon';
 import { useNavigate } from 'react-router-dom';
 import { useObjects, useUpdateObject } from '@/hooks/useObjects';
+import { useAuth } from '@/contexts/AuthContext';
 import { PropertyType } from '@/types/investment-object';
 
 interface BrokerObjectsManagerProps {
@@ -15,6 +16,7 @@ interface BrokerObjectsManagerProps {
 
 const BrokerObjectsManager = ({ onAddClick }: BrokerObjectsManagerProps) => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { data: objects = [], isLoading, error } = useObjects();
   const updateObject = useUpdateObject();
   
@@ -53,6 +55,8 @@ const BrokerObjectsManager = ({ onAddClick }: BrokerObjectsManagerProps) => {
     sold: { label: 'Продано', variant: 'destructive' }
   };
 
+  const isMyObject = (brokerId: number) => user?.id === brokerId;
+
   const handleStatusChange = async (id: number, status: 'available' | 'reserved' | 'sold') => {
     await updateObject.mutateAsync({ id, updates: { status } });
   };
@@ -80,8 +84,10 @@ const BrokerObjectsManager = ({ onAddClick }: BrokerObjectsManagerProps) => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold">Мои объекты</h2>
-          <p className="text-muted-foreground">Всего объектов: {objects.length} | Показано: {filteredObjects.length}</p>
+          <h2 className="text-2xl font-bold">Объекты</h2>
+          <p className="text-muted-foreground">
+            Моих: {objects.filter(o => isMyObject(o.brokerId)).length} | Всего на платформе: {objects.length}
+          </p>
         </div>
         <Button onClick={onAddClick}>
           <Icon name="Plus" size={16} className="mr-2" />
@@ -255,49 +261,64 @@ const BrokerObjectsManager = ({ onAddClick }: BrokerObjectsManagerProps) => {
                       </div>
                     </div>
 
-                    <div className="flex gap-2">
-                      <Button 
-                        variant="outline" 
+                    <div className="flex gap-2 flex-wrap">
+                      <Button
+                        variant="outline"
                         size="sm"
                         onClick={() => navigate(`/objects/${object.id}`)}
                       >
                         <Icon name="Eye" size={14} className="mr-1" />
                         Просмотр
                       </Button>
-                      
-                      {object.status === 'available' && (
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => handleStatusChange(object.id, 'reserved')}
-                          disabled={updateObject.isPending}
-                        >
-                          <Icon name="Clock" size={14} className="mr-1" />
-                          Забронировать
-                        </Button>
-                      )}
-                      
-                      {object.status === 'reserved' && (
+
+                      {isMyObject(object.brokerId) ? (
                         <>
-                          <Button 
-                            variant="outline" 
+                          <Button
+                            variant="outline"
                             size="sm"
-                            onClick={() => handleStatusChange(object.id, 'available')}
-                            disabled={updateObject.isPending}
+                            onClick={() => navigate(`/objects/${object.id}/edit`)}
                           >
-                            <Icon name="RotateCcw" size={14} className="mr-1" />
-                            Снять бронь
+                            <Icon name="Pencil" size={14} className="mr-1" />
+                            Редактировать
                           </Button>
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => handleStatusChange(object.id, 'sold')}
-                            disabled={updateObject.isPending}
-                          >
-                            <Icon name="CheckCircle" size={14} className="mr-1" />
-                            Продано
-                          </Button>
+
+                          {object.status === 'available' && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleStatusChange(object.id, 'reserved')}
+                              disabled={updateObject.isPending}
+                            >
+                              <Icon name="Clock" size={14} className="mr-1" />
+                              Забронировать
+                            </Button>
+                          )}
+
+                          {object.status === 'reserved' && (
+                            <>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleStatusChange(object.id, 'available')}
+                                disabled={updateObject.isPending}
+                              >
+                                <Icon name="RotateCcw" size={14} className="mr-1" />
+                                Снять бронь
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleStatusChange(object.id, 'sold')}
+                                disabled={updateObject.isPending}
+                              >
+                                <Icon name="CheckCircle" size={14} className="mr-1" />
+                                Продано
+                              </Button>
+                            </>
+                          )}
                         </>
+                      ) : (
+                        <Badge variant="outline" className="text-xs">Чужой объект</Badge>
                       )}
                     </div>
                   </div>

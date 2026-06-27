@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import InvestorStats from '@/components/investor/InvestorStats';
 import PortfolioCharts from '@/components/investor/PortfolioCharts';
 import InvestmentsList from '@/components/investor/InvestmentsList';
@@ -8,6 +9,12 @@ import EducationTab from '@/components/investor/EducationTab';
 import NotificationSettings from '@/components/investor/NotificationSettings';
 import BrokerProfileSettings from '@/components/broker/BrokerProfileSettings';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
+import Icon from '@/components/ui/icon';
+import { useObjects } from '@/hooks/useObjects';
+import { useAuth } from '@/contexts/AuthContext';
 import type { PropertyObject, UserInvestment } from '@/types/investment';
 
 interface InvestorDashboardProps {
@@ -20,6 +27,11 @@ const getUserId = () => {
 };
 
 const InvestorDashboard = ({ userName }: InvestorDashboardProps) => {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const { data: myApiObjects = [] } = useObjects();
+  const myObjects = myApiObjects.filter(o => o.brokerId === user?.id);
+
   const PROPERTIES_KEY = 'investpro-properties';
   const INVESTMENTS_KEY = 'investpro-user-investments';
   const USER_KEY = 'investpro-user';
@@ -44,7 +56,7 @@ const InvestorDashboard = ({ userName }: InvestorDashboardProps) => {
       const savedProperties = localStorage.getItem(PROPERTIES_KEY);
       if (savedProperties) {
         const parsed = JSON.parse(savedProperties);
-        setProperties(parsed.map((p: any) => ({
+        setProperties(parsed.map((p: PropertyObject) => ({
           ...p,
           metadata: {
             ...p.metadata,
@@ -61,8 +73,8 @@ const InvestorDashboard = ({ userName }: InvestorDashboardProps) => {
       if (savedInvestments) {
         const parsed = JSON.parse(savedInvestments);
         const userInvestments = parsed
-          .filter((inv: any) => inv.userId === userId)
-          .map((inv: any) => ({
+          .filter((inv: UserInvestment) => inv.userId === userId)
+          .map((inv: UserInvestment) => ({
             ...inv,
             date: new Date(inv.date),
           }));
@@ -81,7 +93,7 @@ const InvestorDashboard = ({ userName }: InvestorDashboardProps) => {
       const savedUser = localStorage.getItem(USER_KEY);
       const userId = savedUser ? JSON.parse(savedUser).email : 'user@example.com';
       
-      const otherInvestments = parsed.filter((inv: any) => inv.userId !== userId);
+      const otherInvestments = parsed.filter((inv: UserInvestment) => inv.userId !== userId);
       const updated = [...otherInvestments, ...investments];
       
       localStorage.setItem(INVESTMENTS_KEY, JSON.stringify(updated));
@@ -278,12 +290,73 @@ const InvestorDashboard = ({ userName }: InvestorDashboardProps) => {
         </TabsContent>
 
         <TabsContent value="objects" className="mt-6">
-          <InvestmentsList
-            myInvestments={myInvestments}
-            properties={properties}
-            onEditInvestment={setEditingInvestment}
-            calculateProfit={calculateProfit}
-          />
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <div>
+                <h3 className="text-xl font-bold">Мои объекты</h3>
+                <p className="text-muted-foreground text-sm">Объекты, которые вы добавили на платформу</p>
+              </div>
+              <Button onClick={() => navigate('/objects/add')}>
+                <Icon name="Plus" size={16} className="mr-2" />
+                Добавить объект
+              </Button>
+            </div>
+
+            {myObjects.length === 0 ? (
+              <Card>
+                <CardContent className="py-12 text-center">
+                  <Icon name="Building" size={48} className="mx-auto text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">Нет добавленных объектов</h3>
+                  <p className="text-muted-foreground mb-4">Добавьте свою недвижимость для привлечения инвесторов</p>
+                  <Button onClick={() => navigate('/objects/add')}>
+                    <Icon name="Plus" size={16} className="mr-2" />
+                    Добавить объект
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid gap-4">
+                {myObjects.map(obj => (
+                  <Card key={obj.id} className="hover:shadow-md transition-shadow">
+                    <CardContent className="p-4">
+                      <div className="flex gap-4">
+                        <div className="w-24 h-24 rounded-lg bg-muted flex-shrink-0 overflow-hidden">
+                          {obj.images && obj.images.length > 0 ? (
+                            <img src={obj.images[0]} alt={obj.title} className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <Icon name="ImageOff" size={20} className="text-muted-foreground" />
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex justify-between items-start mb-1">
+                            <h4 className="font-semibold">{obj.title}</h4>
+                            <Badge variant={obj.status === 'available' ? 'default' : obj.status === 'reserved' ? 'secondary' : 'destructive'}>
+                              {obj.status === 'available' ? 'Свободен' : obj.status === 'reserved' ? 'Бронь' : 'Продано'}
+                            </Badge>
+                          </div>
+                          <p className="text-sm text-muted-foreground mb-2">{obj.address}, {obj.city}</p>
+                          <div className="flex gap-4 text-sm">
+                            <span><span className="text-muted-foreground">Цена: </span>{(obj.price / 1000000).toFixed(1)} млн ₽</span>
+                            <span><span className="text-muted-foreground">Доходность: </span><span className="text-primary font-medium">{obj.yield}%</span></span>
+                          </div>
+                          <div className="flex gap-2 mt-3">
+                            <Button size="sm" variant="outline" onClick={() => navigate(`/objects/${obj.id}`)}>
+                              <Icon name="Eye" size={14} className="mr-1" />Просмотр
+                            </Button>
+                            <Button size="sm" variant="outline" onClick={() => navigate(`/objects/${obj.id}/edit`)}>
+                              <Icon name="Pencil" size={14} className="mr-1" />Редактировать
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
         </TabsContent>
 
         <TabsContent value="education" className="mt-6">

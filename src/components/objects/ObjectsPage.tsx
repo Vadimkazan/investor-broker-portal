@@ -100,8 +100,8 @@ const ObjectsPage = () => {
     if (filters.brokerCities && filters.brokerCities.length > 0 && objects.length > 0) {
       result = result.filter(obj => {
         const objWithBroker = objects.find(o => o.id === obj.id);
-        return objWithBroker?.brokerId && filters.brokerCities!.some(city => 
-          (objWithBroker as any).broker?.city === city
+        return objWithBroker?.brokerId && filters.brokerCities!.some(city =>
+          objWithBroker.broker?.city === city
         );
       });
     }
@@ -109,8 +109,8 @@ const ObjectsPage = () => {
     if (filters.brokerClubs && filters.brokerClubs.length > 0 && objects.length > 0) {
       result = result.filter(obj => {
         const objWithBroker = objects.find(o => o.id === obj.id);
-        return objWithBroker?.brokerId && filters.brokerClubs!.some(club => 
-          (objWithBroker as any).broker?.club === club
+        return objWithBroker?.brokerId && filters.brokerClubs!.some(club =>
+          objWithBroker.broker?.club === club
         );
       });
     }
@@ -118,8 +118,8 @@ const ObjectsPage = () => {
     if (filters.brokerStreams && filters.brokerStreams.length > 0 && objects.length > 0) {
       result = result.filter(obj => {
         const objWithBroker = objects.find(o => o.id === obj.id);
-        return objWithBroker?.brokerId && filters.brokerStreams!.some(stream => 
-          (objWithBroker as any).broker?.training_stream === stream
+        return objWithBroker?.brokerId && filters.brokerStreams!.some(stream =>
+          objWithBroker.broker?.training_stream === stream
         );
       });
     }
@@ -243,7 +243,7 @@ const ObjectsPage = () => {
             </p>
           </div>
           <div className="flex gap-2">
-            {user?.role === 'broker' && (
+            {(user?.role === 'broker' || user?.role === 'investor') && (
               <Button onClick={() => navigate('/objects/add')} size="lg">
                 <Icon name="Plus" className="mr-2" size={20} />
                 Добавить объект

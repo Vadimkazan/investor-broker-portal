@@ -23,8 +23,7 @@ const AddObjectPage = () => {
     paybackPeriod: '',
     area: '',
     description: '',
-    images: [''],
-    monthlyIncome: ''
+    images: ['']
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -72,27 +71,6 @@ const AddObjectPage = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const addImageField = () => {
-    setFormData(prev => ({
-      ...prev,
-      images: [...prev.images, '']
-    }));
-  };
-
-  const removeImageField = (index: number) => {
-    setFormData(prev => ({
-      ...prev,
-      images: prev.images.filter((_, i) => i !== index)
-    }));
-  };
-
-  const updateImageField = (index: number, value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      images: prev.images.map((img, i) => i === index ? value : img)
-    }));
   };
 
   return (
@@ -209,17 +187,7 @@ const AddObjectPage = () => {
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="monthlyIncome">Ежемесячный доход (₽) *</Label>
-                <Input
-                  id="monthlyIncome"
-                  type="number"
-                  value={formData.monthlyIncome}
-                  onChange={(e) => setFormData(prev => ({ ...prev, monthlyIncome: e.target.value }))}
-                  required
-                  placeholder="50000"
-                />
-              </div>
+
             </div>
 
             <div className="space-y-2">

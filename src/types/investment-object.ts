@@ -18,6 +18,14 @@ export interface InvestmentObject {
   description: string;
   brokerId: number;
   createdAt: string;
+  broker?: {
+    id: number;
+    name: string;
+    email: string;
+    city?: string;
+    club?: string;
+    training_stream?: string;
+  };
   monthlyIncome?: number;
   rentalYield?: number;
   coordinates?: {
