@@ -120,7 +120,38 @@ def handle_users(cur, method: str, event: Dict[str, Any]) -> Dict[str, Any]:
             'id': row[0], 'email': row[1], 'name': row[2],
             'role': row[3], 'created_at': row[4].isoformat() if row[4] else None
         }, 201)
-    
+
+    elif method == 'PUT':
+        body = json.loads(event.get('body', '{}'))
+        user_id = body.get('id')
+        if not user_id:
+            return error_response('User ID required', 400)
+        fields = []
+        if 'name' in body:
+            fields.append(f"name = {escape_sql(body['name'])}")
+        if 'role' in body:
+            allowed_roles = ['investor', 'broker', 'admin', 'manager']
+            if body['role'] not in allowed_roles:
+                return error_response('Invalid role', 400)
+            fields.append(f"role = {escape_sql(body['role'])}")
+        if 'notify_new_objects' in body:
+            fields.append(f"notify_new_objects = {escape_sql(body['notify_new_objects'])}")
+        if not fields:
+            return error_response('No fields to update', 400)
+        cur.execute(f"UPDATE users SET {', '.join(fields)} WHERE id = {escape_sql(int(user_id))} RETURNING id, email, name, role, created_at")
+        row = cur.fetchone()
+        if not row:
+            return error_response('User not found', 404)
+        return success_response({'id': row[0], 'email': row[1], 'name': row[2], 'role': row[3], 'created_at': row[4].isoformat() if row[4] else None})
+
+    elif method == 'DELETE':
+        params = event.get('queryStringParameters') or {}
+        user_id = params.get('id')
+        if not user_id:
+            return error_response('User ID required', 400)
+        cur.execute(f"DELETE FROM users WHERE id = {escape_sql(int(user_id))}")
+        return success_response({'message': 'Deleted'})
+
     return error_response('Method not allowed', 405)
 
 

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -6,56 +7,123 @@ import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import Icon from '@/components/ui/icon';
 import { useToast } from '@/hooks/use-toast';
-import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { api, User, InvestmentObjectDB } from '@/services/api';
-import GoogleSheetsSync from '@/components/admin/GoogleSheetsSync';
 import { useAuth } from '@/contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
 
+const ROLE_LABELS: Record<string, string> = {
+  investor: 'Инвестор',
+  broker: 'Брокер',
+  admin: 'Админ',
+  manager: 'Менеджер'
+};
+
+const STATUS_LABELS: Record<string, string> = {
+  available: 'Свободен',
+  reserved: 'Бронь',
+  sold: 'Продано'
+};
+
+const TYPE_LABELS: Record<string, string> = {
+  flats: 'Квартиры',
+  apartments: 'Апартаменты',
+  commercial: 'Коммерция',
+  country: 'Загородная'
+};
+
 const AdminDashboard = () => {
-  const [activeTab, setActiveTab] = useState('overview');
+  const navigate = useNavigate();
+  const { user: currentUser } = useAuth();
+  const { toast } = useToast();
+
   const [users, setUsers] = useState<User[]>([]);
   const [objects, setObjects] = useState<InvestmentObjectDB[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const { toast } = useToast();
-  const { user } = useAuth();
-  const navigate = useNavigate();
+  const [searchUsers, setSearchUsers] = useState('');
+  const [searchObjects, setSearchObjects] = useState('');
+
+  // Диалог подтверждения удаления
+  const [deleteConfirm, setDeleteConfirm] = useState<{ type: 'user' | 'object'; id: number; name: string } | null>(null);
+  const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => {
-    if (!user || (user.role !== 'admin' && user.role !== 'manager')) {
-      toast({
-        title: 'Доступ запрещен',
-        description: 'У вас нет прав для доступа к админ-панели',
-        variant: 'destructive'
-      });
+    if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'manager')) {
+      toast({ title: 'Доступ запрещён', variant: 'destructive' });
       navigate('/');
       return;
     }
     loadData();
-  }, [user, navigate]);
+  }, [currentUser]);
 
   const loadData = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      const [usersData, objectsData] = await Promise.all([
-        api.getUsers(),
-        api.getObjects()
-      ]);
+      const [usersData, objectsData] = await Promise.all([api.getUsers(), api.getObjects()]);
       setUsers(usersData);
       setObjects(objectsData);
-    } catch (error) {
-      toast({
-        title: 'Ошибка загрузки',
-        description: 'Не удалось загрузить данные',
-        variant: 'destructive'
-      });
+    } catch {
+      toast({ title: 'Ошибка загрузки данных', variant: 'destructive' });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleChangeRole = async (userId: number, role: User['role']) => {
+    setActionLoading(true);
+    try {
+      const updated = await api.updateUser(userId, { role });
+      setUsers(prev => prev.map(u => u.id === userId ? { ...u, role: updated.role } : u));
+      toast({ title: 'Роль изменена' });
+    } catch {
+      toast({ title: 'Ошибка изменения роли', variant: 'destructive' });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleDeleteUser = async (id: number) => {
+    setActionLoading(true);
+    try {
+      await api.deleteUser(id);
+      setUsers(prev => prev.filter(u => u.id !== id));
+      toast({ title: 'Пользователь удалён' });
+    } catch {
+      toast({ title: 'Ошибка удаления', variant: 'destructive' });
+    } finally {
+      setActionLoading(false);
+      setDeleteConfirm(null);
+    }
+  };
+
+  const handleDeleteObject = async (id: number) => {
+    setActionLoading(true);
+    try {
+      await api.deleteObject(id);
+      setObjects(prev => prev.filter(o => o.id !== id));
+      toast({ title: 'Объект удалён' });
+    } catch {
+      toast({ title: 'Ошибка удаления', variant: 'destructive' });
+    } finally {
+      setActionLoading(false);
+      setDeleteConfirm(null);
+    }
+  };
+
+  const handleChangeObjectStatus = async (id: number, status: InvestmentObjectDB['status']) => {
+    setActionLoading(true);
+    try {
+      await api.updateObject(id, { status });
+      setObjects(prev => prev.map(o => o.id === id ? { ...o, status } : o));
+      toast({ title: 'Статус изменён' });
+    } catch {
+      toast({ title: 'Ошибка изменения статуса', variant: 'destructive' });
+    } finally {
+      setActionLoading(false);
     }
   };
 
@@ -64,296 +132,194 @@ const AdminDashboard = () => {
     investors: users.filter(u => u.role === 'investor').length,
     brokers: users.filter(u => u.role === 'broker').length,
     totalObjects: objects.length,
-    availableObjects: objects.filter(o => o.status === 'available').length,
-    reservedObjects: objects.filter(o => o.status === 'reserved').length,
-    soldObjects: objects.filter(o => o.status === 'sold').length,
-    totalValue: objects.reduce((sum, obj) => sum + Number(obj.price), 0),
-    averageYield: objects.length > 0 
-      ? objects.reduce((sum, obj) => sum + Number(obj.yield_percent), 0) / objects.length 
-      : 0
+    available: objects.filter(o => o.status === 'available').length,
+    reserved: objects.filter(o => o.status === 'reserved').length,
+    sold: objects.filter(o => o.status === 'sold').length,
+    totalValue: objects.reduce((s, o) => s + Number(o.price), 0),
+    avgYield: objects.length > 0 ? objects.reduce((s, o) => s + Number(o.yield_percent), 0) / objects.length : 0,
   };
 
-  const cityDistribution = objects.reduce((acc, obj) => {
-    acc[obj.city] = (acc[obj.city] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
+  const cityData = Object.entries(
+    objects.reduce((acc, o) => { acc[o.city] = (acc[o.city] || 0) + 1; return acc; }, {} as Record<string, number>)
+  ).map(([name, value]) => ({ name, value }));
 
-  const cityChartData = Object.entries(cityDistribution).map(([city, count]) => ({
-    name: city,
-    value: count
-  }));
+  const typeData = Object.entries(
+    objects.reduce((acc, o) => {
+      const label = TYPE_LABELS[o.property_type] || o.property_type;
+      acc[label] = (acc[label] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>)
+  ).map(([name, value]) => ({ name, value }));
 
-  const typeDistribution = objects.reduce((acc, obj) => {
-    const typeLabels: Record<string, string> = {
-      'flats': 'Квартиры',
-      'apartments': 'Апартаменты',
-      'commercial': 'Коммерция',
-      'country': 'Загородная'
-    };
-    const label = typeLabels[obj.property_type] || obj.property_type;
-    acc[label] = (acc[label] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
-
-  const typeChartData = Object.entries(typeDistribution).map(([name, value]) => ({
-    name,
-    value
-  }));
-
-  const statusChartData = [
-    { name: 'Свободен', value: stats.availableObjects },
-    { name: 'Бронь', value: stats.reservedObjects },
-    { name: 'Продано', value: stats.soldObjects }
+  const statusData = [
+    { name: 'Свободен', value: stats.available },
+    { name: 'Бронь', value: stats.reserved },
+    { name: 'Продано', value: stats.sold },
   ];
 
-  const recentUsers = [...users]
-    .sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime())
-    .slice(0, 10);
+  const filteredUsers = users.filter(u =>
+    u.name.toLowerCase().includes(searchUsers.toLowerCase()) ||
+    u.email.toLowerCase().includes(searchUsers.toLowerCase())
+  );
 
-  const filteredObjects = objects.filter(obj =>
-    obj.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    obj.city.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredObjects = objects.filter(o =>
+    o.title.toLowerCase().includes(searchObjects.toLowerCase()) ||
+    o.city.toLowerCase().includes(searchObjects.toLowerCase())
   );
 
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <Icon name="Loader2" className="animate-spin" size={32} />
+        <Icon name="Loader2" className="animate-spin text-primary" size={40} />
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-muted/30">
-      <div className="container mx-auto p-6 space-y-6">
+      <div className="container mx-auto p-6 space-y-6 max-w-7xl">
+
+        {/* Шапка */}
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold">Панель администратора</h1>
-            <p className="text-muted-foreground">Управление платформой и аналитика</p>
+            <p className="text-muted-foreground">Управление платформой</p>
           </div>
-          <Button variant="outline" onClick={loadData}>
-            <Icon name="RefreshCw" size={16} className="mr-2" />
-            Обновить
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => navigate('/')}>
+              <Icon name="ArrowLeft" size={16} className="mr-2" />
+              На главную
+            </Button>
+            <Button onClick={loadData}>
+              <Icon name="RefreshCw" size={16} className="mr-2" />
+              Обновить
+            </Button>
+          </div>
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="overview">
-              <Icon name="LayoutDashboard" size={16} className="mr-2" />
-              Обзор
-            </TabsTrigger>
+        {/* Статистика */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Пользователи</p>
+                  <p className="text-3xl font-bold">{stats.totalUsers}</p>
+                  <p className="text-xs text-muted-foreground mt-1">{stats.investors} инв. · {stats.brokers} бр.</p>
+                </div>
+                <Icon name="Users" size={32} className="text-primary opacity-60" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Объекты</p>
+                  <p className="text-3xl font-bold">{stats.totalObjects}</p>
+                  <p className="text-xs text-muted-foreground mt-1">{stats.available} свободно</p>
+                </div>
+                <Icon name="Building" size={32} className="text-primary opacity-60" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Общая стоимость</p>
+                  <p className="text-3xl font-bold">{(stats.totalValue / 1_000_000_000).toFixed(1)} млрд</p>
+                  <p className="text-xs text-muted-foreground mt-1">₽ портфель платформы</p>
+                </div>
+                <Icon name="Wallet" size={32} className="text-primary opacity-60" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Ср. доходность</p>
+                  <p className="text-3xl font-bold">{stats.avgYield.toFixed(1)}%</p>
+                  <p className="text-xs text-muted-foreground mt-1">по всем объектам</p>
+                </div>
+                <Icon name="TrendingUp" size={32} className="text-primary opacity-60" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <Tabs defaultValue="users">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="users">
-              <Icon name="Users" size={16} className="mr-2" />
-              Пользователи
+              <Icon name="Users" size={15} className="mr-2" />Пользователи ({users.length})
             </TabsTrigger>
             <TabsTrigger value="objects">
-              <Icon name="Building" size={16} className="mr-2" />
-              Объекты
+              <Icon name="Building" size={15} className="mr-2" />Объекты ({objects.length})
             </TabsTrigger>
             <TabsTrigger value="analytics">
-              <Icon name="TrendingUp" size={16} className="mr-2" />
-              Аналитика
+              <Icon name="BarChart2" size={15} className="mr-2" />Аналитика
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="overview" className="space-y-6">
-            <div className="grid gap-4 md:grid-cols-3">
-              <div className="md:col-span-2 grid gap-4 md:grid-cols-2">
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Всего пользователей</CardTitle>
-                  <Icon name="Users" className="text-muted-foreground" size={16} />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{stats.totalUsers}</div>
-                  <p className="text-xs text-muted-foreground">
-                    {stats.investors} инвесторов, {stats.brokers} брокеров
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Всего объектов</CardTitle>
-                  <Icon name="Building" className="text-muted-foreground" size={16} />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{stats.totalObjects}</div>
-                  <p className="text-xs text-muted-foreground">
-                    {stats.availableObjects} свободно
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Общая стоимость</CardTitle>
-                  <Icon name="DollarSign" className="text-muted-foreground" size={16} />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">
-                    {(stats.totalValue / 1_000_000_000).toFixed(1)} млрд ₽
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Портфель платформы
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Средняя доходность</CardTitle>
-                  <Icon name="TrendingUp" className="text-muted-foreground" size={16} />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{stats.averageYield.toFixed(1)}%</div>
-                  <p className="text-xs text-muted-foreground">
-                    По всем объектам
-                  </p>
-                </CardContent>
-              </Card>
-              </div>
-
-              <GoogleSheetsSync />
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4" style={{display: 'none'}}>
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Всего пользователей</CardTitle>
-                  <Icon name="Users" className="text-muted-foreground" size={16} />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{stats.totalUsers}</div>
-                  <p className="text-xs text-muted-foreground">
-                    {stats.investors} инвесторов, {stats.brokers} брокеров
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Всего объектов</CardTitle>
-                  <Icon name="Building" className="text-muted-foreground" size={16} />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{stats.totalObjects}</div>
-                  <p className="text-xs text-muted-foreground">
-                    {stats.availableObjects} свободно
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Общая стоимость</CardTitle>
-                  <Icon name="DollarSign" className="text-muted-foreground" size={16} />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">
-                    {(stats.totalValue / 1_000_000_000).toFixed(1)} млрд ₽
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Портфель платформы
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Средняя доходность</CardTitle>
-                  <Icon name="TrendingUp" className="text-muted-foreground" size={16} />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{stats.averageYield.toFixed(1)}%</div>
-                  <p className="text-xs text-muted-foreground">
-                    По всем объектам
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Последние регистрации</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {recentUsers.map(user => (
-                      <div key={user.id} className="flex items-center justify-between">
-                        <div>
-                          <p className="font-medium">{user.name}</p>
-                          <p className="text-xs text-muted-foreground">{user.email}</p>
-                        </div>
-                        <Badge variant={user.role === 'broker' ? 'default' : 'secondary'}>
-                          {user.role === 'broker' ? 'Брокер' : 'Инвестор'}
-                        </Badge>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Статус объектов</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ResponsiveContainer width="100%" height={250}>
-                    <PieChart>
-                      <Pie
-                        data={statusChartData}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        label={({ name, value }) => `${name}: ${value}`}
-                        outerRadius={80}
-                        fill="#8884d8"
-                        dataKey="value"
-                      >
-                        {statusChartData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="users">
+          {/* === ПОЛЬЗОВАТЕЛИ === */}
+          <TabsContent value="users" className="space-y-4 mt-4">
             <Card>
-              <CardHeader>
-                <CardTitle>Все пользователи ({users.length})</CardTitle>
+              <CardHeader className="flex flex-row items-center justify-between pb-4">
+                <CardTitle>Все пользователи</CardTitle>
+                <div className="relative w-64">
+                  <Icon name="Search" size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                  <Input placeholder="Поиск по имени или email..." value={searchUsers} onChange={e => setSearchUsers(e.target.value)} className="pl-9" />
+                </div>
               </CardHeader>
               <CardContent>
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>ID</TableHead>
+                      <TableHead className="w-12">ID</TableHead>
                       <TableHead>Имя</TableHead>
                       <TableHead>Email</TableHead>
                       <TableHead>Роль</TableHead>
-                      <TableHead>Дата регистрации</TableHead>
+                      <TableHead>Дата</TableHead>
+                      <TableHead className="text-right">Действия</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {users.map(user => (
-                      <TableRow key={user.id}>
-                        <TableCell>{user.id}</TableCell>
-                        <TableCell className="font-medium">{user.name}</TableCell>
-                        <TableCell>{user.email}</TableCell>
+                    {filteredUsers.map(u => (
+                      <TableRow key={u.id}>
+                        <TableCell className="text-muted-foreground">{u.id}</TableCell>
+                        <TableCell className="font-medium">{u.name}</TableCell>
+                        <TableCell className="text-muted-foreground">{u.email}</TableCell>
                         <TableCell>
-                          <Badge variant={user.role === 'broker' ? 'default' : 'secondary'}>
-                            {user.role === 'broker' ? 'Брокер' : 'Инвестор'}
-                          </Badge>
+                          <Select
+                            value={u.role}
+                            onValueChange={(role) => handleChangeRole(u.id, role as User['role'])}
+                            disabled={actionLoading || u.id === currentUser?.id}
+                          >
+                            <SelectTrigger className="w-32 h-7 text-xs">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="investor">Инвестор</SelectItem>
+                              <SelectItem value="broker">Брокер</SelectItem>
+                              <SelectItem value="manager">Менеджер</SelectItem>
+                              <SelectItem value="admin">Админ</SelectItem>
+                            </SelectContent>
+                          </Select>
                         </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {new Date(user.created_at || '').toLocaleDateString('ru-RU')}
+                        <TableCell className="text-muted-foreground text-sm">
+                          {u.created_at ? new Date(u.created_at).toLocaleDateString('ru-RU') : '—'}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-destructive hover:text-destructive"
+                            disabled={u.id === currentUser?.id}
+                            onClick={() => setDeleteConfirm({ type: 'user', id: u.id, name: u.name })}
+                          >
+                            <Icon name="Trash2" size={14} />
+                          </Button>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -363,48 +329,77 @@ const AdminDashboard = () => {
             </Card>
           </TabsContent>
 
-          <TabsContent value="objects" className="space-y-4">
+          {/* === ОБЪЕКТЫ === */}
+          <TabsContent value="objects" className="space-y-4 mt-4">
             <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle>Все объекты ({objects.length})</CardTitle>
+              <CardHeader className="flex flex-row items-center justify-between pb-4">
+                <CardTitle>Все объекты</CardTitle>
+                <div className="flex gap-2 items-center">
                   <div className="relative w-64">
-                    <Icon name="Search" size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                    <Input
-                      placeholder="Поиск..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pl-9"
-                    />
+                    <Icon name="Search" size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                    <Input placeholder="Поиск..." value={searchObjects} onChange={e => setSearchObjects(e.target.value)} className="pl-9" />
                   </div>
+                  <Button size="sm" onClick={() => navigate('/objects/add')}>
+                    <Icon name="Plus" size={15} className="mr-1" />Добавить
+                  </Button>
                 </div>
               </CardHeader>
               <CardContent>
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>ID</TableHead>
+                      <TableHead className="w-12">ID</TableHead>
                       <TableHead>Название</TableHead>
                       <TableHead>Город</TableHead>
                       <TableHead>Тип</TableHead>
                       <TableHead>Цена</TableHead>
                       <TableHead>Доходность</TableHead>
                       <TableHead>Статус</TableHead>
+                      <TableHead className="text-right">Действия</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredObjects.map(obj => (
                       <TableRow key={obj.id}>
-                        <TableCell>{obj.id}</TableCell>
-                        <TableCell className="font-medium">{obj.title}</TableCell>
+                        <TableCell className="text-muted-foreground">{obj.id}</TableCell>
+                        <TableCell className="font-medium max-w-40 truncate">{obj.title}</TableCell>
                         <TableCell>{obj.city}</TableCell>
-                        <TableCell className="text-muted-foreground">{obj.property_type}</TableCell>
+                        <TableCell className="text-muted-foreground">{TYPE_LABELS[obj.property_type] || obj.property_type}</TableCell>
                         <TableCell>{(Number(obj.price) / 1_000_000).toFixed(1)} млн ₽</TableCell>
                         <TableCell className="text-primary font-medium">{obj.yield_percent}%</TableCell>
                         <TableCell>
-                          <Badge variant={obj.status === 'available' ? 'default' : obj.status === 'reserved' ? 'secondary' : 'destructive'}>
-                            {obj.status === 'available' ? 'Свободен' : obj.status === 'reserved' ? 'Бронь' : 'Продано'}
-                          </Badge>
+                          <Select
+                            value={obj.status}
+                            onValueChange={(s) => handleChangeObjectStatus(obj.id, s as InvestmentObjectDB['status'])}
+                            disabled={actionLoading}
+                          >
+                            <SelectTrigger className="w-28 h-7 text-xs">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="available">Свободен</SelectItem>
+                              <SelectItem value="reserved">Бронь</SelectItem>
+                              <SelectItem value="sold">Продано</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex gap-1 justify-end">
+                            <Button variant="ghost" size="sm" onClick={() => navigate(`/objects/${obj.id}`)}>
+                              <Icon name="Eye" size={14} />
+                            </Button>
+                            <Button variant="ghost" size="sm" onClick={() => navigate(`/objects/${obj.id}/edit`)}>
+                              <Icon name="Pencil" size={14} />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-destructive hover:text-destructive"
+                              onClick={() => setDeleteConfirm({ type: 'object', id: obj.id, name: obj.title })}
+                            >
+                              <Icon name="Trash2" size={14} />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -414,84 +409,101 @@ const AdminDashboard = () => {
             </Card>
           </TabsContent>
 
-          <TabsContent value="analytics" className="space-y-6">
+          {/* === АНАЛИТИКА === */}
+          <TabsContent value="analytics" className="space-y-4 mt-4">
             <div className="grid gap-4 md:grid-cols-2">
               <Card>
-                <CardHeader>
-                  <CardTitle>Распределение по городам</CardTitle>
-                </CardHeader>
+                <CardHeader><CardTitle>Объекты по городам</CardTitle></CardHeader>
                 <CardContent>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={cityChartData}>
+                  <ResponsiveContainer width="100%" height={260}>
+                    <BarChart data={cityData}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="name" />
-                      <YAxis />
+                      <YAxis allowDecimals={false} />
                       <Tooltip />
-                      <Legend />
-                      <Bar dataKey="value" fill="#0088FE" name="Объектов" />
+                      <Bar dataKey="value" fill="hsl(var(--primary))" name="Объектов" radius={[4,4,0,0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </CardContent>
               </Card>
 
               <Card>
-                <CardHeader>
-                  <CardTitle>Типы недвижимости</CardTitle>
-                </CardHeader>
+                <CardHeader><CardTitle>Типы недвижимости</CardTitle></CardHeader>
                 <CardContent>
-                  <ResponsiveContainer width="100%" height={300}>
+                  <ResponsiveContainer width="100%" height={260}>
                     <PieChart>
-                      <Pie
-                        data={typeChartData}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                        outerRadius={100}
-                        fill="#8884d8"
-                        dataKey="value"
-                      >
-                        {typeChartData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
+                      <Pie data={typeData} cx="50%" cy="50%" outerRadius={90} dataKey="value"
+                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} labelLine={false}>
+                        {typeData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
                       </Pie>
                       <Tooltip />
                     </PieChart>
                   </ResponsiveContainer>
                 </CardContent>
               </Card>
-            </div>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Ключевые метрики</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid gap-4 md:grid-cols-3">
-                  <div className="space-y-2">
-                    <p className="text-sm text-muted-foreground">Конверсия в продажи</p>
-                    <p className="text-2xl font-bold">
-                      {stats.totalObjects > 0 ? ((stats.soldObjects / stats.totalObjects) * 100).toFixed(1) : 0}%
-                    </p>
-                  </div>
-                  <div className="space-y-2">
-                    <p className="text-sm text-muted-foreground">Средняя цена объекта</p>
-                    <p className="text-2xl font-bold">
-                      {stats.totalObjects > 0 ? (stats.totalValue / stats.totalObjects / 1_000_000).toFixed(1) : 0} млн ₽
-                    </p>
-                  </div>
-                  <div className="space-y-2">
-                    <p className="text-sm text-muted-foreground">Объектов на брокера</p>
-                    <p className="text-2xl font-bold">
-                      {stats.brokers > 0 ? (stats.totalObjects / stats.brokers).toFixed(1) : 0}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+              <Card>
+                <CardHeader><CardTitle>Статус объектов</CardTitle></CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={260}>
+                    <PieChart>
+                      <Pie data={statusData} cx="50%" cy="50%" outerRadius={90} dataKey="value"
+                        label={({ name, value }) => `${name}: ${value}`} labelLine={false}>
+                        {statusData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader><CardTitle>Ключевые метрики</CardTitle></CardHeader>
+                <CardContent className="space-y-4 pt-2">
+                  {[
+                    { label: 'Конверсия в продажи', value: stats.totalObjects > 0 ? `${((stats.sold / stats.totalObjects) * 100).toFixed(1)}%` : '0%' },
+                    { label: 'Средняя цена объекта', value: stats.totalObjects > 0 ? `${(stats.totalValue / stats.totalObjects / 1_000_000).toFixed(1)} млн ₽` : '—' },
+                    { label: 'Объектов на брокера', value: stats.brokers > 0 ? (stats.totalObjects / stats.brokers).toFixed(1) : '—' },
+                    { label: 'Забронировано', value: `${stats.reserved} из ${stats.totalObjects}` },
+                  ].map(m => (
+                    <div key={m.label} className="flex justify-between items-center border-b pb-3 last:border-0">
+                      <p className="text-sm text-muted-foreground">{m.label}</p>
+                      <p className="font-semibold">{m.value}</p>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Диалог подтверждения удаления */}
+      <Dialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Подтвердите удаление</DialogTitle>
+            <DialogDescription>
+              Вы уверены, что хотите удалить <strong>«{deleteConfirm?.name}»</strong>? Это действие нельзя отменить.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-3 justify-end mt-2">
+            <Button variant="outline" onClick={() => setDeleteConfirm(null)}>Отмена</Button>
+            <Button
+              variant="destructive"
+              disabled={actionLoading}
+              onClick={() => {
+                if (!deleteConfirm) return;
+                if (deleteConfirm.type === 'user') handleDeleteUser(deleteConfirm.id);
+                else handleDeleteObject(deleteConfirm.id);
+              }}
+            >
+              {actionLoading ? <Icon name="Loader2" size={16} className="animate-spin mr-2" /> : null}
+              Удалить
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

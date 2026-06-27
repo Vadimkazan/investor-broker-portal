@@ -15,6 +15,15 @@
       "bodyMatcher": "partial"
     },
     {
+      "name": "Update user role",
+      "method": "PUT",
+      "path": "/?resource=users",
+      "body": { "id": 2, "role": "broker" },
+      "expectedStatus": 200,
+      "expectedBody": { "role": "broker" },
+      "bodyMatcher": "partial"
+    },
+    {
       "name": "Create object",
       "method": "POST",
       "path": "/?resource=objects",

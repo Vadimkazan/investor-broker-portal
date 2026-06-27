@@ -83,7 +83,7 @@ class ApiClient {
   private async request<T>(
     resource: string,
     method: string = 'GET',
-    body?: any,
+    body?: Record<string, unknown>,
     params?: Record<string, string>
   ): Promise<T> {
     const queryParams = new URLSearchParams({ resource, ...params });
@@ -126,8 +126,12 @@ class ApiClient {
     return this.request<User>('users', 'POST', data);
   }
 
-  async updateUser(id: number, data: { name?: string; notify_new_objects?: boolean }): Promise<User> {
+  async updateUser(id: number, data: { name?: string; notify_new_objects?: boolean; role?: User['role'] }): Promise<User> {
     return this.request<User>('users', 'PUT', { id, ...data });
+  }
+
+  async deleteUser(id: number): Promise<{ message: string }> {
+    return this.request<{ message: string }>('users', 'DELETE', undefined, { id: id.toString() });
   }
 
   async getObjects(filters?: {

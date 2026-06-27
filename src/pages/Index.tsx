@@ -32,7 +32,7 @@ const Index = () => {
   const [investmentPeriod, setInvestmentPeriod] = useState(12);
   const [expectedReturn, setExpectedReturn] = useState(15);
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const [user, setUser] = useState<{ name: string; email: string; role: 'investor' | 'broker' } | null>(() => {
+  const [user, setUser] = useState<{ name: string; email: string; role: 'investor' | 'broker' | 'admin' | 'manager'; id?: number } | null>(() => {
     const savedUser = localStorage.getItem('investpro-user');
     return savedUser ? JSON.parse(savedUser) : null;
   });
@@ -48,6 +48,10 @@ const Index = () => {
   const [allProperties, setAllProperties] = useState<PropertyObject[]>([]);
 
   useEffect(() => {
+    if (user && (user.role === 'admin' || user.role === 'manager')) {
+      navigate('/admin/dashboard');
+      return;
+    }
     loadSpreadsheetData();
     
     const loadAllProperties = () => {
@@ -135,9 +139,13 @@ const Index = () => {
     }
   ];
 
-  const handleAuth = (userData: { name: string; email: string; role: 'investor' | 'broker' }) => {
+  const handleAuth = (userData: { name: string; email: string; role: 'investor' | 'broker' | 'admin' | 'manager'; id?: number }) => {
     setUser(userData);
-    setActiveTab('dashboard');
+    if (userData.role === 'admin' || userData.role === 'manager') {
+      navigate('/admin/dashboard');
+    } else {
+      setActiveTab('dashboard');
+    }
   };
 
   const handleLogout = () => {
@@ -157,6 +165,8 @@ const Index = () => {
   const handleTabChange = (tab: string) => {
     if (tab === 'objects') {
       navigate('/objects');
+    } else if (tab === 'dashboard' && user && (user.role === 'admin' || user.role === 'manager')) {
+      navigate('/admin/dashboard');
     } else {
       setActiveTab(tab);
     }
