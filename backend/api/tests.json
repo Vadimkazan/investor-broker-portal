@@ -18,9 +18,26 @@
       "name": "Update user role",
       "method": "PUT",
       "path": "/?resource=users",
-      "body": { "id": 2, "role": "broker" },
+      "body": { "id": 2, "role": "admin" },
       "expectedStatus": 200,
-      "expectedBody": { "role": "broker" },
+      "expectedBody": { "role": "admin" },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Login with correct password",
+      "method": "POST",
+      "path": "/?resource=auth",
+      "body": { "action": "login", "email": "login.v1@yandex.ru", "password": "933651" },
+      "expectedStatus": 200,
+      "expectedBody": { "role": "admin" },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Login with wrong password",
+      "method": "POST",
+      "path": "/?resource=auth",
+      "body": { "action": "login", "email": "login.v1@yandex.ru", "password": "wrongpass" },
+      "expectedStatus": 401,
       "bodyMatcher": "partial"
     },
     {

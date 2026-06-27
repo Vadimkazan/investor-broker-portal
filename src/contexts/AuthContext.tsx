@@ -1,11 +1,25 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { api, User } from '@/services/api';
 
+const AUTH_URL = 'https://functions.poehali.dev/fc00dc4e-18bf-4893-bb9d-331e8abda973?resource=auth';
+
+async function authRequest(body: Record<string, unknown>): Promise<User> {
+  const res = await fetch(AUTH_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Ошибка авторизации');
+  return data as User;
+}
+
 interface AuthContextType {
   user: User | null;
   loading: boolean;
   syncing: boolean;
-  login: (email: string, name: string, role: 'investor' | 'broker' | 'admin' | 'manager') => Promise<void>;
+  login: (email: string, password: string) => Promise<User>;
+  register: (email: string, password: string, name: string, role: 'investor' | 'broker') => Promise<User>;
   logout: () => void;
   switchRole: () => Promise<void>;
 }
@@ -14,28 +28,22 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within AuthProvider');
-  }
+  if (!context) throw new Error('useAuth must be used within AuthProvider');
   return context;
 };
 
-interface AuthProviderProps {
-  children: ReactNode;
-}
-
-export const AuthProvider = ({ children }: AuthProviderProps) => {
+export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
 
   useEffect(() => {
-    loadUser();
-    
-    const interval = setInterval(() => {
-      const savedUser = localStorage.getItem('investpro-user');
-      if (savedUser) {
-        const userData = JSON.parse(savedUser);
+    const saved = localStorage.getItem('investpro-user');
+    if (saved) {
+      try {
+        const userData = JSON.parse(saved) as User;
+        setUser(userData);
+        // Фоново синхронизируем с БД
         setSyncing(true);
         api.getUserByEmail(userData.email)
           .then(dbUser => {
@@ -43,59 +51,24 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
             localStorage.setItem('investpro-user', JSON.stringify(dbUser));
           })
           .catch(() => {})
-          .finally(() => {
-            setTimeout(() => setSyncing(false), 1000);
-          });
-      }
-    }, 5 * 60 * 1000);
-    
-    return () => clearInterval(interval);
+          .finally(() => setTimeout(() => setSyncing(false), 500));
+      } catch { /* ignore */ }
+    }
+    setLoading(false);
   }, []);
 
-  const loadUser = async () => {
-    try {
-      const savedUser = localStorage.getItem('investpro-user');
-      if (savedUser) {
-        const userData = JSON.parse(savedUser);
-        setUser(userData);
-        
-        try {
-          const dbUser = await api.getUserByEmail(userData.email);
-          setUser(dbUser);
-          localStorage.setItem('investpro-user', JSON.stringify(dbUser));
-        } catch (err) {
-          console.log('User not in DB yet, keeping local data');
-        }
-      }
-    } catch (err) {
-      console.error('Failed to load user:', err);
-    } finally {
-      setLoading(false);
-    }
+  const login = async (email: string, password: string): Promise<User> => {
+    const dbUser = await authRequest({ action: 'login', email, password });
+    setUser(dbUser);
+    localStorage.setItem('investpro-user', JSON.stringify(dbUser));
+    return dbUser;
   };
 
-  const login = async (email: string, name: string, role: 'investor' | 'broker' | 'admin' | 'manager') => {
-    try {
-      setLoading(true);
-      
-      try {
-        const existingUser = await api.getUserByEmail(email);
-        setUser(existingUser);
-        localStorage.setItem('investpro-user', JSON.stringify(existingUser));
-      } catch (err) {
-        const newUser = await api.createUser({ email, name, role });
-        setUser(newUser);
-        localStorage.setItem('investpro-user', JSON.stringify(newUser));
-      }
-    } catch (err) {
-      console.error('Failed to login:', err);
-      
-      const localUser = { id: Date.now(), email, name, role, created_at: new Date().toISOString() };
-      setUser(localUser);
-      localStorage.setItem('investpro-user', JSON.stringify(localUser));
-    } finally {
-      setLoading(false);
-    }
+  const register = async (email: string, password: string, name: string, role: 'investor' | 'broker'): Promise<User> => {
+    const dbUser = await authRequest({ action: 'register', email, password, name, role });
+    setUser(dbUser);
+    localStorage.setItem('investpro-user', JSON.stringify(dbUser));
+    return dbUser;
   };
 
   const logout = () => {
@@ -105,16 +78,14 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const switchRole = async () => {
     if (!user) return;
-    
     const newRole = user.role === 'broker' ? 'investor' : 'broker';
-    const updatedUser = { ...user, role: newRole };
-    
-    setUser(updatedUser as User);
-    localStorage.setItem('investpro-user', JSON.stringify(updatedUser));
+    const updated = { ...user, role: newRole };
+    setUser(updated as User);
+    localStorage.setItem('investpro-user', JSON.stringify(updated));
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, syncing, login, logout, switchRole }}>
+    <AuthContext.Provider value={{ user, loading, syncing, login, register, logout, switchRole }}>
       {children}
     </AuthContext.Provider>
   );

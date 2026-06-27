@@ -6,24 +6,58 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import Icon from '@/components/ui/icon';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface AuthModalProps {
   open: boolean;
   onClose: () => void;
-  onAuth: (user: { name: string; email: string; role: 'investor' | 'broker' }) => void;
+  onAuth?: (user: { name: string; email: string; role: string }) => void;
 }
 
 const AuthModal = ({ open, onClose, onAuth }: AuthModalProps) => {
-  const [isLogin, setIsLogin] = useState(true);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [name, setName] = useState('');
-  const [role, setRole] = useState<'investor' | 'broker'>('investor');
+  const { login, register } = useAuth();
+  const [tab, setTab] = useState<'login' | 'register'>('login');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [loginError, setLoginError] = useState('');
+  const [loginLoading, setLoginLoading] = useState(false);
+
+  const [regName, setRegName] = useState('');
+  const [regEmail, setRegEmail] = useState('');
+  const [regPassword, setRegPassword] = useState('');
+  const [regRole, setRegRole] = useState<'investor' | 'broker'>('investor');
+  const [regError, setRegError] = useState('');
+  const [regLoading, setRegLoading] = useState(false);
+
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    onAuth({ name: name || email.split('@')[0], email, role });
-    onClose();
+    setLoginError('');
+    setLoginLoading(true);
+    try {
+      const user = await login(loginEmail.trim().toLowerCase(), loginPassword);
+      onAuth?.({ name: user.name, email: user.email, role: user.role });
+      onClose();
+    } catch (err: unknown) {
+      setLoginError(err instanceof Error ? err.message : 'Ошибка входа');
+    } finally {
+      setLoginLoading(false);
+    }
+  };
+
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setRegError('');
+    setRegLoading(true);
+    try {
+      const user = await register(regEmail.trim().toLowerCase(), regPassword, regName.trim(), regRole);
+      onAuth?.({ name: user.name, email: user.email, role: user.role });
+      onClose();
+    } catch (err: unknown) {
+      setRegError(err instanceof Error ? err.message : 'Ошибка регистрации');
+    } finally {
+      setRegLoading(false);
+    }
   };
 
   return (
@@ -36,22 +70,22 @@ const AuthModal = ({ open, onClose, onAuth }: AuthModalProps) => {
           </DialogDescription>
         </DialogHeader>
 
-        <Tabs value={isLogin ? 'login' : 'register'} onValueChange={(v) => setIsLogin(v === 'login')}>
+        <Tabs value={tab} onValueChange={(v) => setTab(v as 'login' | 'register')}>
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="login">Вход</TabsTrigger>
             <TabsTrigger value="register">Регистрация</TabsTrigger>
           </TabsList>
 
           <TabsContent value="login">
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="login-email">Email</Label>
                 <Input
                   id="login-email"
                   type="email"
-                  placeholder="investor@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  value={loginEmail}
+                  onChange={(e) => setLoginEmail(e.target.value)}
                   required
                 />
               </div>
@@ -61,28 +95,33 @@ const AuthModal = ({ open, onClose, onAuth }: AuthModalProps) => {
                   id="login-password"
                   type="password"
                   placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  value={loginPassword}
+                  onChange={(e) => setLoginPassword(e.target.value)}
                   required
                 />
               </div>
-              <Button type="submit" className="w-full gap-2">
-                <Icon name="LogIn" size={18} />
+              {loginError && (
+                <p className="text-sm text-destructive">{loginError}</p>
+              )}
+              <Button type="submit" className="w-full gap-2" disabled={loginLoading}>
+                {loginLoading
+                  ? <Icon name="Loader2" size={18} className="animate-spin" />
+                  : <Icon name="LogIn" size={18} />}
                 Войти
               </Button>
             </form>
           </TabsContent>
 
           <TabsContent value="register">
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleRegister} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="register-name">Имя</Label>
                 <Input
                   id="register-name"
                   type="text"
                   placeholder="Иван Иванов"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  value={regName}
+                  onChange={(e) => setRegName(e.target.value)}
                   required
                 />
               </div>
@@ -91,9 +130,9 @@ const AuthModal = ({ open, onClose, onAuth }: AuthModalProps) => {
                 <Input
                   id="register-email"
                   type="email"
-                  placeholder="investor@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  value={regEmail}
+                  onChange={(e) => setRegEmail(e.target.value)}
                   required
                 />
               </div>
@@ -103,15 +142,15 @@ const AuthModal = ({ open, onClose, onAuth }: AuthModalProps) => {
                   id="register-password"
                   type="password"
                   placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  value={regPassword}
+                  onChange={(e) => setRegPassword(e.target.value)}
                   required
+                  minLength={6}
                 />
               </div>
-
               <div className="space-y-3">
                 <Label>Роль</Label>
-                <RadioGroup value={role} onValueChange={(v) => setRole(v as 'investor' | 'broker')}>
+                <RadioGroup value={regRole} onValueChange={(v) => setRegRole(v as 'investor' | 'broker')}>
                   <div className="flex items-center space-x-2 border rounded-lg p-3 hover:bg-muted cursor-pointer">
                     <RadioGroupItem value="investor" id="investor" />
                     <Label htmlFor="investor" className="flex-1 cursor-pointer">
@@ -138,9 +177,13 @@ const AuthModal = ({ open, onClose, onAuth }: AuthModalProps) => {
                   </div>
                 </RadioGroup>
               </div>
-
-              <Button type="submit" className="w-full gap-2">
-                <Icon name="UserPlus" size={18} />
+              {regError && (
+                <p className="text-sm text-destructive">{regError}</p>
+              )}
+              <Button type="submit" className="w-full gap-2" disabled={regLoading}>
+                {regLoading
+                  ? <Icon name="Loader2" size={18} className="animate-spin" />
+                  : <Icon name="UserPlus" size={18} />}
                 Зарегистрироваться
               </Button>
             </form>

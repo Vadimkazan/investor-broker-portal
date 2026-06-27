@@ -4,6 +4,7 @@ import InvestorFunnel from './InvestorFunnel';
 import ReferralSystem from './ReferralSystem';
 import BrokerObjectsManager from './broker/BrokerObjectsManager';
 import AddNewObjectDialog from './broker/AddNewObjectDialog';
+import ProfileSettings from './ProfileSettings';
 
 interface NewBrokerDashboardProps {
   userName: string;
@@ -21,10 +22,11 @@ const NewBrokerDashboard = ({ userName, brokerId }: NewBrokerDashboardProps) => 
       </div>
 
       <Tabs defaultValue="properties" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="properties">Объекты</TabsTrigger>
           <TabsTrigger value="investors">Инвесторы</TabsTrigger>
-          <TabsTrigger value="referral">Реферальная программа</TabsTrigger>
+          <TabsTrigger value="referral">Реферальная</TabsTrigger>
+          <TabsTrigger value="settings">Настройки</TabsTrigger>
         </TabsList>
 
         <TabsContent value="properties">
@@ -43,6 +45,10 @@ const NewBrokerDashboard = ({ userName, brokerId }: NewBrokerDashboardProps) => 
 
         <TabsContent value="referral">
           <ReferralSystem brokerId={String(brokerId)} brokerName={userName} />
+        </TabsContent>
+
+        <TabsContent value="settings">
+          <ProfileSettings />
         </TabsContent>
       </Tabs>
     </div>
