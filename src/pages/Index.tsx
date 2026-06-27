@@ -48,10 +48,6 @@ const Index = () => {
   const [allProperties, setAllProperties] = useState<PropertyObject[]>([]);
 
   useEffect(() => {
-    if (user && (user.role === 'admin' || user.role === 'manager')) {
-      navigate('/admin/dashboard');
-      return;
-    }
     loadSpreadsheetData();
     
     const loadAllProperties = () => {
