@@ -41,6 +41,32 @@
       "bodyMatcher": "partial"
     },
     {
+      "name": "Create investor",
+      "method": "POST",
+      "path": "/?resource=investors",
+      "body": {
+        "broker_id": 2,
+        "first_name": "Тест",
+        "last_name": "Инвесторов",
+        "email": "test.inv@example.com",
+        "phone": "+70000000000",
+        "budget": 1000000,
+        "source": "manual",
+        "stage": "lead",
+        "timeline": []
+      },
+      "expectedStatus": 201,
+      "expectedBody": { "stage": "lead" },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Get broker investors",
+      "method": "GET",
+      "path": "/?resource=investors&broker_id=2",
+      "expectedStatus": 200,
+      "bodyMatcher": "partial"
+    },
+    {
       "name": "Create object",
       "method": "POST",
       "path": "/?resource=objects",

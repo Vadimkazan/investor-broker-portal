@@ -61,6 +61,8 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             return handle_favorites(cur, method, event)
         elif resource == 'auth':
             return handle_auth(cur, method, event)
+        elif resource == 'investors':
+            return handle_investors(cur, method, event)
         else:
             return error_response('Resource not found', 404)
     
@@ -352,6 +354,109 @@ def handle_favorites(cur, method: str, event: Dict[str, Any]) -> Dict[str, Any]:
         
         return success_response({'message': 'Favorite removed'})
     
+    return error_response('Method not allowed', 405)
+
+
+def format_investor(row) -> Dict[str, Any]:
+    return {
+        'id': str(row[0]),
+        'brokerId': str(row[1]),
+        'personalInfo': {
+            'firstName': row[2], 'lastName': row[3], 'email': row[4], 'phone': row[5]
+        },
+        'investmentProfile': {
+            'budget': float(row[6]) if row[6] is not None else 0,
+            'strategies': [], 'riskTolerance': 'medium',
+            'preferredPropertyTypes': [], 'preferredLocations': []
+        },
+        'stage': row[8],
+        'interaction': {'source': row[7], 'notes': row[9] or ''},
+        'timeline': row[10] or [],
+        'portfolio': {
+            'totalInvested': float(row[11]) if row[11] is not None else 0,
+            'activeInvestments': row[12] or 0,
+            'totalReturn': float(row[13]) if row[13] is not None else 0,
+            'properties': []
+        },
+        'metadata': {
+            'createdAt': row[14].isoformat() if row[14] else None,
+            'updatedAt': row[15].isoformat() if row[15] else None
+        }
+    }
+
+
+def handle_investors(cur, method: str, event: Dict[str, Any]) -> Dict[str, Any]:
+    cols = "id, broker_id, first_name, last_name, email, phone, budget, source, stage, notes, timeline, total_invested, active_investments, total_return, created_at, updated_at"
+
+    if method == 'GET':
+        params = event.get('queryStringParameters') or {}
+        broker_id = params.get('broker_id')
+        if not broker_id:
+            return error_response('broker_id required', 400)
+        cur.execute(f"SELECT {cols} FROM broker_investors WHERE broker_id = {escape_sql(int(broker_id))} ORDER BY created_at DESC")
+        rows = cur.fetchall()
+        return success_response([format_investor(r) for r in rows])
+
+    elif method == 'POST':
+        body = json.loads(event.get('body', '{}'))
+        timeline = json.dumps(body.get('timeline', []))
+        query = f"""
+            INSERT INTO broker_investors (broker_id, first_name, last_name, email, phone, budget, source, stage, notes, timeline)
+            VALUES (
+                {escape_sql(int(body.get('broker_id')))},
+                {escape_sql(body.get('first_name', ''))},
+                {escape_sql(body.get('last_name', ''))},
+                {escape_sql(body.get('email', ''))},
+                {escape_sql(body.get('phone', ''))},
+                {escape_sql(body.get('budget', 0) or 0)},
+                {escape_sql(body.get('source', ''))},
+                {escape_sql(body.get('stage', 'lead'))},
+                {escape_sql(body.get('notes', ''))},
+                {escape_sql(timeline)}::jsonb
+            ) RETURNING {cols}
+        """
+        cur.execute(query)
+        return success_response(format_investor(cur.fetchone()), 201)
+
+    elif method == 'PUT':
+        body = json.loads(event.get('body', '{}'))
+        investor_id = body.get('id')
+        if not investor_id:
+            return error_response('Investor ID required', 400)
+        fields = []
+        if 'stage' in body:
+            fields.append(f"stage = {escape_sql(body['stage'])}")
+        if 'notes' in body:
+            fields.append(f"notes = {escape_sql(body['notes'])}")
+        if 'timeline' in body:
+            fields.append(f"timeline = {escape_sql(json.dumps(body['timeline']))}::jsonb")
+        if 'first_name' in body:
+            fields.append(f"first_name = {escape_sql(body['first_name'])}")
+        if 'last_name' in body:
+            fields.append(f"last_name = {escape_sql(body['last_name'])}")
+        if 'email' in body:
+            fields.append(f"email = {escape_sql(body['email'])}")
+        if 'phone' in body:
+            fields.append(f"phone = {escape_sql(body['phone'])}")
+        if 'budget' in body:
+            fields.append(f"budget = {escape_sql(body['budget'] or 0)}")
+        if not fields:
+            return error_response('No fields to update', 400)
+        fields.append("updated_at = CURRENT_TIMESTAMP")
+        cur.execute(f"UPDATE broker_investors SET {', '.join(fields)} WHERE id = {escape_sql(int(investor_id))} RETURNING {cols}")
+        row = cur.fetchone()
+        if not row:
+            return error_response('Investor not found', 404)
+        return success_response(format_investor(row))
+
+    elif method == 'DELETE':
+        params = event.get('queryStringParameters') or {}
+        investor_id = params.get('id')
+        if not investor_id:
+            return error_response('Investor ID required', 400)
+        cur.execute(f"DELETE FROM broker_investors WHERE id = {escape_sql(int(investor_id))}")
+        return success_response({'message': 'Deleted'})
+
     return error_response('Method not allowed', 405)
 
 

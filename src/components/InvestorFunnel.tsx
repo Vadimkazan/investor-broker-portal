@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useState, useEffect, useCallback } from 'react';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,206 +8,136 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import Icon from '@/components/ui/icon';
-import type { Investor, InvestorStage, InvestmentStrategy, RiskLevel, PropertyType } from '@/types/investment';
+import { api, BrokerInvestor } from '@/services/api';
+import { useToast } from '@/hooks/use-toast';
 
 interface InvestorFunnelProps {
   brokerId: string;
 }
 
-const InvestorFunnel = ({ brokerId }: InvestorFunnelProps) => {
-  const [investors, setInvestors] = useState<Investor[]>([
-    {
-      id: '1',
-      brokerId,
-      personalInfo: {
-        firstName: 'Иван',
-        lastName: 'Петров',
-        email: 'ivan@example.com',
-        phone: '+7 (999) 123-45-67'
-      },
-      stage: 'active',
-      investmentProfile: {
-        budget: 2000000,
-        strategies: ['rental', 'resale'],
-        riskTolerance: 'medium',
-        preferredPropertyTypes: ['apartment', 'commercial'],
-        preferredLocations: ['Москва', 'Санкт-Петербург']
-      },
-      portfolio: {
-        totalInvested: 1500000,
-        activeInvestments: 3,
-        totalReturn: 180000,
-        properties: []
-      },
-      interaction: {
-        source: 'telegram',
-        utmParams: {
-          source: 'telegram',
-          medium: 'social',
-          campaign: 'spring2024'
-        },
-        notes: 'Заинтересован в коммерческой недвижимости'
-      },
-      timeline: [
-        {
-          date: new Date('2024-01-15'),
-          action: 'Регистрация',
-          details: 'Пришёл через Telegram канал'
-        },
-        {
-          date: new Date('2024-01-20'),
-          action: 'Консультация',
-          details: 'Обсудили инвестиционные цели'
-        }
-      ],
-      metadata: {
-        createdAt: new Date('2024-01-15'),
-        updatedAt: new Date()
-      }
-    }
-  ]);
+type InvestorStage = 'lead' | 'consultation' | 'analysis' | 'offer_sent' | 'negotiation' | 'deal_preparation' | 'active' | 'inactive';
 
-  const [selectedInvestor, setSelectedInvestor] = useState<Investor | null>(null);
+const stageLabels: Record<InvestorStage, string> = {
+  lead: 'Лид',
+  consultation: 'Консультация',
+  analysis: 'Анализ',
+  offer_sent: 'Отправлено предложение',
+  negotiation: 'Переговоры',
+  deal_preparation: 'Подготовка сделки',
+  active: 'Активный',
+  inactive: 'Неактивный'
+};
+
+const stageColors: Record<InvestorStage, string> = {
+  lead: 'bg-gray-500',
+  consultation: 'bg-blue-500',
+  analysis: 'bg-purple-500',
+  offer_sent: 'bg-yellow-500',
+  negotiation: 'bg-orange-500',
+  deal_preparation: 'bg-green-400',
+  active: 'bg-green-600',
+  inactive: 'bg-gray-400'
+};
+
+const InvestorFunnel = ({ brokerId }: InvestorFunnelProps) => {
+  const { toast } = useToast();
+  const [investors, setInvestors] = useState<BrokerInvestor[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [selectedInvestor, setSelectedInvestor] = useState<BrokerInvestor | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [noteDraft, setNoteDraft] = useState('');
   const [newInvestor, setNewInvestor] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    phone: '',
-    budget: '',
-    source: ''
+    firstName: '', lastName: '', email: '', phone: '', budget: '', source: ''
   });
 
-  const stageLabels: Record<InvestorStage, string> = {
-    lead: 'Лид',
-    consultation: 'Консультация',
-    analysis: 'Анализ',
-    offer_sent: 'Отправлено предложение',
-    negotiation: 'Переговоры',
-    deal_preparation: 'Подготовка сделки',
-    active: 'Активный',
-    inactive: 'Неактивный'
-  };
+  const loadInvestors = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await api.getInvestors(Number(brokerId));
+      setInvestors(data);
+    } catch {
+      toast({ title: 'Не удалось загрузить инвесторов', variant: 'destructive' });
+    } finally {
+      setLoading(false);
+    }
+  }, [brokerId, toast]);
 
-  const stageColors: Record<InvestorStage, string> = {
-    lead: 'bg-gray-500',
-    consultation: 'bg-blue-500',
-    analysis: 'bg-purple-500',
-    offer_sent: 'bg-yellow-500',
-    negotiation: 'bg-orange-500',
-    deal_preparation: 'bg-green-400',
-    active: 'bg-green-600',
-    inactive: 'bg-gray-400'
-  };
+  useEffect(() => { loadInvestors(); }, [loadInvestors]);
 
   const groupedByStage = investors.reduce((acc, inv) => {
-    if (!acc[inv.stage]) acc[inv.stage] = [];
-    acc[inv.stage].push(inv);
+    const stage = inv.stage as InvestorStage;
+    if (!acc[stage]) acc[stage] = [];
+    acc[stage].push(inv);
     return acc;
-  }, {} as Record<InvestorStage, Investor[]>);
+  }, {} as Record<InvestorStage, BrokerInvestor[]>);
 
-  const handleAddInvestor = () => {
-    const investor: Investor = {
-      id: Date.now().toString(),
-      brokerId,
-      personalInfo: {
-        firstName: newInvestor.firstName,
-        lastName: newInvestor.lastName,
+  const handleAddInvestor = async () => {
+    if (!newInvestor.firstName.trim()) {
+      toast({ title: 'Укажите имя инвестора', variant: 'destructive' });
+      return;
+    }
+    setSaving(true);
+    try {
+      const created = await api.createInvestor({
+        broker_id: Number(brokerId),
+        first_name: newInvestor.firstName,
+        last_name: newInvestor.lastName,
         email: newInvestor.email,
-        phone: newInvestor.phone
-      },
-      stage: 'lead',
-      investmentProfile: {
-        budget: parseInt(newInvestor.budget),
-        strategies: [],
-        riskTolerance: 'medium',
-        preferredPropertyTypes: [],
-        preferredLocations: []
-      },
-      portfolio: {
-        totalInvested: 0,
-        activeInvestments: 0,
-        totalReturn: 0,
-        properties: []
-      },
-      interaction: {
+        phone: newInvestor.phone,
+        budget: parseInt(newInvestor.budget) || 0,
         source: newInvestor.source,
-        notes: ''
-      },
-      timeline: [
-        {
-          date: new Date(),
+        stage: 'lead',
+        timeline: [{
+          date: new Date().toISOString(),
           action: 'Регистрация',
-          details: `Добавлен вручную, источник: ${newInvestor.source}`
-        }
-      ],
-      metadata: {
-        createdAt: new Date(),
-        updatedAt: new Date()
-      }
-    };
-
-    setInvestors([...investors, investor]);
-    setShowAddModal(false);
-    setNewInvestor({
-      firstName: '',
-      lastName: '',
-      email: '',
-      phone: '',
-      budget: '',
-      source: ''
-    });
+          details: `Добавлен вручную, источник: ${newInvestor.source || 'не указан'}`
+        }]
+      });
+      setInvestors(prev => [created, ...prev]);
+      setShowAddModal(false);
+      setNewInvestor({ firstName: '', lastName: '', email: '', phone: '', budget: '', source: '' });
+      toast({ title: 'Инвестор добавлен' });
+    } catch (err) {
+      toast({ title: err instanceof Error ? err.message : 'Ошибка сохранения', variant: 'destructive' });
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const moveToStage = (investorId: string, newStage: InvestorStage) => {
-    setInvestors(prev => prev.map(inv => {
-      if (inv.id === investorId) {
-        return {
-          ...inv,
-          stage: newStage,
-          timeline: [
-            ...inv.timeline,
-            {
-              date: new Date(),
-              action: 'Смена этапа',
-              details: `Переведён на этап: ${stageLabels[newStage]}`
-            }
-          ],
-          metadata: {
-            ...inv.metadata,
-            updatedAt: new Date()
-          }
-        };
-      }
-      return inv;
-    }));
+  const moveToStage = async (investor: BrokerInvestor, newStage: InvestorStage) => {
+    const newTimeline = [
+      ...investor.timeline,
+      { date: new Date().toISOString(), action: 'Смена этапа', details: `Переведён на этап: ${stageLabels[newStage]}` }
+    ];
+    try {
+      const updated = await api.updateInvestor(Number(investor.id), { stage: newStage, timeline: newTimeline });
+      setInvestors(prev => prev.map(i => i.id === investor.id ? updated : i));
+      setSelectedInvestor(updated);
+      toast({ title: 'Этап изменён' });
+    } catch {
+      toast({ title: 'Ошибка изменения этапа', variant: 'destructive' });
+    }
   };
 
-  const addNote = (investorId: string, note: string) => {
-    setInvestors(prev => prev.map(inv => {
-      if (inv.id === investorId) {
-        return {
-          ...inv,
-          interaction: {
-            ...inv.interaction,
-            notes: note
-          },
-          timeline: [
-            ...inv.timeline,
-            {
-              date: new Date(),
-              action: 'Добавлена заметка',
-              details: note
-            }
-          ],
-          metadata: {
-            ...inv.metadata,
-            updatedAt: new Date()
-          }
-        };
-      }
-      return inv;
-    }));
+  const saveNote = async (investor: BrokerInvestor) => {
+    const newTimeline = [
+      ...investor.timeline,
+      { date: new Date().toISOString(), action: 'Добавлена заметка', details: noteDraft }
+    ];
+    try {
+      const updated = await api.updateInvestor(Number(investor.id), { notes: noteDraft, timeline: newTimeline });
+      setInvestors(prev => prev.map(i => i.id === investor.id ? updated : i));
+      setSelectedInvestor(updated);
+      toast({ title: 'Заметка сохранена' });
+    } catch {
+      toast({ title: 'Ошибка сохранения заметки', variant: 'destructive' });
+    }
+  };
+
+  const openInvestor = (investor: BrokerInvestor) => {
+    setSelectedInvestor(investor);
+    setNoteDraft(investor.interaction.notes || '');
   };
 
   return (
@@ -232,57 +162,32 @@ const InvestorFunnel = ({ brokerId }: InvestorFunnelProps) => {
             <div className="space-y-4 py-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Имя</Label>
-                  <Input
-                    value={newInvestor.firstName}
-                    onChange={(e) => setNewInvestor({ ...newInvestor, firstName: e.target.value })}
-                    placeholder="Иван"
-                  />
+                  <Label>Имя *</Label>
+                  <Input value={newInvestor.firstName} onChange={(e) => setNewInvestor({ ...newInvestor, firstName: e.target.value })} placeholder="Иван" />
                 </div>
                 <div className="space-y-2">
                   <Label>Фамилия</Label>
-                  <Input
-                    value={newInvestor.lastName}
-                    onChange={(e) => setNewInvestor({ ...newInvestor, lastName: e.target.value })}
-                    placeholder="Петров"
-                  />
+                  <Input value={newInvestor.lastName} onChange={(e) => setNewInvestor({ ...newInvestor, lastName: e.target.value })} placeholder="Петров" />
                 </div>
               </div>
               <div className="space-y-2">
                 <Label>Email</Label>
-                <Input
-                  type="email"
-                  value={newInvestor.email}
-                  onChange={(e) => setNewInvestor({ ...newInvestor, email: e.target.value })}
-                  placeholder="ivan@example.com"
-                />
+                <Input type="email" value={newInvestor.email} onChange={(e) => setNewInvestor({ ...newInvestor, email: e.target.value })} placeholder="ivan@example.com" />
               </div>
               <div className="space-y-2">
                 <Label>Телефон</Label>
-                <Input
-                  value={newInvestor.phone}
-                  onChange={(e) => setNewInvestor({ ...newInvestor, phone: e.target.value })}
-                  placeholder="+7 (999) 123-45-67"
-                />
+                <Input value={newInvestor.phone} onChange={(e) => setNewInvestor({ ...newInvestor, phone: e.target.value })} placeholder="+7 (999) 123-45-67" />
               </div>
               <div className="space-y-2">
                 <Label>Бюджет (₽)</Label>
-                <Input
-                  type="number"
-                  value={newInvestor.budget}
-                  onChange={(e) => setNewInvestor({ ...newInvestor, budget: e.target.value })}
-                  placeholder="1000000"
-                />
+                <Input type="number" value={newInvestor.budget} onChange={(e) => setNewInvestor({ ...newInvestor, budget: e.target.value })} placeholder="2000000" />
               </div>
               <div className="space-y-2">
                 <Label>Источник</Label>
-                <Input
-                  value={newInvestor.source}
-                  onChange={(e) => setNewInvestor({ ...newInvestor, source: e.target.value })}
-                  placeholder="Telegram, Instagram, Сайт..."
-                />
+                <Input value={newInvestor.source} onChange={(e) => setNewInvestor({ ...newInvestor, source: e.target.value })} placeholder="Telegram, Instagram, Сайт..." />
               </div>
-              <Button onClick={handleAddInvestor} className="w-full">
+              <Button onClick={handleAddInvestor} className="w-full" disabled={saving}>
+                {saving && <Icon name="Loader2" size={16} className="animate-spin mr-2" />}
                 Добавить
               </Button>
             </div>
@@ -290,37 +195,45 @@ const InvestorFunnel = ({ brokerId }: InvestorFunnelProps) => {
         </Dialog>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-        {(['lead', 'consultation', 'analysis', 'offer_sent', 'negotiation', 'deal_preparation', 'active', 'inactive'] as InvestorStage[]).map(stage => (
-          <Card key={stage}>
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <Badge className={stageColors[stage]}>{stageLabels[stage]}</Badge>
-                <span className="text-sm font-semibold">{groupedByStage[stage]?.length || 0}</span>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              {groupedByStage[stage]?.map(investor => (
-                <div
-                  key={investor.id}
-                  className="border rounded-lg p-3 cursor-pointer hover:shadow-md transition-shadow"
-                  onClick={() => setSelectedInvestor(investor)}
-                >
-                  <p className="font-semibold text-sm">
-                    {investor.personalInfo.firstName} {investor.personalInfo.lastName}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    ₽{(investor.investmentProfile.budget / 1000).toFixed(0)}K
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {investor.interaction.source}
-                  </p>
+      {loading ? (
+        <div className="text-center py-12">
+          <Icon name="Loader2" size={32} className="mx-auto text-primary animate-spin mb-2" />
+          <p className="text-muted-foreground">Загрузка инвесторов...</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+          {(['lead', 'consultation', 'analysis', 'offer_sent', 'negotiation', 'deal_preparation', 'active', 'inactive'] as InvestorStage[]).map(stage => (
+            <Card key={stage}>
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <Badge className={stageColors[stage]}>{stageLabels[stage]}</Badge>
+                  <span className="text-sm font-semibold">{groupedByStage[stage]?.length || 0}</span>
                 </div>
-              ))}
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {groupedByStage[stage]?.map(investor => (
+                  <div
+                    key={investor.id}
+                    className="border rounded-lg p-3 cursor-pointer hover:shadow-md transition-shadow"
+                    onClick={() => openInvestor(investor)}
+                  >
+                    <p className="font-semibold text-sm">
+                      {investor.personalInfo.firstName} {investor.personalInfo.lastName}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      ₽{(investor.investmentProfile.budget / 1000).toFixed(0)}K
+                    </p>
+                    <p className="text-xs text-muted-foreground">{investor.interaction.source}</p>
+                  </div>
+                ))}
+                {(!groupedByStage[stage] || groupedByStage[stage].length === 0) && (
+                  <p className="text-xs text-muted-foreground text-center py-2">Пусто</p>
+                )}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
 
       <Dialog open={selectedInvestor !== null} onOpenChange={() => setSelectedInvestor(null)}>
         <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
@@ -335,11 +248,11 @@ const InvestorFunnel = ({ brokerId }: InvestorFunnelProps) => {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Email</Label>
-                  <p className="text-sm">{selectedInvestor.personalInfo.email}</p>
+                  <p className="text-sm">{selectedInvestor.personalInfo.email || '—'}</p>
                 </div>
                 <div className="space-y-2">
                   <Label>Телефон</Label>
-                  <p className="text-sm">{selectedInvestor.personalInfo.phone}</p>
+                  <p className="text-sm">{selectedInvestor.personalInfo.phone || '—'}</p>
                 </div>
               </div>
 
@@ -347,11 +260,9 @@ const InvestorFunnel = ({ brokerId }: InvestorFunnelProps) => {
                 <Label>Текущий этап</Label>
                 <Select
                   value={selectedInvestor.stage}
-                  onValueChange={(value) => moveToStage(selectedInvestor.id, value as InvestorStage)}
+                  onValueChange={(value) => moveToStage(selectedInvestor, value as InvestorStage)}
                 >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {Object.entries(stageLabels).map(([key, label]) => (
                       <SelectItem key={key} value={key}>{label}</SelectItem>
@@ -368,11 +279,8 @@ const InvestorFunnel = ({ brokerId }: InvestorFunnelProps) => {
                     <p className="font-semibold">₽{selectedInvestor.investmentProfile.budget.toLocaleString('ru-RU')}</p>
                   </div>
                   <div>
-                    <p className="text-muted-foreground">Толерантность к риску</p>
-                    <p className="font-semibold">
-                      {selectedInvestor.investmentProfile.riskTolerance === 'low' ? 'Низкая' :
-                       selectedInvestor.investmentProfile.riskTolerance === 'medium' ? 'Средняя' : 'Высокая'}
-                    </p>
+                    <p className="text-muted-foreground">Источник</p>
+                    <p className="font-semibold">{selectedInvestor.interaction.source || '—'}</p>
                   </div>
                   <div>
                     <p className="text-muted-foreground">Активных инвестиций</p>
@@ -385,42 +293,18 @@ const InvestorFunnel = ({ brokerId }: InvestorFunnelProps) => {
                 </div>
               </div>
 
-              <div className="border rounded-lg p-4">
-                <h3 className="font-semibold mb-3">Источник и UTM</h3>
-                <div className="space-y-2 text-sm">
-                  <div>
-                    <p className="text-muted-foreground">Источник</p>
-                    <p className="font-semibold">{selectedInvestor.interaction.source}</p>
-                  </div>
-                  {selectedInvestor.interaction.utmParams && (
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <p className="text-muted-foreground text-xs">UTM Source</p>
-                        <p className="text-xs font-mono">{selectedInvestor.interaction.utmParams.source}</p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground text-xs">UTM Campaign</p>
-                        <p className="text-xs font-mono">{selectedInvestor.interaction.utmParams.campaign}</p>
-                      </div>
-                    </div>
-                  )}
-                  {selectedInvestor.interaction.referralCode && (
-                    <div>
-                      <p className="text-muted-foreground">Реферальный код</p>
-                      <p className="font-mono text-xs">{selectedInvestor.interaction.referralCode}</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-
               <div className="space-y-2">
                 <Label>Заметки</Label>
                 <Textarea
-                  value={selectedInvestor.interaction.notes}
-                  onChange={(e) => addNote(selectedInvestor.id, e.target.value)}
+                  value={noteDraft}
+                  onChange={(e) => setNoteDraft(e.target.value)}
                   placeholder="Добавьте заметки о клиенте..."
                   rows={4}
                 />
+                <Button size="sm" onClick={() => saveNote(selectedInvestor)} disabled={noteDraft === selectedInvestor.interaction.notes}>
+                  <Icon name="Save" size={14} className="mr-2" />
+                  Сохранить заметку
+                </Button>
               </div>
 
               <div>
@@ -431,22 +315,11 @@ const InvestorFunnel = ({ brokerId }: InvestorFunnelProps) => {
                       <p className="text-sm font-semibold">{event.action}</p>
                       <p className="text-xs text-muted-foreground">{event.details}</p>
                       <p className="text-xs text-muted-foreground mt-1">
-                        {event.date.toLocaleDateString('ru-RU')} {event.date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
+                        {event.date ? new Date(event.date).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''}
                       </p>
                     </div>
                   ))}
                 </div>
-              </div>
-
-              <div className="flex gap-2">
-                <Button className="flex-1 gap-2">
-                  <Icon name="Mail" size={18} />
-                  Написать письмо
-                </Button>
-                <Button className="flex-1 gap-2" variant="outline">
-                  <Icon name="Phone" size={18} />
-                  Позвонить
-                </Button>
               </div>
             </div>
           )}

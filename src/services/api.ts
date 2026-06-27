@@ -73,6 +73,24 @@ export interface Notification {
   created_at?: string;
 }
 
+export interface BrokerInvestor {
+  id: string;
+  brokerId: string;
+  personalInfo: { firstName: string; lastName: string; email: string; phone: string };
+  investmentProfile: {
+    budget: number;
+    strategies: string[];
+    riskTolerance: string;
+    preferredPropertyTypes: string[];
+    preferredLocations: string[];
+  };
+  stage: string;
+  interaction: { source: string; notes: string };
+  timeline: { date: string; action: string; details: string }[];
+  portfolio: { totalInvested: number; activeInvestments: number; totalReturn: number; properties: unknown[] };
+  metadata: { createdAt: string | null; updatedAt: string | null };
+}
+
 class ApiClient {
   private baseUrl: string;
 
@@ -196,6 +214,33 @@ class ApiClient {
 
   async createNotification(data: { user_id: number; type: string; title: string; message: string; object_id?: number }): Promise<Notification> {
     return this.request<Notification>('notifications', 'POST', data);
+  }
+
+  async getInvestors(brokerId: number): Promise<BrokerInvestor[]> {
+    return this.request<BrokerInvestor[]>('investors', 'GET', undefined, { broker_id: brokerId.toString() });
+  }
+
+  async createInvestor(data: {
+    broker_id: number;
+    first_name: string;
+    last_name?: string;
+    email?: string;
+    phone?: string;
+    budget?: number;
+    source?: string;
+    stage?: string;
+    notes?: string;
+    timeline?: unknown[];
+  }): Promise<BrokerInvestor> {
+    return this.request<BrokerInvestor>('investors', 'POST', data);
+  }
+
+  async updateInvestor(id: number, data: Record<string, unknown>): Promise<BrokerInvestor> {
+    return this.request<BrokerInvestor>('investors', 'PUT', { id, ...data });
+  }
+
+  async deleteInvestor(id: number): Promise<{ message: string }> {
+    return this.request<{ message: string }>('investors', 'DELETE', undefined, { id: id.toString() });
   }
 
   async uploadFile(file: File): Promise<{ url: string; fileName: string; fileType: string }> {
