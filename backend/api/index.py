@@ -1,7 +1,15 @@
 import json
 import os
 import psycopg2
+import hashlib
+import hmac
 from typing import Dict, Any, List, Optional
+
+def hash_password(password: str) -> str:
+    return hashlib.sha256(password.encode()).hexdigest()
+
+def verify_password(password: str, password_hash: str) -> bool:
+    return hmac.compare_digest(hash_password(password), password_hash)
 
 def escape_sql(value):
     '''Escape values for Simple Query Protocol'''
@@ -51,6 +59,8 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             return handle_objects(cur, method, event)
         elif resource == 'favorites':
             return handle_favorites(cur, method, event)
+        elif resource == 'auth':
+            return handle_auth(cur, method, event)
         else:
             return error_response('Resource not found', 404)
     
@@ -343,6 +353,82 @@ def handle_favorites(cur, method: str, event: Dict[str, Any]) -> Dict[str, Any]:
         return success_response({'message': 'Favorite removed'})
     
     return error_response('Method not allowed', 405)
+
+
+def handle_auth(cur, method: str, event: Dict[str, Any]) -> Dict[str, Any]:
+    if method != 'POST':
+        return error_response('Method not allowed', 405)
+
+    body = json.loads(event.get('body', '{}'))
+    action = body.get('action')  # 'login' | 'register' | 'change_password' | 'change_email'
+    email = body.get('email', '').strip().lower()
+    password = body.get('password', '')
+
+    if action == 'login':
+        if not email or not password:
+            return error_response('Email and password required', 400)
+        cur.execute(f"SELECT id, email, name, role, created_at, password_hash FROM users WHERE email = {escape_sql(email)}")
+        row = cur.fetchone()
+        if not row:
+            return error_response('Пользователь не найден', 404)
+        stored_hash = row[5]
+        if stored_hash is None:
+            return error_response('Пароль не установлен. Обратитесь к администратору.', 401)
+        if not verify_password(password, stored_hash):
+            return error_response('Неверный пароль', 401)
+        return success_response({'id': row[0], 'email': row[1], 'name': row[2], 'role': row[3], 'created_at': row[4].isoformat() if row[4] else None})
+
+    elif action == 'register':
+        name = body.get('name', '').strip()
+        role = body.get('role', 'investor')
+        if not email or not password or not name:
+            return error_response('Email, password and name required', 400)
+        if role not in ('investor', 'broker'):
+            role = 'investor'
+        cur.execute(f"SELECT id FROM users WHERE email = {escape_sql(email)}")
+        if cur.fetchone():
+            return error_response('Пользователь с таким email уже существует', 409)
+        ph = hash_password(password)
+        cur.execute(f"INSERT INTO users (email, name, role, password_hash) VALUES ({escape_sql(email)}, {escape_sql(name)}, {escape_sql(role)}, {escape_sql(ph)}) RETURNING id, email, name, role, created_at")
+        row = cur.fetchone()
+        return success_response({'id': row[0], 'email': row[1], 'name': row[2], 'role': row[3], 'created_at': row[4].isoformat() if row[4] else None}, 201)
+
+    elif action == 'change_password':
+        user_id = body.get('user_id')
+        old_password = body.get('old_password', '')
+        new_password = body.get('new_password', '')
+        if not user_id or not old_password or not new_password:
+            return error_response('user_id, old_password and new_password required', 400)
+        cur.execute(f"SELECT password_hash FROM users WHERE id = {escape_sql(int(user_id))}")
+        row = cur.fetchone()
+        if not row:
+            return error_response('User not found', 404)
+        if row[0] and not verify_password(old_password, row[0]):
+            return error_response('Неверный текущий пароль', 401)
+        ph = hash_password(new_password)
+        cur.execute(f"UPDATE users SET password_hash = {escape_sql(ph)} WHERE id = {escape_sql(int(user_id))}")
+        return success_response({'message': 'Пароль изменён'})
+
+    elif action == 'change_email':
+        user_id = body.get('user_id')
+        new_email = body.get('new_email', '').strip().lower()
+        password = body.get('password', '')
+        if not user_id or not new_email or not password:
+            return error_response('user_id, new_email and password required', 400)
+        cur.execute(f"SELECT password_hash FROM users WHERE id = {escape_sql(int(user_id))}")
+        row = cur.fetchone()
+        if not row:
+            return error_response('User not found', 404)
+        if row[0] and not verify_password(password, row[0]):
+            return error_response('Неверный пароль', 401)
+        cur.execute(f"SELECT id FROM users WHERE email = {escape_sql(new_email)}")
+        if cur.fetchone():
+            return error_response('Email уже используется', 409)
+        cur.execute(f"UPDATE users SET email = {escape_sql(new_email)} WHERE id = {escape_sql(int(user_id))} RETURNING id, email, name, role, created_at")
+        row = cur.fetchone()
+        return success_response({'id': row[0], 'email': row[1], 'name': row[2], 'role': row[3], 'created_at': row[4].isoformat() if row[4] else None})
+
+    return error_response('Unknown action', 400)
 
 
 def format_object_with_broker(row) -> Dict[str, Any]:
