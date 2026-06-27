@@ -49,7 +49,7 @@
         "title": "Тестовый объект",
         "city": "Москва",
         "address": "ул. Тестовая, 1",
-        "property_type": "flats",
+        "property_type": "new_flat",
         "area": 50,
         "price": 5000000,
         "yield_percent": 10,

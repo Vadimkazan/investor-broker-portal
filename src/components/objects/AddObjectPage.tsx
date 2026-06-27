@@ -13,6 +13,7 @@ const AddObjectPage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
   const [formData, setFormData] = useState({
     title: '',
     type: 'apartments' as import('@/types/investment-object').PropertyType,
@@ -30,10 +31,11 @@ const AddObjectPage = () => {
     e.preventDefault();
     
     if (!user) {
-      alert('Необходимо войти в систему');
+      setErrorMsg('Необходимо войти в систему');
       return;
     }
 
+    setErrorMsg('');
     setLoading(true);
 
     try {
@@ -60,14 +62,14 @@ const AddObjectPage = () => {
         body: JSON.stringify(objectData)
       });
 
-      if (!response.ok) {
-        throw new Error('Ошибка при создании объекта');
+        if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.error || `Ошибка сервера: ${response.status}`);
       }
 
       navigate('/objects');
     } catch (error) {
-      console.error('Error creating object:', error);
-      alert('Ошибка при создании объекта');
+      setErrorMsg(error instanceof Error ? error.message : 'Неизвестная ошибка');
     } finally {
       setLoading(false);
     }
@@ -202,6 +204,12 @@ const AddObjectPage = () => {
                 onChange={(imgs) => setFormData(prev => ({ ...prev, images: imgs }))}
               />
             </div>
+
+            {errorMsg && (
+              <div className="rounded-md bg-destructive/10 border border-destructive/30 px-4 py-3 text-sm text-destructive">
+                {errorMsg}
+              </div>
+            )}
 
             <div className="flex gap-4">
               <Button type="submit" disabled={loading} className="flex-1">
