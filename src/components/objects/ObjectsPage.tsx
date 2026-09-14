@@ -9,6 +9,7 @@ import ObjectCard from './ObjectCard';
 import { InvestmentObject, ObjectFilters } from '@/types/investment-object';
 import { useObjects } from '@/hooks/useObjects';
 import { useAuth } from '@/contexts/AuthContext';
+import ImportObjectsExcel from '@/components/broker/ImportObjectsExcel';
 
 const ObjectsPage = () => {
   const navigate = useNavigate();
@@ -242,7 +243,8 @@ const ObjectsPage = () => {
               Найдите лучшие предложения для инвестиций в недвижимость
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
+            {user?.role === 'broker' && <ImportObjectsExcel brokerId={user.id} />}
             {(user?.role === 'broker' || user?.role === 'investor') && (
               <Button onClick={() => navigate('/objects/add')} size="lg">
                 <Icon name="Plus" className="mr-2" size={20} />
