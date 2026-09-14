@@ -10,6 +10,7 @@ import { useObjects, useUpdateObject } from '@/hooks/useObjects';
 import { useAuth } from '@/contexts/AuthContext';
 import { PropertyType } from '@/types/investment-object';
 import PropertyTypeSelect from '@/components/ui/property-type-select';
+import ImportObjectsExcel from '@/components/broker/ImportObjectsExcel';
 
 interface BrokerObjectsManagerProps {
   onAddClick: () => void;
@@ -83,17 +84,20 @@ const BrokerObjectsManager = ({ onAddClick }: BrokerObjectsManagerProps) => {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-wrap justify-between items-center gap-3">
         <div>
           <h2 className="text-2xl font-bold">Объекты</h2>
           <p className="text-muted-foreground">
             Моих: {objects.filter(o => isMyObject(o.brokerId)).length} | Всего на платформе: {objects.length}
           </p>
         </div>
-        <Button onClick={onAddClick}>
-          <Icon name="Plus" size={16} className="mr-2" />
-          Добавить объект
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          {user && <ImportObjectsExcel brokerId={user.id} />}
+          <Button onClick={onAddClick}>
+            <Icon name="Plus" size={16} className="mr-2" />
+            Добавить объект
+          </Button>
+        </div>
       </div>
       
       <Card>
