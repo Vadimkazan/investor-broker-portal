@@ -160,7 +160,7 @@ const InvestorFunnel = ({ brokerId }: InvestorFunnelProps) => {
               <DialogDescription>Добавьте информацию о потенциальном клиенте</DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Имя *</Label>
                   <Input value={newInvestor.firstName} onChange={(e) => setNewInvestor({ ...newInvestor, firstName: e.target.value })} placeholder="Иван" />
@@ -201,7 +201,7 @@ const InvestorFunnel = ({ brokerId }: InvestorFunnelProps) => {
           <p className="text-muted-foreground">Загрузка инвесторов...</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {(['lead', 'consultation', 'analysis', 'offer_sent', 'negotiation', 'deal_preparation', 'active', 'inactive'] as InvestorStage[]).map(stage => (
             <Card key={stage}>
               <CardHeader className="pb-3">
@@ -245,7 +245,7 @@ const InvestorFunnel = ({ brokerId }: InvestorFunnelProps) => {
           </DialogHeader>
           {selectedInvestor && (
             <div className="space-y-6 py-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Email</Label>
                   <p className="text-sm">{selectedInvestor.personalInfo.email || '—'}</p>
@@ -273,7 +273,7 @@ const InvestorFunnel = ({ brokerId }: InvestorFunnelProps) => {
 
               <div className="border rounded-lg p-4">
                 <h3 className="font-semibold mb-3">Инвестиционный профиль</h3>
-                <div className="grid grid-cols-2 gap-4 text-sm">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                   <div>
                     <p className="text-muted-foreground">Бюджет</p>
                     <p className="font-semibold">₽{selectedInvestor.investmentProfile.budget.toLocaleString('ru-RU')}</p>

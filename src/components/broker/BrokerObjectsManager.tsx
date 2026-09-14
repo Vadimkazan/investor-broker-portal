@@ -243,7 +243,7 @@ const BrokerObjectsManager = ({ onAddClick }: BrokerObjectsManagerProps) => {
                       </Badge>
                     </div>
 
-                    <div className="grid grid-cols-3 gap-4 my-4">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 my-4">
                       <div>
                         <p className="text-sm text-muted-foreground">Цена</p>
                         <p className="font-semibold">

@@ -236,10 +236,10 @@ const ObjectsPage = () => {
       />
       
       <div className="container mx-auto px-4 pt-20 pb-8">
-        <div className="mb-8 flex justify-between items-center">
+        <div className="mb-8 flex flex-col lg:flex-row lg:justify-between lg:items-center gap-4">
           <div>
-            <h1 className="text-4xl font-bold mb-4">Инвестиционные объекты</h1>
-            <p className="text-muted-foreground text-lg">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-2 sm:mb-4">Инвестиционные объекты</h1>
+            <p className="text-muted-foreground text-base sm:text-lg">
               Найдите лучшие предложения для инвестиций в недвижимость
             </p>
           </div>

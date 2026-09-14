@@ -43,10 +43,10 @@ const HowItWorksSection = ({ onRegisterClick }: HowItWorksSectionProps) => {
   ];
 
   return (
-    <section className="py-20 px-6 bg-background">
+    <section className="py-12 sm:py-20 px-4 sm:px-6 bg-background">
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-16">
-          <h2 className="text-4xl md:text-5xl font-bold mb-4">
+          <h2 className="text-2xl sm:text-4xl md:text-5xl font-bold mb-4">
             От мечты к доходу — за 4 простых шага
           </h2>
           <p className="text-xl text-muted-foreground">

@@ -267,13 +267,15 @@ const InvestorDashboard = ({ userName }: InvestorDashboardProps) => {
       </div>
 
       <Tabs defaultValue="portfolio" className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="portfolio">Портфель</TabsTrigger>
-          <TabsTrigger value="finances">Финансы</TabsTrigger>
-          <TabsTrigger value="objects">Мои объекты</TabsTrigger>
-          <TabsTrigger value="education">Обучение</TabsTrigger>
-          <TabsTrigger value="settings">Настройки</TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+          <TabsList className="flex w-max min-w-full sm:grid sm:grid-cols-5">
+            <TabsTrigger value="portfolio" className="flex-1 whitespace-nowrap">Портфель</TabsTrigger>
+            <TabsTrigger value="finances" className="flex-1 whitespace-nowrap">Финансы</TabsTrigger>
+            <TabsTrigger value="objects" className="flex-1 whitespace-nowrap">Мои объекты</TabsTrigger>
+            <TabsTrigger value="education" className="flex-1 whitespace-nowrap">Обучение</TabsTrigger>
+            <TabsTrigger value="settings" className="flex-1 whitespace-nowrap">Настройки</TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="portfolio" className="space-y-6 mt-6">
           <InvestorStats stats={stats} />

@@ -38,16 +38,15 @@ const Header = ({ activeTab, onTabChange, user, onAuthClick, onLogout, onRoleSwi
 
   return (
     <div className="border-b border-border bg-card sticky top-0 z-50">
-      <div className="container mx-auto px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3 cursor-pointer" onClick={() => onTabChange('home')}>
-            <div className="w-10 h-10 bg-gradient-to-br from-primary to-secondary rounded-lg flex items-center justify-center">
-              <Icon name="TrendingUp" className="text-white" size={24} />
+      <div className="container mx-auto px-4 sm:px-6 py-3 sm:py-4">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 sm:gap-3 cursor-pointer flex-shrink-0" onClick={() => onTabChange('home')}>
+            <div className="w-9 h-9 sm:w-10 sm:h-10 bg-gradient-to-br from-primary to-secondary rounded-lg flex items-center justify-center flex-shrink-0">
+              <Icon name="TrendingUp" className="text-white" size={22} />
             </div>
-            <div>
+            <div className="hidden sm:block">
               <h1 className="text-xl font-bold">InvestPro</h1>
-              <p className="text-xs text-muted-foreground">Платформа инвестиций в недвижимость
-</p>
+              <p className="text-xs text-muted-foreground">Платформа инвестиций в недвижимость</p>
             </div>
           </div>
           <nav className="flex gap-1 items-center overflow-x-auto scrollbar-hide">
@@ -109,18 +108,25 @@ const Header = ({ activeTab, onTabChange, user, onAuthClick, onLogout, onRoleSwi
               )}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="gap-2">
-                    <div className="text-left">
+                  <Button variant="outline" className="gap-2 px-2 sm:px-4 flex-shrink-0">
+                    <div className="text-left hidden sm:block">
                       <p className="text-sm font-semibold">{user.name}</p>
                       <p className="text-xs text-muted-foreground">
                         {user.role === 'admin' ? 'Администратор' : user.role === 'manager' ? 'Менеджер' : user.role === 'broker' ? 'Брокер' : 'Инвестор'}
                       </p>
                     </div>
+                    <Icon name="User" size={18} className="sm:hidden" />
                     <Icon name="ChevronDown" size={16} />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  <DropdownMenuLabel>Мой аккаунт</DropdownMenuLabel>
+                <DropdownMenuContent align="end" className="w-56 max-w-[calc(100vw-1.5rem)]">
+                  <DropdownMenuLabel className="sm:hidden">
+                    <p className="font-semibold">{user.name}</p>
+                    <p className="text-xs text-muted-foreground font-normal">
+                      {user.role === 'admin' ? 'Администратор' : user.role === 'manager' ? 'Менеджер' : user.role === 'broker' ? 'Брокер' : 'Инвестор'}
+                    </p>
+                  </DropdownMenuLabel>
+                  <DropdownMenuLabel className="hidden sm:block">Мой аккаунт</DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   {(user.role === 'admin' || user.role === 'manager') && (
                     <>

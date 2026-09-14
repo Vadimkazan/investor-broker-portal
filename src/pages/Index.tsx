@@ -179,7 +179,7 @@ const Index = () => {
         onRoleSwitch={handleRoleSwitch}
       />
 
-      <div className="container mx-auto px-6 py-8 relative">
+      <div className="container mx-auto px-4 sm:px-6 py-6 sm:py-8 relative">
         {isTransitioning && (
           <div className="absolute inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm z-50">
             <div className="flex flex-col items-center gap-3">

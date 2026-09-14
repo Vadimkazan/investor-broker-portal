@@ -22,12 +22,14 @@ const NewBrokerDashboard = ({ userName, brokerId }: NewBrokerDashboardProps) => 
       </div>
 
       <Tabs defaultValue="properties" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="properties">Объекты</TabsTrigger>
-          <TabsTrigger value="investors">Инвесторы</TabsTrigger>
-          <TabsTrigger value="referral">Реферальная</TabsTrigger>
-          <TabsTrigger value="settings">Настройки</TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+          <TabsList className="flex w-max min-w-full sm:grid sm:grid-cols-4">
+            <TabsTrigger value="properties" className="flex-1 whitespace-nowrap">Объекты</TabsTrigger>
+            <TabsTrigger value="investors" className="flex-1 whitespace-nowrap">Инвесторы</TabsTrigger>
+            <TabsTrigger value="referral" className="flex-1 whitespace-nowrap">Реферальная</TabsTrigger>
+            <TabsTrigger value="settings" className="flex-1 whitespace-nowrap">Настройки</TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="properties">
           <BrokerObjectsManager onAddClick={() => setAddDialogOpen(true)} />

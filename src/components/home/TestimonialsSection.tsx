@@ -41,12 +41,12 @@ const TestimonialsSection = ({ isVisible }: TestimonialsSectionProps) => {
     <section 
       id="testimonials" 
       data-animate 
-      className={`py-20 px-6 bg-background transition-all duration-1000 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}
+      className={`py-12 sm:py-20 px-4 sm:px-6 bg-background transition-all duration-1000 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}
     >
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-16">
           <Badge className="bg-primary/10 text-primary mb-4">95% клиентов рекомендуют</Badge>
-          <h2 className="text-4xl md:text-5xl font-bold mb-4">
+          <h2 className="text-2xl sm:text-4xl md:text-5xl font-bold mb-4">
             Истории успеха наших инвесторов
           </h2>
           <p className="text-xl text-muted-foreground">
