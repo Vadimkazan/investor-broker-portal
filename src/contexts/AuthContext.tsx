@@ -19,9 +19,10 @@ interface AuthContextType {
   loading: boolean;
   syncing: boolean;
   login: (email: string, password: string) => Promise<User>;
-  register: (email: string, password: string, name: string, role: 'investor' | 'broker') => Promise<User>;
+  register: (email: string, password: string, name: string, role: 'investor' | 'broker', brokerId?: number) => Promise<User>;
   logout: () => void;
   switchRole: () => Promise<void>;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -64,11 +65,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return dbUser;
   };
 
-  const register = async (email: string, password: string, name: string, role: 'investor' | 'broker'): Promise<User> => {
-    const dbUser = await authRequest({ action: 'register', email, password, name, role });
+  const register = async (email: string, password: string, name: string, role: 'investor' | 'broker', brokerId?: number): Promise<User> => {
+    const dbUser = await authRequest({ action: 'register', email, password, name, role, broker_id: brokerId });
     setUser(dbUser);
     localStorage.setItem('investpro-user', JSON.stringify(dbUser));
     return dbUser;
+  };
+
+  const refreshUser = async (): Promise<void> => {
+    if (!user) return;
+    try {
+      const dbUser = await api.getUserById(user.id);
+      setUser(dbUser);
+      localStorage.setItem('investpro-user', JSON.stringify(dbUser));
+    } catch { /* ignore */ }
   };
 
   const logout = () => {
@@ -85,7 +95,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, syncing, login, register, logout, switchRole }}>
+    <AuthContext.Provider value={{ user, loading, syncing, login, register, logout, switchRole, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );

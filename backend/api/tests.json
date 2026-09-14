@@ -24,6 +24,13 @@
       "bodyMatcher": "partial"
     },
     {
+      "name": "Get all brokers",
+      "method": "GET",
+      "path": "/?resource=users&role=broker",
+      "expectedStatus": 200,
+      "bodyMatcher": "partial"
+    },
+    {
       "name": "Login with correct password",
       "method": "POST",
       "path": "/?resource=auth",

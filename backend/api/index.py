@@ -71,42 +71,50 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             conn.close()
 
 
+USER_COLS = "id, email, name, role, created_at, broker_id, phone, photo_url, bio, city, surname, first_name"
+
+
+def format_user(row) -> Dict[str, Any]:
+    return {
+        'id': row[0], 'email': row[1], 'name': row[2], 'role': row[3],
+        'created_at': row[4].isoformat() if row[4] else None,
+        'broker_id': row[5],
+        'phone': row[6], 'photo_url': row[7], 'bio': row[8], 'city': row[9],
+        'surname': row[10], 'first_name': row[11]
+    }
+
+
 def handle_users(cur, method: str, event: Dict[str, Any]) -> Dict[str, Any]:
     if method == 'GET':
         params = event.get('queryStringParameters') or {}
         user_id = params.get('id')
         email = params.get('email')
+        role = params.get('role')
         
         if user_id:
-            query = f"SELECT id, email, name, role, created_at FROM users WHERE id = {escape_sql(int(user_id))}"
+            query = f"SELECT {USER_COLS} FROM users WHERE id = {escape_sql(int(user_id))}"
             cur.execute(query)
             row = cur.fetchone()
             if row:
-                return success_response({
-                    'id': row[0], 'email': row[1], 'name': row[2],
-                    'role': row[3], 'created_at': row[4].isoformat() if row[4] else None
-                })
+                return success_response(format_user(row))
             return error_response('User not found', 404)
         
         elif email:
-            query = f"SELECT id, email, name, role, created_at FROM users WHERE email = {escape_sql(email)}"
+            query = f"SELECT {USER_COLS} FROM users WHERE email = {escape_sql(email)}"
             cur.execute(query)
             row = cur.fetchone()
             if row:
-                return success_response({
-                    'id': row[0], 'email': row[1], 'name': row[2],
-                    'role': row[3], 'created_at': row[4].isoformat() if row[4] else None
-                })
+                return success_response(format_user(row))
             return error_response('User not found', 404)
         
         else:
-            cur.execute("SELECT id, email, name, role, created_at FROM users ORDER BY created_at DESC LIMIT 100")
+            query = f"SELECT {USER_COLS} FROM users"
+            if role:
+                query += f" WHERE role = {escape_sql(role)}"
+            query += " ORDER BY created_at DESC LIMIT 100"
+            cur.execute(query)
             rows = cur.fetchall()
-            users = [{
-                'id': r[0], 'email': r[1], 'name': r[2],
-                'role': r[3], 'created_at': r[4].isoformat() if r[4] else None
-            } for r in rows]
-            return success_response(users)
+            return success_response([format_user(r) for r in rows])
     
     elif method == 'POST':
         body = json.loads(event.get('body', '{}'))
@@ -148,13 +156,20 @@ def handle_users(cur, method: str, event: Dict[str, Any]) -> Dict[str, Any]:
             fields.append(f"role = {escape_sql(body['role'])}")
         if 'notify_new_objects' in body:
             fields.append(f"notify_new_objects = {escape_sql(body['notify_new_objects'])}")
+        if 'broker_id' in body:
+            broker_id = body['broker_id']
+            if broker_id is not None:
+                cur.execute(f"SELECT id FROM users WHERE id = {escape_sql(int(broker_id))} AND role = 'broker'")
+                if not cur.fetchone():
+                    return error_response('Broker not found', 404)
+            fields.append(f"broker_id = {escape_sql(broker_id)}")
         if not fields:
             return error_response('No fields to update', 400)
-        cur.execute(f"UPDATE users SET {', '.join(fields)} WHERE id = {escape_sql(int(user_id))} RETURNING id, email, name, role, created_at")
+        cur.execute(f"UPDATE users SET {', '.join(fields)} WHERE id = {escape_sql(int(user_id))} RETURNING {USER_COLS}")
         row = cur.fetchone()
         if not row:
             return error_response('User not found', 404)
-        return success_response({'id': row[0], 'email': row[1], 'name': row[2], 'role': row[3], 'created_at': row[4].isoformat() if row[4] else None})
+        return success_response(format_user(row))
 
     elif method == 'DELETE':
         params = event.get('queryStringParameters') or {}
@@ -472,16 +487,16 @@ def handle_auth(cur, method: str, event: Dict[str, Any]) -> Dict[str, Any]:
     if action == 'login':
         if not email or not password:
             return error_response('Email and password required', 400)
-        cur.execute(f"SELECT id, email, name, role, created_at, password_hash FROM users WHERE email = {escape_sql(email)}")
+        cur.execute(f"SELECT {USER_COLS}, password_hash FROM users WHERE email = {escape_sql(email)}")
         row = cur.fetchone()
         if not row:
             return error_response('Пользователь не найден', 404)
-        stored_hash = row[5]
+        stored_hash = row[-1]
         if stored_hash is None:
             return error_response('Пароль не установлен. Обратитесь к администратору.', 401)
         if not verify_password(password, stored_hash):
             return error_response('Неверный пароль', 401)
-        return success_response({'id': row[0], 'email': row[1], 'name': row[2], 'role': row[3], 'created_at': row[4].isoformat() if row[4] else None})
+        return success_response(format_user(row))
 
     elif action == 'register':
         name = body.get('name', '').strip()
@@ -493,10 +508,25 @@ def handle_auth(cur, method: str, event: Dict[str, Any]) -> Dict[str, Any]:
         cur.execute(f"SELECT id FROM users WHERE email = {escape_sql(email)}")
         if cur.fetchone():
             return error_response('Пользователь с таким email уже существует', 409)
+
+        broker_id = None
+        if role == 'investor':
+            broker_id = body.get('broker_id')
+            if broker_id is not None:
+                cur.execute(f"SELECT id FROM users WHERE id = {escape_sql(int(broker_id))} AND role = 'broker'")
+                if not cur.fetchone():
+                    broker_id = None
+            if broker_id is None:
+                # Автопривязка: брокер уже добавил этого инвестора в свою CRM по email
+                cur.execute(f"SELECT broker_id FROM broker_investors WHERE email = {escape_sql(email)} ORDER BY created_at ASC LIMIT 1")
+                crm_row = cur.fetchone()
+                if crm_row:
+                    broker_id = crm_row[0]
+
         ph = hash_password(password)
-        cur.execute(f"INSERT INTO users (email, name, role, password_hash) VALUES ({escape_sql(email)}, {escape_sql(name)}, {escape_sql(role)}, {escape_sql(ph)}) RETURNING id, email, name, role, created_at")
+        cur.execute(f"INSERT INTO users (email, name, role, password_hash, broker_id) VALUES ({escape_sql(email)}, {escape_sql(name)}, {escape_sql(role)}, {escape_sql(ph)}, {escape_sql(broker_id)}) RETURNING {USER_COLS}")
         row = cur.fetchone()
-        return success_response({'id': row[0], 'email': row[1], 'name': row[2], 'role': row[3], 'created_at': row[4].isoformat() if row[4] else None}, 201)
+        return success_response(format_user(row), 201)
 
     elif action == 'change_password':
         user_id = body.get('user_id')
@@ -529,9 +559,9 @@ def handle_auth(cur, method: str, event: Dict[str, Any]) -> Dict[str, Any]:
         cur.execute(f"SELECT id FROM users WHERE email = {escape_sql(new_email)}")
         if cur.fetchone():
             return error_response('Email уже используется', 409)
-        cur.execute(f"UPDATE users SET email = {escape_sql(new_email)} WHERE id = {escape_sql(int(user_id))} RETURNING id, email, name, role, created_at")
+        cur.execute(f"UPDATE users SET email = {escape_sql(new_email)} WHERE id = {escape_sql(int(user_id))} RETURNING {USER_COLS}")
         row = cur.fetchone()
-        return success_response({'id': row[0], 'email': row[1], 'name': row[2], 'role': row[3], 'created_at': row[4].isoformat() if row[4] else None})
+        return success_response(format_user(row))
 
     return error_response('Unknown action', 400)
 

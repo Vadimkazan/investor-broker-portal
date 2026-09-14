@@ -8,6 +8,13 @@ export interface User {
   is_admin?: boolean;
   notify_new_objects?: boolean;
   created_at?: string;
+  broker_id?: number | null;
+  phone?: string;
+  photo_url?: string;
+  bio?: string;
+  city?: string;
+  surname?: string;
+  first_name?: string;
 }
 
 export interface BrokerInfo {
@@ -144,8 +151,12 @@ class ApiClient {
     return this.request<User>('users', 'POST', data);
   }
 
-  async updateUser(id: number, data: { name?: string; notify_new_objects?: boolean; role?: User['role'] }): Promise<User> {
+  async updateUser(id: number, data: { name?: string; notify_new_objects?: boolean; role?: User['role']; broker_id?: number | null }): Promise<User> {
     return this.request<User>('users', 'PUT', { id, ...data });
+  }
+
+  async getBrokers(): Promise<User[]> {
+    return this.request<User[]>('users', 'GET', undefined, { role: 'broker' });
   }
 
   async deleteUser(id: number): Promise<{ message: string }> {

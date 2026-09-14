@@ -1,12 +1,14 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import Icon from '@/components/ui/icon';
 import { useAuth } from '@/contexts/AuthContext';
+import { api, User } from '@/services/api';
 
 interface AuthModalProps {
   open: boolean;
@@ -27,8 +29,16 @@ const AuthModal = ({ open, onClose, onAuth }: AuthModalProps) => {
   const [regEmail, setRegEmail] = useState('');
   const [regPassword, setRegPassword] = useState('');
   const [regRole, setRegRole] = useState<'investor' | 'broker'>('investor');
+  const [regBrokerId, setRegBrokerId] = useState<string>('');
+  const [brokers, setBrokers] = useState<User[]>([]);
   const [regError, setRegError] = useState('');
   const [regLoading, setRegLoading] = useState(false);
+
+  useEffect(() => {
+    if (open && regRole === 'investor' && brokers.length === 0) {
+      api.getBrokers().then(setBrokers).catch(() => {});
+    }
+  }, [open, regRole, brokers.length]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,7 +60,13 @@ const AuthModal = ({ open, onClose, onAuth }: AuthModalProps) => {
     setRegError('');
     setRegLoading(true);
     try {
-      const user = await register(regEmail.trim().toLowerCase(), regPassword, regName.trim(), regRole);
+      const user = await register(
+        regEmail.trim().toLowerCase(),
+        regPassword,
+        regName.trim(),
+        regRole,
+        regRole === 'investor' && regBrokerId ? Number(regBrokerId) : undefined
+      );
       onAuth?.({ name: user.name, email: user.email, role: user.role });
       onClose();
     } catch (err: unknown) {
@@ -177,6 +193,22 @@ const AuthModal = ({ open, onClose, onAuth }: AuthModalProps) => {
                   </div>
                 </RadioGroup>
               </div>
+              {regRole === 'investor' && (
+                <div className="space-y-2">
+                  <Label>Ваш брокер (необязательно)</Label>
+                  <Select value={regBrokerId} onValueChange={setRegBrokerId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Не выбран — можно указать позже" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {brokers.map((b) => (
+                        <SelectItem key={b.id} value={String(b.id)}>{b.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">Выбрать брокера можно будет позже в настройках</p>
+                </div>
+              )}
               {regError && (
                 <p className="text-sm text-destructive">{regError}</p>
               )}
