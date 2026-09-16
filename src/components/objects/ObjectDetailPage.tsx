@@ -13,11 +13,14 @@ import { Broker } from '@/types/investment-object';
 import { useObject } from '@/hooks/useObjects';
 import { useFavorites, useAddToFavorites, useRemoveFromFavorites } from '@/hooks/useFavorites';
 import { useAuth } from '@/contexts/AuthContext';
+import { api } from '@/services/api';
+import { useToast } from '@/hooks/use-toast';
 
 const ObjectDetailPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const { toast } = useToast();
   const objectId = id ? parseInt(id) : 0;
   
   const { data: object, isLoading, error } = useObject(objectId);
@@ -27,6 +30,7 @@ const ObjectDetailPage = () => {
   
   const [broker, setBroker] = useState<Broker | null>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
@@ -44,6 +48,18 @@ const ObjectDetailPage = () => {
       }
     }
   }, [object]);
+
+  useEffect(() => {
+    if (object && user) {
+      api.recordObjectView(user.id, objectId).catch(() => {});
+    }
+  }, [object?.id, user?.id]);
+
+  useEffect(() => {
+    if (user) {
+      setFormData((prev) => ({ ...prev, name: prev.name || user.name, email: prev.email || user.email, phone: prev.phone || user.phone || '' }));
+    }
+  }, [user]);
 
   const loadBroker = (brokerId: number) => {
     const mockBroker: Broker = {
@@ -80,10 +96,26 @@ const ObjectDetailPage = () => {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Заявка отправлена:', formData);
-    alert('Спасибо за заявку! Мы свяжемся с вами в ближайшее время.');
+    if (!object) return;
+    setSubmitting(true);
+    try {
+      await api.createInquiry({
+        object_id: object.id,
+        user_id: user?.id,
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        message: formData.message,
+      });
+      toast({ title: 'Заявка отправлена', description: 'Мы свяжемся с вами в ближайшее время.' });
+      setFormData((prev) => ({ ...prev, message: '' }));
+    } catch {
+      toast({ title: 'Не удалось отправить заявку', description: 'Попробуйте ещё раз', variant: 'destructive' });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleLogout = () => {
@@ -426,7 +458,8 @@ const ObjectDetailPage = () => {
                       rows={4}
                     />
                   </div>
-                  <Button type="submit" className="w-full">
+                  <Button type="submit" className="w-full" disabled={submitting}>
+                    {submitting && <Icon name="Loader2" size={16} className="mr-2 animate-spin" />}
                     Отправить заявку
                   </Button>
                 </form>

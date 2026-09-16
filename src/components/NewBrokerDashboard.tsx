@@ -5,6 +5,7 @@ import ReferralSystem from './ReferralSystem';
 import BrokerObjectsManager from './broker/BrokerObjectsManager';
 import AddNewObjectDialog from './broker/AddNewObjectDialog';
 import ProfileSettings from './ProfileSettings';
+import BrokerRegisteredInvestors from './broker/BrokerRegisteredInvestors';
 
 interface NewBrokerDashboardProps {
   userName: string;
@@ -23,9 +24,10 @@ const NewBrokerDashboard = ({ userName, brokerId }: NewBrokerDashboardProps) => 
 
       <Tabs defaultValue="properties" className="space-y-6">
         <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
-          <TabsList className="flex w-max min-w-full sm:grid sm:grid-cols-4">
+          <TabsList className="flex w-max min-w-full sm:grid sm:grid-cols-5">
             <TabsTrigger value="properties" className="flex-1 whitespace-nowrap">Объекты</TabsTrigger>
-            <TabsTrigger value="investors" className="flex-1 whitespace-nowrap">Инвесторы</TabsTrigger>
+            <TabsTrigger value="investors" className="flex-1 whitespace-nowrap">Воронка</TabsTrigger>
+            <TabsTrigger value="site-investors" className="flex-1 whitespace-nowrap">Мои инвесторы</TabsTrigger>
             <TabsTrigger value="referral" className="flex-1 whitespace-nowrap">Реферальная</TabsTrigger>
             <TabsTrigger value="settings" className="flex-1 whitespace-nowrap">Настройки</TabsTrigger>
           </TabsList>
@@ -43,6 +45,10 @@ const NewBrokerDashboard = ({ userName, brokerId }: NewBrokerDashboardProps) => 
 
         <TabsContent value="investors">
           <InvestorFunnel brokerId={String(brokerId)} />
+        </TabsContent>
+
+        <TabsContent value="site-investors">
+          <BrokerRegisteredInvestors brokerId={brokerId} />
         </TabsContent>
 
         <TabsContent value="referral">

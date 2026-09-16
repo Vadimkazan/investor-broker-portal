@@ -63,6 +63,10 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             return handle_auth(cur, method, event)
         elif resource == 'investors':
             return handle_investors(cur, method, event)
+        elif resource == 'inquiries':
+            return handle_inquiries(cur, method, event)
+        elif resource == 'views':
+            return handle_views(cur, method, event)
         else:
             return error_response('Resource not found', 404)
     
@@ -108,6 +112,7 @@ def handle_users(cur, method: str, event: Dict[str, Any]) -> Dict[str, Any]:
         user_id = params.get('id')
         email = params.get('email')
         role = params.get('role')
+        broker_id = params.get('broker_id')
         
         if user_id:
             query = f"SELECT {USER_COLS} FROM users WHERE id = {escape_sql(int(user_id))}"
@@ -127,8 +132,13 @@ def handle_users(cur, method: str, event: Dict[str, Any]) -> Dict[str, Any]:
         
         else:
             query = f"SELECT {USER_COLS} FROM users"
+            conditions = []
             if role:
-                query += f" WHERE {escape_sql(role)} = ANY(roles)"
+                conditions.append(f"{escape_sql(role)} = ANY(roles)")
+            if broker_id:
+                conditions.append(f"broker_id = {escape_sql(int(broker_id))}")
+            if conditions:
+                query += " WHERE " + " AND ".join(conditions)
             query += " ORDER BY created_at DESC LIMIT 100"
             cur.execute(query)
             rows = cur.fetchall()
@@ -410,6 +420,120 @@ def handle_favorites(cur, method: str, event: Dict[str, Any]) -> Dict[str, Any]:
         
         return success_response({'message': 'Favorite removed'})
     
+    return error_response('Method not allowed', 405)
+
+
+def handle_inquiries(cur, method: str, event: Dict[str, Any]) -> Dict[str, Any]:
+    if method == 'GET':
+        params = event.get('queryStringParameters') or {}
+        user_id = params.get('user_id')
+        broker_id = params.get('broker_id')
+
+        query = """
+            SELECT i.id, i.object_id, i.user_id, i.name, i.email, i.phone, i.message, i.status, i.created_at,
+                   o.title, o.city, o.broker_id
+            FROM inquiries i
+            LEFT JOIN investment_objects o ON i.object_id = o.id
+        """
+        conditions = []
+        if user_id:
+            conditions.append(f"i.user_id = {escape_sql(int(user_id))}")
+        if broker_id:
+            conditions.append(f"o.broker_id = {escape_sql(int(broker_id))}")
+        if conditions:
+            query += " WHERE " + " AND ".join(conditions)
+        query += " ORDER BY i.created_at DESC LIMIT 200"
+
+        cur.execute(query)
+        rows = cur.fetchall()
+
+        inquiries = [{
+            'id': r[0], 'objectId': r[1], 'userId': r[2], 'name': r[3], 'email': r[4],
+            'phone': r[5], 'message': r[6], 'status': r[7],
+            'createdAt': r[8].isoformat() if r[8] else None,
+            'objectTitle': r[9], 'objectCity': r[10], 'brokerId': r[11],
+        } for r in rows]
+
+        return success_response(inquiries)
+
+    elif method == 'POST':
+        body = json.loads(event.get('body', '{}'))
+        object_id = body.get('object_id')
+        name = body.get('name')
+        email = body.get('email')
+        phone = body.get('phone')
+        user_id = body.get('user_id')
+        message = body.get('message')
+
+        if not object_id or not name or not email or not phone:
+            return error_response('object_id, name, email and phone are required', 400)
+
+        query = (
+            "INSERT INTO inquiries (object_id, user_id, name, email, phone, message) "
+            f"VALUES ({escape_sql(int(object_id))}, {escape_sql(int(user_id)) if user_id else 'NULL'}, "
+            f"{escape_sql(name)}, {escape_sql(email)}, {escape_sql(phone)}, {escape_sql(message)}) "
+            "RETURNING id, object_id, user_id, name, email, phone, message, status, created_at"
+        )
+        cur.execute(query)
+        row = cur.fetchone()
+
+        return success_response({
+            'id': row[0], 'objectId': row[1], 'userId': row[2], 'name': row[3], 'email': row[4],
+            'phone': row[5], 'message': row[6], 'status': row[7],
+            'createdAt': row[8].isoformat() if row[8] else None,
+        }, 201)
+
+    return error_response('Method not allowed', 405)
+
+
+def handle_views(cur, method: str, event: Dict[str, Any]) -> Dict[str, Any]:
+    if method == 'GET':
+        params = event.get('queryStringParameters') or {}
+        user_id = params.get('user_id')
+
+        if not user_id:
+            return error_response('user_id required', 400)
+
+        query = f"""
+            SELECT v.id, v.user_id, v.object_id, v.created_at, o.title, o.city
+            FROM object_views v
+            LEFT JOIN investment_objects o ON v.object_id = o.id
+            WHERE v.user_id = {escape_sql(int(user_id))}
+            ORDER BY v.created_at DESC
+            LIMIT 100
+        """
+        cur.execute(query)
+        rows = cur.fetchall()
+
+        views = [{
+            'id': r[0], 'userId': r[1], 'objectId': r[2],
+            'createdAt': r[3].isoformat() if r[3] else None,
+            'objectTitle': r[4], 'objectCity': r[5],
+        } for r in rows]
+
+        return success_response(views)
+
+    elif method == 'POST':
+        body = json.loads(event.get('body', '{}'))
+        user_id = body.get('user_id')
+        object_id = body.get('object_id')
+
+        if not user_id or not object_id:
+            return error_response('user_id and object_id required', 400)
+
+        query = (
+            "INSERT INTO object_views (user_id, object_id) "
+            f"VALUES ({escape_sql(int(user_id))}, {escape_sql(int(object_id))}) "
+            "RETURNING id, user_id, object_id, created_at"
+        )
+        cur.execute(query)
+        row = cur.fetchone()
+
+        return success_response({
+            'id': row[0], 'userId': row[1], 'objectId': row[2],
+            'createdAt': row[3].isoformat() if row[3] else None,
+        }, 201)
+
     return error_response('Method not allowed', 405)
 
 

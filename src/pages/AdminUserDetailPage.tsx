@@ -12,6 +12,7 @@ import { api, User, UserRole } from '@/services/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { ROLE_LABELS, isAdminOrManager } from '@/utils/roles';
 import AvatarUpload from '@/components/profile/AvatarUpload';
+import UserActivityHistory from '@/components/profile/UserActivityHistory';
 
 const ALL_ROLES: UserRole[] = ['investor', 'broker', 'manager', 'admin'];
 
@@ -189,6 +190,8 @@ const AdminUserDetailPage = () => {
             </p>
           </CardContent>
         </Card>
+
+        <UserActivityHistory userId={user.id} />
 
         <Card>
           <CardHeader>

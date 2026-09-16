@@ -81,6 +81,30 @@ export interface Favorite {
   };
 }
 
+export interface Inquiry {
+  id: number;
+  objectId: number;
+  userId: number | null;
+  name: string;
+  email: string;
+  phone: string;
+  message?: string;
+  status: 'new' | 'contacted' | 'closed';
+  createdAt?: string;
+  objectTitle?: string;
+  objectCity?: string;
+  brokerId?: number;
+}
+
+export interface ObjectView {
+  id: number;
+  userId: number;
+  objectId: number;
+  createdAt?: string;
+  objectTitle?: string;
+  objectCity?: string;
+}
+
 export interface Notification {
   id: number;
   user_id: number;
@@ -191,6 +215,10 @@ class ApiClient {
     return this.request<User[]>('users', 'GET', undefined, { role: 'broker' });
   }
 
+  async getBrokerRegisteredInvestors(brokerId: number): Promise<User[]> {
+    return this.request<User[]>('users', 'GET', undefined, { broker_id: brokerId.toString() });
+  }
+
   async deleteUser(id: number): Promise<{ message: string }> {
     return this.request<{ message: string }>('users', 'DELETE', undefined, { id: id.toString() });
   }
@@ -245,6 +273,26 @@ class ApiClient {
       user_id: userId.toString(),
       object_id: objectId.toString(),
     });
+  }
+
+  async createInquiry(data: { object_id: number; user_id?: number; name: string; email: string; phone: string; message?: string }): Promise<Inquiry> {
+    return this.request<Inquiry>('inquiries', 'POST', data);
+  }
+
+  async getInquiriesByUser(userId: number): Promise<Inquiry[]> {
+    return this.request<Inquiry[]>('inquiries', 'GET', undefined, { user_id: userId.toString() });
+  }
+
+  async getInquiriesByBroker(brokerId: number): Promise<Inquiry[]> {
+    return this.request<Inquiry[]>('inquiries', 'GET', undefined, { broker_id: brokerId.toString() });
+  }
+
+  async recordObjectView(userId: number, objectId: number): Promise<ObjectView> {
+    return this.request<ObjectView>('views', 'POST', { user_id: userId, object_id: objectId });
+  }
+
+  async getObjectViews(userId: number): Promise<ObjectView[]> {
+    return this.request<ObjectView[]>('views', 'GET', undefined, { user_id: userId.toString() });
   }
 
   async getNotifications(userId: number): Promise<Notification[]> {

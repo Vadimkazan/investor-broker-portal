@@ -94,6 +94,45 @@
       "expectedStatus": 201,
       "expectedBody": { "title": "Тестовый объект" },
       "bodyMatcher": "partial"
+    },
+    {
+      "name": "Create inquiry",
+      "method": "POST",
+      "path": "/?resource=inquiries",
+      "body": {
+        "object_id": 23,
+        "user_id": 3,
+        "name": "Тест Инвестор",
+        "email": "test.inv@example.com",
+        "phone": "+70000000000",
+        "message": "Интересует объект"
+      },
+      "expectedStatus": 201,
+      "expectedBody": { "name": "Тест Инвестор" },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Get inquiries by user",
+      "method": "GET",
+      "path": "/?resource=inquiries&user_id=3",
+      "expectedStatus": 200,
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Create object view",
+      "method": "POST",
+      "path": "/?resource=views",
+      "body": { "user_id": 3, "object_id": 23 },
+      "expectedStatus": 201,
+      "expectedBody": { "userId": 3, "objectId": 23 },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Get views by user",
+      "method": "GET",
+      "path": "/?resource=views&user_id=3",
+      "expectedStatus": 200,
+      "bodyMatcher": "partial"
     }
   ]
 }
