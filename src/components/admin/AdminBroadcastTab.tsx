@@ -1,13 +1,16 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import Icon from '@/components/ui/icon';
 import { useToast } from '@/hooks/use-toast';
+import { api } from '@/services/api';
 
 const TELEGRAM_BOT_URL = 'https://functions.poehali.dev/0db3f807-568e-4315-90c1-bc467c92575b';
+
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
+const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
 
 type Audience = 'all' | 'investor' | 'broker';
 
@@ -23,6 +26,9 @@ const AdminBroadcastTab = () => {
   const [audience, setAudience] = useState<Audience>('all');
   const [sending, setSending] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [counts, setCounts] = useState<Record<Audience, number> | null>(null);
   const { toast } = useToast();
 
@@ -50,6 +56,44 @@ const AdminBroadcastTab = () => {
     } catch {
       setCounts(null);
     }
+  };
+
+  const handleFile = async (file: File) => {
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+      toast({
+        title: 'Неподдерживаемый формат',
+        description: 'Выберите картинку JPG, PNG, WEBP или GIF',
+        variant: 'destructive',
+      });
+      return;
+    }
+    if (file.size > MAX_IMAGE_SIZE) {
+      toast({
+        title: 'Файл слишком большой',
+        description: 'Максимальный размер картинки — 5 МБ',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setUploading(true);
+    setConfirming(false);
+    try {
+      const { url } = await api.uploadFile(file);
+      setPhotoUrl(url);
+      toast({ title: 'Картинка загружена' });
+    } catch {
+      toast({ title: 'Не удалось загрузить картинку', variant: 'destructive' });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) handleFile(file);
   };
 
   const handleSend = async () => {
@@ -89,7 +133,7 @@ const AdminBroadcastTab = () => {
 
   const tooLong = text.length > maxLength;
   const audienceLabel = AUDIENCES.find((a) => a.value === audience)?.label || 'Всем';
-  const canSend = !!text.trim() && !tooLong && !sending && subscribers !== 0;
+  const canSend = !!text.trim() && !tooLong && !sending && !uploading && subscribers !== 0;
 
   return (
     <Card>
@@ -163,30 +207,87 @@ const AdminBroadcastTab = () => {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="broadcast-photo">Ссылка на картинку (необязательно)</Label>
-          <Input
-            id="broadcast-photo"
-            placeholder="https://..."
-            value={photoUrl}
+          <Label>Картинка (необязательно)</Label>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/gif"
+            className="hidden"
             onChange={(e) => {
-              setPhotoUrl(e.target.value);
-              setConfirming(false);
+              const file = e.target.files?.[0];
+              e.target.value = '';
+              if (file) handleFile(file);
             }}
           />
-        </div>
 
-        {photoUrl.trim() && (
-          <div className="rounded-lg border overflow-hidden bg-muted/30">
-            <img
-              src={photoUrl}
-              alt="Предпросмотр"
-              className="w-full max-h-64 object-contain"
-              onError={(e) => {
-                (e.target as HTMLImageElement).style.display = 'none';
+          {photoUrl.trim() ? (
+            <div className="rounded-lg border overflow-hidden bg-muted/30">
+              <img
+                src={photoUrl}
+                alt="Предпросмотр"
+                className="w-full max-h-64 object-contain"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).style.display = 'none';
+                }}
+              />
+              <div className="flex gap-2 p-2 border-t bg-background">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading}
+                  className="flex-1"
+                >
+                  <Icon name="RefreshCw" size={14} className="mr-2" />
+                  Заменить
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setPhotoUrl('');
+                    setConfirming(false);
+                  }}
+                  disabled={uploading}
+                  className="flex-1"
+                >
+                  <Icon name="Trash2" size={14} className="mr-2" />
+                  Удалить
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div
+              onClick={() => !uploading && fileInputRef.current?.click()}
+              onDragOver={(e) => {
+                e.preventDefault();
+                setDragOver(true);
               }}
-            />
-          </div>
-        )}
+              onDragLeave={() => setDragOver(false)}
+              onDrop={handleDrop}
+              className={`flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed p-8 text-center cursor-pointer transition-colors ${
+                dragOver
+                  ? 'border-primary bg-primary/10'
+                  : 'border-muted-foreground/30 hover:border-primary/50 hover:bg-muted/50'
+              } ${uploading ? 'pointer-events-none opacity-70' : ''}`}
+            >
+              <Icon
+                name={uploading ? 'Loader2' : 'ImagePlus'}
+                size={28}
+                className={`text-muted-foreground ${uploading ? 'animate-spin' : ''}`}
+              />
+              <p className="text-sm font-medium">
+                {uploading ? 'Загружаем картинку...' : 'Перетащите картинку сюда'}
+              </p>
+              {!uploading && (
+                <p className="text-xs text-muted-foreground">
+                  или нажмите, чтобы выбрать файл — JPG, PNG, WEBP, GIF до 5 МБ
+                </p>
+              )}
+            </div>
+          )}
+        </div>
 
         {confirming ? (
           <div className="space-y-3 rounded-lg border border-amber-500/30 bg-amber-500/10 p-4">
