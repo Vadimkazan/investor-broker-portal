@@ -35,7 +35,28 @@ const ProfileSettings = () => {
   const [emailPassword, setEmailPassword] = useState('');
   const [emailLoading, setEmailLoading] = useState(false);
 
+  const [tgUsername, setTgUsername] = useState(user?.telegram_username || '');
+  const [tgLoading, setTgLoading] = useState(false);
+
   if (!user) return null;
+
+  const normalizedTg = tgUsername.trim().replace(/^@+/, '').replace(/^https?:\/\/(t\.me|telegram\.me)\//i, '');
+  const tgChanged = normalizedTg !== (user.telegram_username || '');
+  const tgInvalid = !!normalizedTg && !/^[a-zA-Z0-9_]{5,32}$/.test(normalizedTg);
+
+  const handleSaveTelegram = async () => {
+    setTgLoading(true);
+    try {
+      await api.updateUser(user.id, { telegram_username: normalizedTg });
+      await refreshUser();
+      setTgUsername(normalizedTg);
+      toast({ title: normalizedTg ? 'Ник Telegram сохранён' : 'Ник Telegram удалён' });
+    } catch (err: unknown) {
+      toast({ title: 'Не удалось сохранить ник', variant: 'destructive' });
+    } finally {
+      setTgLoading(false);
+    }
+  };
 
   const userRoles = getUserRoles(user);
 
@@ -124,6 +145,35 @@ const ProfileSettings = () => {
               ))}
             </div>
           </div>
+          <div className="space-y-2 pt-2 border-t">
+            <Label htmlFor="tg-username">Ник в Telegram</Label>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <div className="relative flex-1">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">@</span>
+                <Input
+                  id="tg-username"
+                  placeholder="username"
+                  value={tgUsername}
+                  onChange={e => setTgUsername(e.target.value)}
+                  className={`pl-7 ${tgInvalid ? 'border-destructive' : ''}`}
+                />
+              </div>
+              <Button
+                onClick={handleSaveTelegram}
+                disabled={!tgChanged || tgInvalid || tgLoading}
+                variant="outline"
+              >
+                {tgLoading && <Icon name="Loader2" size={16} className="animate-spin mr-2" />}
+                Сохранить
+              </Button>
+            </div>
+            <p className={`text-xs ${tgInvalid ? 'text-destructive' : 'text-muted-foreground'}`}>
+              {tgInvalid
+                ? 'Ник может содержать латинские буквы, цифры и «_», от 5 до 32 символов'
+                : 'Нужен, чтобы с вами могли связаться в Telegram'}
+            </p>
+          </div>
+
           {isAdminOrManager(user) && (
             <div className="flex gap-2 pt-2">
               <Button variant="default" onClick={() => navigate('/admin/dashboard')}>
