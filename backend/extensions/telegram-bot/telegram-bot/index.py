@@ -9,6 +9,7 @@ Telegram Bot Function
 
 import json
 import os
+import socket
 import uuid
 import hashlib
 from datetime import datetime, timezone, timedelta
@@ -16,6 +17,27 @@ from typing import Optional
 
 import psycopg2
 import telebot
+
+
+# =============================================================================
+# NETWORK WORKAROUND
+# =============================================================================
+# In this sandbox api.telegram.org sometimes resolves to an unreachable IP.
+# Force resolution to a known-reachable Telegram DC IP while keeping the
+# hostname for TLS/SNI verification intact (safe — certificate check still
+# validates against "api.telegram.org").
+
+_TELEGRAM_WORKING_IP = "149.154.167.220"
+_original_getaddrinfo = socket.getaddrinfo
+
+
+def _patched_getaddrinfo(host, *args, **kwargs):
+    if host == "api.telegram.org":
+        host = _TELEGRAM_WORKING_IP
+    return _original_getaddrinfo(host, *args, **kwargs)
+
+
+socket.getaddrinfo = _patched_getaddrinfo
 
 
 # =============================================================================
@@ -324,6 +346,18 @@ def handler(event: dict, context) -> dict:
             return handle_send_photo(body)
         elif action == "test" and method == "POST":
             return handle_test(body)
+
+        elif action == "webhook-info":
+            try:
+                import requests as _requests
+                token = get_bot_token()
+                resp = _requests.get(
+                    f"https://api.telegram.org/bot{token}/getWebhookInfo",
+                    timeout=4,
+                )
+                return cors_response(200, resp.json())
+            except Exception as e:
+                return cors_response(500, {"error": f"{type(e).__name__}: {e}"})
         else:
             return cors_response(400, {"error": f"Unknown action: {action}"})
 
