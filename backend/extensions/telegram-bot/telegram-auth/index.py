@@ -172,11 +172,13 @@ def create_or_update_user(
         """, (display_name, photo_url, telegram_id))
     else:
         # Create new user
+        # email обязателен в схеме users — генерируем плейсхолдер для Telegram-пользователей
+        placeholder_email = f"telegram_{telegram_id}@telegram.local"
         cursor.execute(f"""
-            INSERT INTO {schema}users (telegram_id, name, avatar_url, email_verified, password_hash, created_at, updated_at, last_login_at)
-            VALUES (%s, %s, %s, TRUE, '', NOW(), NOW(), NOW())
+            INSERT INTO {schema}users (telegram_id, name, avatar_url, email, email_verified, password_hash, role, roles, created_at, updated_at, last_login_at)
+            VALUES (%s, %s, %s, %s, TRUE, '', 'investor', ARRAY['investor'], NOW(), NOW(), NOW())
             RETURNING id, email, name, avatar_url, telegram_id
-        """, (telegram_id, display_name, photo_url))
+        """, (telegram_id, display_name, photo_url, placeholder_email))
 
     row = cursor.fetchone()
     return {
