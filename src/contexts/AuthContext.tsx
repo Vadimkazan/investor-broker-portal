@@ -41,22 +41,38 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const saved = localStorage.getItem('investpro-user');
-    if (saved) {
-      try {
-        const userData = JSON.parse(saved) as User;
-        setUser(userData);
-        // Фоново синхронизируем с БД
-        setSyncing(true);
-        api.getUserByEmail(userData.email)
-          .then(dbUser => {
-            setUser(dbUser);
-            localStorage.setItem('investpro-user', JSON.stringify(dbUser));
-          })
-          .catch(() => {})
-          .finally(() => setTimeout(() => setSyncing(false), 500));
-      } catch { /* ignore */ }
+    if (!saved) {
+      setLoading(false);
+      return;
     }
-    setLoading(false);
+
+    let userData: User | null = null;
+    try {
+      userData = JSON.parse(saved) as User;
+    } catch {
+      localStorage.removeItem('investpro-user');
+    }
+
+    if (!userData?.email) {
+      setLoading(false);
+      return;
+    }
+
+    setUser(userData);
+    setSyncing(true);
+
+    api.getUserByEmail(userData.email)
+      .then(dbUser => {
+        setUser(dbUser);
+        localStorage.setItem('investpro-user', JSON.stringify(dbUser));
+      })
+      .catch(() => {
+        // Сеть могла отвалиться — оставляем сохранённый вход, не выкидываем пользователя
+      })
+      .finally(() => {
+        setLoading(false);
+        setTimeout(() => setSyncing(false), 500);
+      });
   }, []);
 
   const login = async (email: string, password: string): Promise<User> => {

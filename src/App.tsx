@@ -1,5 +1,4 @@
 
-import { useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -16,6 +15,7 @@ import AdminUserDetailPage from "./pages/AdminUserDetailPage";
 import TelegramCallbackPage from "./pages/TelegramCallbackPage";
 import NotFound from "./pages/NotFound";
 import { AuthProvider } from "@/contexts/AuthContext";
+import ProtectedRoute from "@/components/ProtectedRoute";
 import SiteAssistantWidget from "@/components/assistant/SiteAssistantWidget";
 
 const queryClient = new QueryClient({
@@ -40,12 +40,12 @@ const App = () => {
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/objects" element={<ObjectsPage />} />
-              <Route path="/objects/add" element={<AddObjectPage />} />
-              <Route path="/objects/:id/edit" element={<EditObjectPage />} />
+              <Route path="/objects/add" element={<ProtectedRoute roles={['broker', 'admin', 'manager']}><AddObjectPage /></ProtectedRoute>} />
+              <Route path="/objects/:id/edit" element={<ProtectedRoute roles={['broker', 'admin', 'manager']}><EditObjectPage /></ProtectedRoute>} />
               <Route path="/objects/:id" element={<ObjectDetailPage />} />
-              <Route path="/admin" element={<AdminPage />} />
-              <Route path="/admin/dashboard" element={<AdminDashboard />} />
-              <Route path="/admin/users/:id" element={<AdminUserDetailPage />} />
+              <Route path="/admin" element={<ProtectedRoute roles={['admin', 'manager']}><AdminPage /></ProtectedRoute>} />
+              <Route path="/admin/dashboard" element={<ProtectedRoute roles={['admin', 'manager']}><AdminDashboard /></ProtectedRoute>} />
+              <Route path="/admin/users/:id" element={<ProtectedRoute roles={['admin', 'manager']}><AdminUserDetailPage /></ProtectedRoute>} />
               <Route path="/auth/telegram/callback" element={<TelegramCallbackPage />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />

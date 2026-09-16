@@ -10,7 +10,7 @@ import Icon from '@/components/ui/icon';
 import { useToast } from '@/hooks/use-toast';
 import { api, User, UserRole } from '@/services/api';
 import { useAuth } from '@/contexts/AuthContext';
-import { ROLE_LABELS, isAdminOrManager } from '@/utils/roles';
+import { ROLE_LABELS } from '@/utils/roles';
 import AvatarUpload from '@/components/profile/AvatarUpload';
 import UserActivityHistory from '@/components/profile/UserActivityHistory';
 
@@ -52,11 +52,7 @@ const AdminUserDetailPage = () => {
   const [roles, setRoles] = useState<UserRole[]>([]);
 
   useEffect(() => {
-    if (!isAdminOrManager(currentUser)) {
-      toast({ title: 'Доступ запрещён', variant: 'destructive' });
-      navigate('/');
-      return;
-    }
+    if (!currentUser) return;
     loadUser();
   }, [currentUser, id]);
 

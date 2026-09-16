@@ -13,7 +13,7 @@ import AdminUsersTab from '@/components/admin/AdminUsersTab';
 import AdminObjectsTab from '@/components/admin/AdminObjectsTab';
 import AdminAnalyticsTab from '@/components/admin/AdminAnalyticsTab';
 import AdminBroadcastTab from '@/components/admin/AdminBroadcastTab';
-import { isAdminOrManager, hasRole } from '@/utils/roles';
+import { hasRole } from '@/utils/roles';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -30,11 +30,7 @@ const AdminDashboard = () => {
   const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => {
-    if (!isAdminOrManager(currentUser)) {
-      toast({ title: 'Доступ запрещён', variant: 'destructive' });
-      navigate('/');
-      return;
-    }
+    if (!currentUser) return;
     loadData();
   }, [currentUser]);
 

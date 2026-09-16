@@ -9,11 +9,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import Icon from '@/components/ui/icon';
 import ImageUploader from '@/components/ui/image-uploader';
 import { PROPERTY_TYPE_LABELS } from '@/types/investment-object';
+import { isAdminOrManager } from '@/utils/roles';
+import { useToast } from '@/hooks/use-toast';
 
 const EditObjectPage = () => {
   const navigate = useNavigate();
   const { id } = useParams();
   const { user } = useAuth();
+  const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [loadingObject, setLoadingObject] = useState(true);
   const [formData, setFormData] = useState({
@@ -31,8 +34,9 @@ const EditObjectPage = () => {
   });
 
   useEffect(() => {
+    if (!user) return;
     loadObject();
-  }, [id]);
+  }, [id, user]);
 
   const loadObject = async () => {
     try {
@@ -44,8 +48,13 @@ const EditObjectPage = () => {
 
       const data = await response.json();
       
-      if (!user || data.brokerId !== user.id) {
-        alert('У вас нет прав для редактирования этого объекта');
+      const canEdit = !!user && (data.brokerId === user.id || isAdminOrManager(user));
+      if (!canEdit) {
+        toast({
+          title: 'Нет прав на редактирование',
+          description: 'Изменять объект может только его брокер или администратор',
+          variant: 'destructive',
+        });
         navigate('/objects');
         return;
       }
