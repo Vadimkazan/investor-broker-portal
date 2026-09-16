@@ -12,6 +12,7 @@ import AdminStatsCards from '@/components/admin/AdminStatsCards';
 import AdminUsersTab from '@/components/admin/AdminUsersTab';
 import AdminObjectsTab from '@/components/admin/AdminObjectsTab';
 import AdminAnalyticsTab from '@/components/admin/AdminAnalyticsTab';
+import AdminBroadcastTab from '@/components/admin/AdminBroadcastTab';
 import { isAdminOrManager, hasRole } from '@/utils/roles';
 
 const AdminDashboard = () => {
@@ -177,7 +178,7 @@ const AdminDashboard = () => {
         <AdminStatsCards stats={stats} />
 
         <Tabs defaultValue="users">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4">
             <TabsTrigger value="users">
               <Icon name="Users" size={15} className="mr-2" />Пользователи ({users.length})
             </TabsTrigger>
@@ -186,6 +187,9 @@ const AdminDashboard = () => {
             </TabsTrigger>
             <TabsTrigger value="analytics">
               <Icon name="BarChart2" size={15} className="mr-2" />Аналитика
+            </TabsTrigger>
+            <TabsTrigger value="broadcast">
+              <Icon name="Megaphone" size={15} className="mr-2" />Рассылка
             </TabsTrigger>
           </TabsList>
 
@@ -219,6 +223,10 @@ const AdminDashboard = () => {
               statusData={statusData}
               stats={stats}
             />
+          </TabsContent>
+
+          <TabsContent value="broadcast" className="space-y-4 mt-4">
+            <AdminBroadcastTab />
           </TabsContent>
         </Tabs>
       </div>

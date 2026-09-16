@@ -497,6 +497,46 @@ def handle_broadcast_object(body: dict) -> dict:
     return cors_response(200, {"success": True, "sent": sent, "failed": failed})
 
 
+def handle_broadcast(body: dict) -> dict:
+    """
+    POST ?action=broadcast
+    Ручная рассылка произвольного сообщения подписчикам.
+    """
+    text = (body.get("text") or "").strip()
+    photo_url = (body.get("photo_url") or "").strip()
+
+    if not text:
+        return cors_response(400, {"error": "Введите текст сообщения"})
+
+    limit = 1024 if photo_url else 4096
+    if len(text) > limit:
+        return cors_response(400, {"error": f"Слишком длинный текст (максимум {limit} символов)"})
+
+    subscribers = get_object_subscribers()
+    if not subscribers:
+        return cors_response(200, {"success": True, "sent": 0, "failed": 0})
+
+    sent, failed = 0, 0
+    bot = get_bot()
+    for chat_id in subscribers:
+        try:
+            if photo_url:
+                bot.send_photo(chat_id=chat_id, photo=photo_url, caption=text, parse_mode="HTML")
+            else:
+                bot.send_message(chat_id=chat_id, text=text, parse_mode="HTML")
+            sent += 1
+        except Exception as e:
+            failed += 1
+            print(f"Manual broadcast failed for {chat_id}: {e}")
+
+    return cors_response(200, {"success": True, "sent": sent, "failed": failed})
+
+
+def handle_subscribers_count(body: dict) -> dict:
+    """GET/POST ?action=subscribers-count — сколько людей получит рассылку."""
+    return cors_response(200, {"count": len(get_object_subscribers())})
+
+
 def handle_test(body: dict) -> dict:
     """
     POST ?action=test
@@ -581,6 +621,10 @@ def handler(event: dict, context) -> dict:
         elif action == "test" and method == "POST":
             return handle_test(body)
 
+        elif action == "broadcast" and method == "POST":
+            return handle_broadcast(body)
+        elif action == "subscribers-count":
+            return handle_subscribers_count(body)
         elif action == "broadcast-object" and method == "POST":
             return handle_broadcast_object(body)
         elif action == "link-start" and method == "POST":
