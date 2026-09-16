@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import Icon from '@/components/ui/icon';
 import Header from '@/components/Header';
+import ObjectChatWidget from './ObjectChatWidget';
 import { Broker } from '@/types/investment-object';
 import { useObject } from '@/hooks/useObjects';
 import { useFavorites, useAddToFavorites, useRemoveFromFavorites } from '@/hooks/useFavorites';
@@ -350,6 +351,8 @@ const ObjectDetailPage = () => {
                 </CardContent>
               </Card>
             )}
+
+            <ObjectChatWidget object={object} />
 
             <Card>
               <CardHeader>
