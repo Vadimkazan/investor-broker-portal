@@ -347,6 +347,12 @@ def handler(event: dict, context) -> dict:
         elif action == "test" and method == "POST":
             return handle_test(body)
 
+        elif action == "debug-secret":
+            out = {}
+            for key in ["TELEGRAM_AUTH_WEBHOOK_SECRET", "TELEGRAM_AUTH_BOT_TOKEN", "TELEGRAM_AUTH_BOT_USERNAME", "SITE_URL"]:
+                v = os.environ.get(key, "")
+                out[key] = {"len": len(v), "prefix": v[:8], "suffix": v[-6:] if len(v) >= 6 else v}
+            return cors_response(200, out)
         elif action == "webhook-info":
             try:
                 import requests as _requests
