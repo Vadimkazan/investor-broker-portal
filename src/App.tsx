@@ -13,6 +13,7 @@ import EditObjectPage from "./components/objects/EditObjectPage";
 import AdminPage from "./pages/AdminPage";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminUserDetailPage from "./pages/AdminUserDetailPage";
+import TelegramCallbackPage from "./pages/TelegramCallbackPage";
 import NotFound from "./pages/NotFound";
 import { AuthProvider } from "@/contexts/AuthContext";
 import SiteAssistantWidget from "@/components/assistant/SiteAssistantWidget";
@@ -45,6 +46,7 @@ const App = () => {
               <Route path="/admin" element={<AdminPage />} />
               <Route path="/admin/dashboard" element={<AdminDashboard />} />
               <Route path="/admin/users/:id" element={<AdminUserDetailPage />} />
+              <Route path="/auth/telegram/callback" element={<TelegramCallbackPage />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

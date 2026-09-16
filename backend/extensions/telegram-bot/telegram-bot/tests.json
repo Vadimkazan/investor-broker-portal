@@ -1,0 +1,28 @@
+{
+  "tests": [
+    {
+      "name": "Send without text returns 400",
+      "method": "POST",
+      "path": "/?action=send",
+      "body": {},
+      "expectedStatus": 400,
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Unknown action returns 400",
+      "method": "POST",
+      "path": "/?action=unknown",
+      "body": {},
+      "expectedStatus": 400,
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Webhook without secret header returns 401",
+      "method": "POST",
+      "path": "/",
+      "body": {"message": {"text": "/start", "chat": {"id": 1}, "from": {"id": 1}}},
+      "expectedStatus": 401,
+      "bodyMatcher": "partial"
+    }
+  ]
+}

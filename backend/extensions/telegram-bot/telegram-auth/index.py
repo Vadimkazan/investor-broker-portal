@@ -312,7 +312,7 @@ def handle_callback(cursor, body: dict) -> dict:
         return cors_response(400, {"error": "Token not authenticated"})
 
     # Get JWT secret
-    jwt_secret = get_env("JWT_SECRET")
+    jwt_secret = get_env("TELEGRAM_AUTH_JWT_SECRET")
     if len(jwt_secret) < 32:
         return cors_response(500, {"error": "Server configuration error"})
 
@@ -354,7 +354,7 @@ def handle_refresh(cursor, body: dict) -> dict:
     if not refresh_token:
         return cors_response(400, {"error": "Missing refresh_token"})
 
-    jwt_secret = get_env("JWT_SECRET")
+    jwt_secret = get_env("TELEGRAM_AUTH_JWT_SECRET")
     token_hash = hash_token(refresh_token)
 
     token_data = find_refresh_token(cursor, token_hash)

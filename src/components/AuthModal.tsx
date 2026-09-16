@@ -9,6 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import Icon from '@/components/ui/icon';
 import { useAuth } from '@/contexts/AuthContext';
 import { api, User, UserRole } from '@/services/api';
+import TelegramLoginButton from '@/components/extensions/telegram-bot/TelegramLoginButton';
+
+const TELEGRAM_BOT_USERNAME = 'arealvests_bot';
 
 interface AuthModalProps {
   open: boolean;
@@ -39,6 +42,10 @@ const AuthModal = ({ open, onClose, onAuth }: AuthModalProps) => {
       api.getBrokers().then(setBrokers).catch(() => {});
     }
   }, [open, regRole, brokers.length]);
+
+  const handleTelegramLogin = () => {
+    window.open(`https://t.me/${TELEGRAM_BOT_USERNAME}?start=web_auth`, '_blank');
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -93,6 +100,17 @@ const AuthModal = ({ open, onClose, onAuth }: AuthModalProps) => {
           </TabsList>
 
           <TabsContent value="login">
+            <div className="space-y-4 mb-4">
+              <TelegramLoginButton onClick={handleTelegramLogin} className="w-full" />
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-background px-2 text-muted-foreground">или по email</span>
+                </div>
+              </div>
+            </div>
             <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="login-email">Email</Label>

@@ -23,6 +23,7 @@ interface AuthContextType {
   logout: () => void;
   switchRole: () => Promise<void>;
   refreshUser: () => Promise<void>;
+  loginWithUserId: (id: number) => Promise<User>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -81,6 +82,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch { /* ignore */ }
   };
 
+  const loginWithUserId = async (id: number): Promise<User> => {
+    const dbUser = await api.getUserById(id);
+    setUser(dbUser);
+    localStorage.setItem('investpro-user', JSON.stringify(dbUser));
+    return dbUser;
+  };
+
   const logout = () => {
     setUser(null);
     localStorage.removeItem('investpro-user');
@@ -95,7 +103,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, syncing, login, register, logout, switchRole, refreshUser }}>
+    <AuthContext.Provider value={{ user, loading, syncing, login, register, logout, switchRole, refreshUser, loginWithUserId }}>
       {children}
     </AuthContext.Provider>
   );

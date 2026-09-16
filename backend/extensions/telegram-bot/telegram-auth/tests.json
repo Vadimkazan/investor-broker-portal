@@ -1,0 +1,28 @@
+{
+  "tests": [
+    {
+      "name": "Callback without token returns 400",
+      "method": "POST",
+      "path": "/?action=callback",
+      "body": {},
+      "expectedStatus": 400,
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Refresh without token returns 400",
+      "method": "POST",
+      "path": "/?action=refresh",
+      "body": {},
+      "expectedStatus": 400,
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Unknown action returns 400",
+      "method": "POST",
+      "path": "/?action=unknown",
+      "body": {},
+      "expectedStatus": 400,
+      "bodyMatcher": "partial"
+    }
+  ]
+}

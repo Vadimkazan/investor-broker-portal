@@ -1,4 +1,6 @@
 {
+  "telegram-bot-telegram-auth": "https://functions.poehali.dev/6b7dd561-5529-4cdd-b4f7-72c236e9e68f",
+  "telegram-bot-telegram-bot": "https://functions.poehali.dev/0db3f807-568e-4315-90c1-bc467c92575b",
   "chatgpt-polza-chatgpt": "https://functions.poehali.dev/9900f4e9-9b8a-4671-9500-d2d0019e24b4",
   "import-objects-excel": "https://functions.poehali.dev/704cf8b2-42c2-4835-aa8e-ad16b91f60f0",
   "upload": "https://functions.poehali.dev/c8226cd3-1426-487a-8f8f-0b22ed0be84e",

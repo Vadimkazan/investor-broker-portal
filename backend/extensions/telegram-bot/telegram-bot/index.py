@@ -23,10 +23,10 @@ import telebot
 # =============================================================================
 
 def get_bot_token() -> str:
-    """Get Telegram bot token."""
-    token = os.environ.get("TELEGRAM_BOT_TOKEN", "")
+    """Get Telegram bot token (dedicated auth bot, separate from notifications bot)."""
+    token = os.environ.get("TELEGRAM_AUTH_BOT_TOKEN", "")
     if not token:
-        raise ValueError("TELEGRAM_BOT_TOKEN not configured")
+        raise ValueError("TELEGRAM_AUTH_BOT_TOKEN not configured")
     return token
 
 
@@ -330,7 +330,7 @@ def handler(event: dict, context) -> dict:
     # No action — handle Telegram webhook
     headers = event.get("headers", {})
     headers_lower = {k.lower(): v for k, v in headers.items()}
-    webhook_secret = os.environ.get("TELEGRAM_WEBHOOK_SECRET")
+    webhook_secret = os.environ.get("TELEGRAM_AUTH_WEBHOOK_SECRET")
 
     if webhook_secret:
         request_secret = headers_lower.get("x-telegram-bot-api-secret-token", "")
