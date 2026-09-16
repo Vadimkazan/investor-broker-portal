@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import Icon from '@/components/ui/icon';
 import { useToast } from '@/hooks/use-toast';
 import { api } from '@/services/api';
+import BroadcastHistory from '@/components/admin/BroadcastHistory';
 
 const TELEGRAM_BOT_URL = 'https://functions.poehali.dev/0db3f807-568e-4315-90c1-bc467c92575b';
 
@@ -28,6 +29,7 @@ const AdminBroadcastTab = () => {
   const [confirming, setConfirming] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
+  const [historyKey, setHistoryKey] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [counts, setCounts] = useState<Record<Audience, number> | null>(null);
   const { toast } = useToast();
@@ -120,6 +122,7 @@ const AdminBroadcastTab = () => {
       setText('');
       setPhotoUrl('');
       setConfirming(false);
+      setHistoryKey((k) => k + 1);
     } catch (error) {
       toast({
         title: 'Ошибка рассылки',
@@ -136,6 +139,7 @@ const AdminBroadcastTab = () => {
   const canSend = !!text.trim() && !tooLong && !sending && !uploading && subscribers !== 0;
 
   return (
+    <div className="space-y-4">
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
@@ -336,6 +340,9 @@ const AdminBroadcastTab = () => {
         )}
       </CardContent>
     </Card>
+
+    <BroadcastHistory refreshKey={historyKey} />
+    </div>
   );
 };
 

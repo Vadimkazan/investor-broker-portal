@@ -412,8 +412,8 @@ def handle_send_photo(body: dict) -> dict:
         return cors_response(500, {"error": str(e)})
 
 
-def get_object_subscribers(audience: str = "all") -> list:
-    """Получить chat_id подписчиков. audience: all | investor | broker."""
+def get_subscribers_with_roles(audience: str = "all") -> list:
+    """Получить [(chat_id, is_investor, is_broker)] подписчиков."""
     schema = get_schema()
     role_filter = ""
     if audience in ("investor", "broker"):
@@ -423,15 +423,65 @@ def get_object_subscribers(audience: str = "all") -> list:
     try:
         cursor = conn.cursor()
         cursor.execute(f"""
-            SELECT telegram_chat_id FROM {schema}users
+            SELECT telegram_chat_id,
+                   (role = 'investor' OR 'investor' = ANY(roles)) AS is_investor,
+                   (role = 'broker' OR 'broker' = ANY(roles)) AS is_broker
+            FROM {schema}users
             WHERE notify_new_objects = TRUE
               AND telegram_chat_id IS NOT NULL
               AND telegram_chat_id <> ''
               {role_filter}
         """)
-        return [row[0] for row in cursor.fetchall()]
+        return cursor.fetchall()
     finally:
         conn.close()
+
+
+def get_object_subscribers(audience: str = "all") -> list:
+    """Получить chat_id подписчиков. audience: all | investor | broker."""
+    return [row[0] for row in get_subscribers_with_roles(audience)]
+
+
+def save_broadcast(text: str, photo_url: str, audience: str,
+                   investors: int, brokers: int, total: int, failed: int) -> None:
+    """Сохраняет отправленную рассылку в историю."""
+    schema = get_schema()
+    conn = psycopg2.connect(os.environ["DATABASE_URL"])
+    try:
+        cursor = conn.cursor()
+        cursor.execute(f"""
+            INSERT INTO {schema}broadcasts
+                (text, photo_url, audience, sent_total, sent_investors, sent_brokers, failed_count)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+        """, (text, photo_url or None, audience, total, investors, brokers, failed))
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def handle_broadcast_history(body: dict) -> dict:
+    """GET/POST ?action=broadcast-history — история отправленных рассылок."""
+    schema = get_schema()
+    conn = psycopg2.connect(os.environ["DATABASE_URL"])
+    try:
+        cursor = conn.cursor()
+        cursor.execute(f"""
+            SELECT id, text, photo_url, audience, sent_total,
+                   sent_investors, sent_brokers, failed_count, created_at
+            FROM {schema}broadcasts
+            ORDER BY created_at DESC
+            LIMIT 100
+        """)
+        items = [{
+            "id": r[0], "text": r[1], "photo_url": r[2], "audience": r[3],
+            "sent_total": r[4], "sent_investors": r[5], "sent_brokers": r[6],
+            "failed_count": r[7],
+            "created_at": r[8].isoformat() if r[8] else None,
+        } for r in cursor.fetchall()]
+    finally:
+        conn.close()
+
+    return cors_response(200, {"items": items})
 
 
 def format_price(value) -> str:
@@ -521,24 +571,35 @@ def handle_broadcast(body: dict) -> dict:
     if audience not in ("all", "investor", "broker"):
         return cors_response(400, {"error": "Неверная аудитория"})
 
-    subscribers = get_object_subscribers(audience)
+    subscribers = get_subscribers_with_roles(audience)
     if not subscribers:
-        return cors_response(200, {"success": True, "sent": 0, "failed": 0})
+        return cors_response(200, {"success": True, "sent": 0, "failed": 0,
+                                   "investors": 0, "brokers": 0})
 
-    sent, failed = 0, 0
+    sent, failed, investors, brokers = 0, 0, 0, 0
     bot = get_bot()
-    for chat_id in subscribers:
+    for chat_id, is_investor, is_broker in subscribers:
         try:
             if photo_url:
                 bot.send_photo(chat_id=chat_id, photo=photo_url, caption=text, parse_mode="HTML")
             else:
                 bot.send_message(chat_id=chat_id, text=text, parse_mode="HTML")
             sent += 1
+            if is_investor:
+                investors += 1
+            if is_broker:
+                brokers += 1
         except Exception as e:
             failed += 1
             print(f"Manual broadcast failed for {chat_id}: {e}")
 
-    return cors_response(200, {"success": True, "sent": sent, "failed": failed})
+    try:
+        save_broadcast(text, photo_url, audience, investors, brokers, sent, failed)
+    except Exception as e:
+        print(f"Failed to save broadcast history: {e}")
+
+    return cors_response(200, {"success": True, "sent": sent, "failed": failed,
+                               "investors": investors, "brokers": brokers})
 
 
 def handle_subscribers_count(body: dict) -> dict:
@@ -637,6 +698,8 @@ def handler(event: dict, context) -> dict:
 
         elif action == "broadcast" and method == "POST":
             return handle_broadcast(body)
+        elif action == "broadcast-history":
+            return handle_broadcast_history(body)
         elif action == "subscribers-count":
             return handle_subscribers_count(body)
         elif action == "broadcast-object" and method == "POST":
