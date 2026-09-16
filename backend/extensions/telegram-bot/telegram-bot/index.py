@@ -412,6 +412,91 @@ def handle_send_photo(body: dict) -> dict:
         return cors_response(500, {"error": str(e)})
 
 
+def get_object_subscribers() -> list:
+    """Получить chat_id подписчиков на уведомления о новых объектах."""
+    schema = get_schema()
+    conn = psycopg2.connect(os.environ["DATABASE_URL"])
+    try:
+        cursor = conn.cursor()
+        cursor.execute(f"""
+            SELECT telegram_chat_id FROM {schema}users
+            WHERE notify_new_objects = TRUE
+              AND telegram_chat_id IS NOT NULL
+              AND telegram_chat_id <> ''
+        """)
+        return [row[0] for row in cursor.fetchall()]
+    finally:
+        conn.close()
+
+
+def format_price(value) -> str:
+    """Форматирует цену в читаемый вид."""
+    try:
+        return f"{int(float(value)):,}".replace(",", " ") + " ₽"
+    except (TypeError, ValueError):
+        return "цена по запросу"
+
+
+def handle_broadcast_object(body: dict) -> dict:
+    """
+    POST ?action=broadcast-object
+    Рассылает подписчикам карточку нового объекта.
+    """
+    object_id = body.get("object_id")
+    if not object_id:
+        return cors_response(400, {"error": "object_id is required"})
+
+    schema = get_schema()
+    conn = psycopg2.connect(os.environ["DATABASE_URL"])
+    try:
+        cursor = conn.cursor()
+        cursor.execute(f"""
+            SELECT title, city, price, yield_percent, images
+            FROM {schema}investment_objects WHERE id = %s
+        """, (int(object_id),))
+        row = cursor.fetchone()
+    finally:
+        conn.close()
+
+    if not row:
+        return cors_response(404, {"error": "Object not found"})
+
+    title, city, price, yield_percent, images = row
+    site_url = os.environ.get("SITE_URL", "").rstrip("/")
+    link = f"{site_url}/objects/{object_id}"
+
+    lines = [f"<b>Новый объект: {title}</b>", ""]
+    if city:
+        lines.append(f"Город: {city}")
+    lines.append(f"Цена: {format_price(price)}")
+    if yield_percent:
+        lines.append(f"Доходность: {yield_percent}% годовых")
+    lines.append("")
+    lines.append(f'<a href="{link}">Смотреть объект</a>')
+    caption = "\n".join(lines)
+
+    photo = images[0] if images else None
+    subscribers = get_object_subscribers()
+    sent, failed = 0, 0
+
+    bot = get_bot()
+    for chat_id in subscribers:
+        try:
+            if photo:
+                bot.send_photo(chat_id=chat_id, photo=photo, caption=caption, parse_mode="HTML")
+            else:
+                bot.send_message(
+                    chat_id=chat_id, text=caption, parse_mode="HTML",
+                    disable_web_page_preview=False,
+                )
+            sent += 1
+        except Exception as e:
+            failed += 1
+            print(f"Object broadcast failed for {chat_id}: {e}")
+
+    return cors_response(200, {"success": True, "sent": sent, "failed": failed})
+
+
 def handle_test(body: dict) -> dict:
     """
     POST ?action=test
@@ -496,6 +581,8 @@ def handler(event: dict, context) -> dict:
         elif action == "test" and method == "POST":
             return handle_test(body)
 
+        elif action == "broadcast-object" and method == "POST":
+            return handle_broadcast_object(body)
         elif action == "link-start" and method == "POST":
             user_id = body.get("user_id")
             if not user_id:

@@ -11,6 +11,23 @@ def hash_password(password: str) -> str:
 def verify_password(password: str, password_hash: str) -> bool:
     return hmac.compare_digest(hash_password(password), password_hash)
 
+def notify_new_object(object_id: int) -> None:
+    '''Отправляет подписчикам уведомление о новом объекте (не блокирует ответ)'''
+    bot_url = os.environ.get('TELEGRAM_BOT_FUNCTION_URL', '')
+    if not bot_url:
+        return
+    try:
+        import urllib.request
+        req = urllib.request.Request(
+            f"{bot_url}?action=broadcast-object",
+            data=json.dumps({'object_id': object_id}).encode(),
+            headers={'Content-Type': 'application/json'},
+            method='POST',
+        )
+        urllib.request.urlopen(req, timeout=3)
+    except Exception as e:
+        print(f"Broadcast trigger failed: {e}")
+
 def escape_sql(value):
     '''Escape values for Simple Query Protocol'''
     if value is None:
@@ -304,7 +321,12 @@ def handle_objects(cur, method: str, event: Dict[str, Any]) -> Dict[str, Any]:
             LEFT JOIN users u ON o.broker_id = u.id
             WHERE o.id = {escape_sql(new_id)}
         """)
-        return success_response(format_object_with_broker(cur.fetchone()), 201)
+        result = format_object_with_broker(cur.fetchone())
+
+        if body.get('status', 'available') == 'available':
+            notify_new_object(new_id)
+
+        return success_response(result, 201)
 
     elif method == 'PUT':
         body = json.loads(event.get('body', '{}'))
