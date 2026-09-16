@@ -417,16 +417,32 @@ def handle_test(body: dict) -> dict:
     POST ?action=test
     Send test message to verify configuration.
     """
-    chat_id = body.get("chat_id") or get_default_chat_id()
+    chat_id = body.get("chat_id")
+
+    user_id = body.get("user_id")
+    if not chat_id and user_id:
+        schema = get_schema()
+        conn = psycopg2.connect(os.environ["DATABASE_URL"])
+        try:
+            cursor = conn.cursor()
+            cursor.execute(
+                f"SELECT telegram_chat_id FROM {schema}users WHERE id = %s",
+                (int(user_id),)
+            )
+            row = cursor.fetchone()
+            chat_id = row[0] if row else None
+        finally:
+            conn.close()
 
     if not chat_id:
-        return cors_response(400, {"error": "chat_id is required"})
+        chat_id = get_default_chat_id()
 
-    text = f"""<b>Тестовое сообщение</b>
+    if not chat_id:
+        return cors_response(400, {"error": "Telegram не подключен"})
 
-Если вы видите это сообщение — Telegram-бот настроен правильно!
+    text = """<b>Проверка связи</b>
 
-<i>Время: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}</i>"""
+Всё работает! Уведомления будут приходить в этот чат."""
 
     try:
         bot = get_bot()

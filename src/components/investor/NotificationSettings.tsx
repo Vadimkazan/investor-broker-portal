@@ -19,6 +19,7 @@ const NotificationSettings = ({ userId }: NotificationSettingsProps) => {
   const [telegramChatId, setTelegramChatId] = useState('');
   const [loading, setLoading] = useState(true);
   const [connecting, setConnecting] = useState(false);
+  const [sendingTest, setSendingTest] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -129,6 +130,35 @@ const NotificationSettings = ({ userId }: NotificationSettingsProps) => {
         description: 'Не удалось начать подключение Telegram',
         variant: 'destructive',
       });
+    }
+  };
+
+  const handleSendTest = async () => {
+    setSendingTest(true);
+    try {
+      const res = await fetch(`${TELEGRAM_BOT_URL}?action=test`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: userId }),
+      });
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Не удалось отправить');
+      }
+
+      toast({
+        title: 'Сообщение отправлено',
+        description: 'Проверьте чат с ботом в Telegram',
+      });
+    } catch (error) {
+      toast({
+        title: 'Не удалось отправить',
+        description: 'Проверьте, что чат с ботом не заблокирован',
+        variant: 'destructive',
+      });
+    } finally {
+      setSendingTest(false);
     }
   };
 
@@ -295,15 +325,32 @@ const NotificationSettings = ({ userId }: NotificationSettingsProps) => {
                 </div>
               </div>
               
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={handleDisconnectTelegram}
-                className="w-full"
-              >
-                <Icon name="Unlink" size={16} className="mr-2" />
-                Отключить Telegram
-              </Button>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleSendTest}
+                  disabled={sendingTest}
+                  className="flex-1"
+                >
+                  <Icon
+                    name={sendingTest ? 'Loader2' : 'Send'}
+                    size={16}
+                    className={`mr-2 ${sendingTest ? 'animate-spin' : ''}`}
+                  />
+                  {sendingTest ? 'Отправляем...' : 'Отправить тестовое сообщение'}
+                </Button>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleDisconnectTelegram}
+                  className="flex-1"
+                >
+                  <Icon name="Unlink" size={16} className="mr-2" />
+                  Отключить Telegram
+                </Button>
+              </div>
             </div>
           )}
         </div>
