@@ -109,7 +109,7 @@ function ModelDropdown({
 
 export function ChatGPTPlayground({
   apiUrl,
-  defaultModel = "openai/gpt-4o-mini",
+  defaultModel = "gpt-5.4-mini",
 }: ChatGPTPlaygroundProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");

@@ -65,7 +65,7 @@ const ObjectChatWidget = ({ object }: ObjectChatWidgetProps) => {
       { role: 'user' as const, content: text },
     ];
 
-    const result = await generate({ messages: apiMessages, model: 'openai/gpt-4o-mini', temperature: 0.5 });
+    const result = await generate({ messages: apiMessages, model: 'gpt-5.4-mini', temperature: 0.5 });
 
     setMessages((prev) => [
       ...prev,

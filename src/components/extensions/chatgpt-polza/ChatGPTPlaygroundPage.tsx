@@ -16,7 +16,7 @@ interface ChatGPTPlaygroundPageProps {
 
 export function ChatGPTPlaygroundPage({
   apiUrl,
-  defaultModel = "openai/gpt-4o-mini",
+  defaultModel = "gpt-5.4-mini",
 }: ChatGPTPlaygroundPageProps) {
   return (
     <div className="h-screen">

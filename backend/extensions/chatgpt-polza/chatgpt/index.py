@@ -21,9 +21,9 @@ import requests
 # CONFIGURATION
 # =============================================================================
 
-# Provider: Polza.ai (OpenAI-compatible API)
-PROVIDER_BASE_URL = "https://api.polza.ai/api/v1"
-DEFAULT_MODEL = "openai/gpt-4o-mini"
+# Provider: provod.ai (OpenAI-compatible API)
+PROVIDER_BASE_URL = "https://api.provod.ai/v1"
+DEFAULT_MODEL = "gpt-5.4-nano"
 DEFAULT_TIMEOUT = 60
 
 
@@ -102,7 +102,14 @@ def make_request(endpoint: str, method: str = "POST", data: Optional[dict] = Non
             error_body = e.response.json()
         except Exception:
             pass
-        raise ValueError(error_body.get("error", {}).get("message", str(e)))
+        error_field = error_body.get("error")
+        if isinstance(error_field, dict):
+            message = error_field.get("message", str(e))
+        elif isinstance(error_field, str):
+            message = error_field
+        else:
+            message = error_body.get("message", str(e))
+        raise ValueError(message)
 
 
 # =============================================================================
@@ -127,12 +134,6 @@ def handle_generate(body: dict) -> dict:
     model = body.get("model", DEFAULT_MODEL)
     temperature = body.get("temperature", 0.7)
     max_tokens = body.get("max_tokens")
-
-    # Validate model starts with openai/
-    if not model.startswith("openai/"):
-        return cors_response(400, {
-            "error": "This extension only supports OpenAI models (openai/*)"
-        })
 
     request_data = {
         "model": model,
@@ -169,7 +170,7 @@ def handle_generate(body: dict) -> dict:
         return cors_response(500, {"error": str(e)})
 
 
-def handle_models(body: dict) -> dict:
+def handle_models(body: dict, debug: bool = False) -> dict:
     """
     GET/POST ?action=models
     List available GPT models from Polza.ai.
@@ -177,20 +178,24 @@ def handle_models(body: dict) -> dict:
     try:
         result = make_request("models", method="GET")
 
-        # Filter only OpenAI models
+        if debug:
+            return cors_response(200, {"debug_raw": result})
+
+        # Filter only OpenAI GPT models
         models = []
         for model in result.get("data", []):
             model_id = model.get("id", "")
-            if model_id.startswith("openai/"):
+            publisher = (model.get("publisher") or {}).get("slug", "")
+            if publisher == "openai" or model_id.startswith("gpt-"):
                 models.append({
                     "id": model_id,
-                    "name": model_id.replace("openai/", "").upper(),
+                    "name": model.get("name", model_id),
                 })
 
         return cors_response(200, {
             "success": True,
             "models": models,
-            "provider": "polza.ai",
+            "provider": "provod.ai",
         })
     except (TimeoutError, ConnectionError) as e:
         return cors_response(503, {"error": str(e)})
@@ -259,7 +264,7 @@ def handler(event: dict, context) -> dict:
     if action == "generate":
         return handle_generate(body)
     elif action == "models":
-        return handle_models(body)
+        return handle_models(body, debug=params.get("debug") == "1")
     elif action == "test":
         return handle_test(body)
     else:
