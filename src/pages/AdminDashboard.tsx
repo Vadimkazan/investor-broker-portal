@@ -110,7 +110,12 @@ const AdminDashboard = () => {
     reserved: objects.filter(o => o.status === 'reserved').length,
     sold: objects.filter(o => o.status === 'sold').length,
     totalValue: objects.reduce((s, o) => s + Number(o.price), 0),
-    avgYield: objects.length > 0 ? objects.reduce((s, o) => s + Number(o.yield_percent), 0) / objects.length : 0,
+    avgYield: (() => {
+      const yields = objects
+        .map(o => Number(o.yield_percent ?? (o as { yieldPercent?: number }).yieldPercent))
+        .filter(v => Number.isFinite(v) && v > 0);
+      return yields.length > 0 ? yields.reduce((s, v) => s + v, 0) / yields.length : 0;
+    })(),
   };
 
   const cityData = Object.entries(
@@ -119,7 +124,8 @@ const AdminDashboard = () => {
 
   const typeData = Object.entries(
     objects.reduce((acc, o) => {
-      const label = TYPE_LABELS[o.property_type] || o.property_type;
+      const raw = String(o.property_type ?? (o as { propertyType?: string }).propertyType ?? 'Без типа');
+      const label = (TYPE_LABELS as Record<string, string>)[raw] || raw;
       acc[label] = (acc[label] || 0) + 1;
       return acc;
     }, {} as Record<string, number>)

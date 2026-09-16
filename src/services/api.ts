@@ -262,6 +262,10 @@ class ApiClient {
     return this.request<InvestmentObjectDB>('objects', 'PUT', { id, ...data });
   }
 
+  async deleteObject(id: number): Promise<{ message: string }> {
+    return this.request<{ message: string }>('objects', 'DELETE', undefined, { id: id.toString() });
+  }
+
   async getFavorites(userId: number): Promise<Favorite[]> {
     return this.request<Favorite[]>('favorites', 'GET', undefined, { user_id: userId.toString() });
   }

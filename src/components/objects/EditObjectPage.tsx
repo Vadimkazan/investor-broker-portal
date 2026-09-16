@@ -59,22 +59,28 @@ const EditObjectPage = () => {
         return;
       }
 
+      const num = (v: unknown) => (v === null || v === undefined || v === '' ? '' : String(v));
+
       setFormData({
-        title: data.title,
-        type: data.type,
-        city: data.city,
-        address: data.address,
-        price: data.price.toString(),
-        yield: data.yield.toString(),
-        paybackPeriod: data.paybackPeriod.toString(),
-        area: data.area.toString(),
-        description: data.description,
-        images: data.images.length > 0 ? data.images : [''],
-        status: data.status
+        title: data.title || '',
+        type: data.propertyType || data.property_type || data.type || '',
+        city: data.city || '',
+        address: data.address || '',
+        price: num(data.price),
+        yield: num(data.yieldPercent ?? data.yield_percent ?? data.yield),
+        paybackPeriod: num(data.paybackYears ?? data.payback_years ?? data.paybackPeriod),
+        area: num(data.area),
+        description: data.description || '',
+        images: Array.isArray(data.images) && data.images.length > 0 ? data.images : [''],
+        status: data.status || 'available'
       });
     } catch (error) {
       console.error('Error loading object:', error);
-      alert('Ошибка при загрузке объекта');
+      toast({
+        title: 'Не удалось открыть объект',
+        description: 'Объект не найден или был удалён',
+        variant: 'destructive',
+      });
       navigate('/objects');
     } finally {
       setLoadingObject(false);

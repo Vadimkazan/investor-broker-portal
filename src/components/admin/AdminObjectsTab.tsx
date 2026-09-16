@@ -8,6 +8,18 @@ import Icon from '@/components/ui/icon';
 import { InvestmentObjectDB } from '@/services/api';
 import { TYPE_LABELS, DeleteConfirm } from './adminConstants';
 
+type ObjRow = InvestmentObjectDB & { propertyType?: string; yieldPercent?: number | string };
+
+const objType = (o: ObjRow) => {
+  const t = String(o.property_type ?? o.propertyType ?? '');
+  return (TYPE_LABELS as Record<string, string>)[t] || t || '—';
+};
+
+const objYield = (o: ObjRow) => {
+  const v = Number(o.yield_percent ?? o.yieldPercent);
+  return Number.isFinite(v) && v > 0 ? `${v}%` : '—';
+};
+
 interface AdminObjectsTabProps {
   filteredObjects: InvestmentObjectDB[];
   searchObjects: string;
@@ -66,9 +78,9 @@ const AdminObjectsTab = ({
                 <TableCell className="text-muted-foreground">{obj.id}</TableCell>
                 <TableCell className="font-medium max-w-40 truncate">{obj.title}</TableCell>
                 <TableCell>{obj.city}</TableCell>
-                <TableCell className="text-muted-foreground">{TYPE_LABELS[obj.property_type] || obj.property_type}</TableCell>
+                <TableCell className="text-muted-foreground">{objType(obj)}</TableCell>
                 <TableCell>{(Number(obj.price) / 1_000_000).toFixed(1)} млн ₽</TableCell>
-                <TableCell className="text-primary font-medium">{obj.yield_percent}%</TableCell>
+                <TableCell className="text-primary font-medium">{objYield(obj)}</TableCell>
                 <TableCell>
                   <Select
                     value={obj.status}

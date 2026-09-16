@@ -367,7 +367,10 @@ def handle_objects(cur, method: str, event: Dict[str, Any]) -> Dict[str, Any]:
         object_id = params.get('id')
         if not object_id:
             return error_response('Object ID required', 400)
-        cur.execute(f"DELETE FROM investment_objects WHERE id = {escape_sql(int(object_id))}")
+        oid = escape_sql(int(object_id))
+        for table in ('object_views', 'favorites', 'inquiries', 'notifications'):
+            cur.execute(f"DELETE FROM {table} WHERE object_id = {oid}")
+        cur.execute(f"DELETE FROM investment_objects WHERE id = {oid}")
         return success_response({'message': 'Deleted'})
 
     return error_response('Method not allowed', 405)
