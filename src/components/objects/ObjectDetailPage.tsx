@@ -91,10 +91,24 @@ const ObjectDetailPage = () => {
     navigate('/');
   };
 
+  const handleTabChange = (tab: string) => {
+    if (tab === 'home') navigate('/');
+    else if (tab === 'objects') navigate('/objects');
+    else if (tab === 'calculator') navigate('/?tab=calculator');
+    else if (tab === 'dashboard') navigate('/?tab=dashboard');
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
-        <Header user={user} onLogout={handleLogout} />
+        <Header
+          activeTab="objects"
+          onTabChange={handleTabChange}
+          user={user}
+          onAuthClick={() => navigate('/')}
+          onLogout={handleLogout}
+          onRoleSwitch={() => {}}
+        />
         <div className="text-center py-16">
           <Icon name="Loader2" size={48} className="mx-auto text-primary animate-spin mb-4" />
           <p className="text-muted-foreground">Загрузка...</p>
@@ -106,7 +120,14 @@ const ObjectDetailPage = () => {
   if (error || !object) {
     return (
       <div className="min-h-screen bg-background">
-        <Header user={user} onLogout={handleLogout} />
+        <Header
+          activeTab="objects"
+          onTabChange={handleTabChange}
+          user={user}
+          onAuthClick={() => navigate('/')}
+          onLogout={handleLogout}
+          onRoleSwitch={() => {}}
+        />
         <div className="text-center py-16">
           <Icon name="AlertCircle" size={48} className="mx-auto text-destructive mb-4" />
           <h3 className="text-xl font-semibold mb-2">Объект не найден</h3>
@@ -121,7 +142,14 @@ const ObjectDetailPage = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header user={user} onLogout={handleLogout} />
+      <Header
+        activeTab="objects"
+        onTabChange={handleTabChange}
+        user={user}
+        onAuthClick={() => navigate('/')}
+        onLogout={handleLogout}
+        onRoleSwitch={() => {}}
+      />
       
       <div className="container mx-auto px-4 pt-20 pb-8">
         <Button 
