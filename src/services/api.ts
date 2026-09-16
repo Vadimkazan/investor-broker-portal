@@ -1,13 +1,17 @@
 const API_URL = 'https://functions.poehali.dev/fc00dc4e-18bf-4893-bb9d-331e8abda973';
 
+export type UserRole = 'investor' | 'broker' | 'admin' | 'manager';
+
 export interface User {
   id: number;
   email: string;
   name: string;
-  role: 'investor' | 'broker' | 'admin' | 'manager';
+  role: UserRole;
+  roles: UserRole[];
   is_admin?: boolean;
   notify_new_objects?: boolean;
   created_at?: string;
+  updated_at?: string;
   broker_id?: number | null;
   phone?: string;
   photo_url?: string;
@@ -15,6 +19,14 @@ export interface User {
   city?: string;
   surname?: string;
   first_name?: string;
+  country?: string;
+  club?: string;
+  training_stream?: string;
+  telegram_username?: string;
+  telegram_channel?: string;
+  youtube_channel?: string;
+  vk_group?: string;
+  telegram_chat_id?: string;
 }
 
 export interface BrokerInfo {
@@ -151,7 +163,27 @@ class ApiClient {
     return this.request<User>('users', 'POST', data);
   }
 
-  async updateUser(id: number, data: { name?: string; notify_new_objects?: boolean; role?: User['role']; broker_id?: number | null }): Promise<User> {
+  async updateUser(id: number, data: Partial<{
+    name: string;
+    notify_new_objects: boolean;
+    role: UserRole;
+    roles: UserRole[];
+    broker_id: number | null;
+    phone: string;
+    photo_url: string;
+    bio: string;
+    city: string;
+    surname: string;
+    first_name: string;
+    country: string;
+    club: string;
+    training_stream: string;
+    telegram_username: string;
+    telegram_channel: string;
+    youtube_channel: string;
+    vk_group: string;
+    telegram_chat_id: string | null;
+  }>): Promise<User> {
     return this.request<User>('users', 'PUT', { id, ...data });
   }
 

@@ -12,6 +12,7 @@ import AdminStatsCards from '@/components/admin/AdminStatsCards';
 import AdminUsersTab from '@/components/admin/AdminUsersTab';
 import AdminObjectsTab from '@/components/admin/AdminObjectsTab';
 import AdminAnalyticsTab from '@/components/admin/AdminAnalyticsTab';
+import { isAdminOrManager, hasRole } from '@/utils/roles';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -28,7 +29,7 @@ const AdminDashboard = () => {
   const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => {
-    if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'manager')) {
+    if (!isAdminOrManager(currentUser)) {
       toast({ title: 'Доступ запрещён', variant: 'destructive' });
       navigate('/');
       return;
@@ -49,14 +50,14 @@ const AdminDashboard = () => {
     }
   };
 
-  const handleChangeRole = async (userId: number, role: User['role']) => {
+  const handleChangeRoles = async (userId: number, roles: User['roles']) => {
     setActionLoading(true);
     try {
-      const updated = await api.updateUser(userId, { role });
-      setUsers(prev => prev.map(u => u.id === userId ? { ...u, role: updated.role } : u));
-      toast({ title: 'Роль изменена' });
+      const updated = await api.updateUser(userId, { roles });
+      setUsers(prev => prev.map(u => u.id === userId ? { ...u, role: updated.role, roles: updated.roles } : u));
+      toast({ title: 'Роли изменены' });
     } catch {
-      toast({ title: 'Ошибка изменения роли', variant: 'destructive' });
+      toast({ title: 'Ошибка изменения ролей', variant: 'destructive' });
     } finally {
       setActionLoading(false);
     }
@@ -105,8 +106,8 @@ const AdminDashboard = () => {
 
   const stats = {
     totalUsers: users.length,
-    investors: users.filter(u => u.role === 'investor').length,
-    brokers: users.filter(u => u.role === 'broker').length,
+    investors: users.filter(u => hasRole(u, 'investor')).length,
+    brokers: users.filter(u => hasRole(u, 'broker')).length,
     totalObjects: objects.length,
     available: objects.filter(o => o.status === 'available').length,
     reserved: objects.filter(o => o.status === 'reserved').length,
@@ -195,7 +196,7 @@ const AdminDashboard = () => {
               onSearchChange={setSearchUsers}
               currentUserId={currentUser?.id}
               actionLoading={actionLoading}
-              onChangeRole={handleChangeRole}
+              onChangeRoles={handleChangeRoles}
               onDeleteClick={setDeleteConfirm}
             />
           </TabsContent>

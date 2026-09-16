@@ -8,10 +8,12 @@ import Icon from '@/components/ui/icon';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
+import { getUserRoles, isAdminOrManager } from '@/utils/roles';
+import { UserRole } from '@/services/api';
 
 const AUTH_URL = 'https://functions.poehali.dev/fc00dc4e-18bf-4893-bb9d-331e8abda973?resource=auth';
 
-const ROLE_LABELS: Record<string, { label: string; color: string }> = {
+const ROLE_LABELS: Record<UserRole, { label: string; color: string }> = {
   admin: { label: 'Администратор', color: 'destructive' },
   manager: { label: 'Менеджер', color: 'default' },
   broker: { label: 'Брокер', color: 'default' },
@@ -34,7 +36,7 @@ const ProfileSettings = () => {
 
   if (!user) return null;
 
-  const roleInfo = ROLE_LABELS[user.role] || { label: user.role, color: 'secondary' };
+  const userRoles = getUserRoles(user);
 
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -101,11 +103,15 @@ const ProfileSettings = () => {
               <p className="font-semibold text-lg">{user.name}</p>
               <p className="text-muted-foreground">{user.email}</p>
             </div>
-            <Badge variant={roleInfo.color as 'default' | 'secondary' | 'destructive'} className="text-sm px-3 py-1">
-              {roleInfo.label}
-            </Badge>
+            <div className="flex gap-1 flex-wrap justify-end">
+              {userRoles.map((r) => (
+                <Badge key={r} variant={(ROLE_LABELS[r]?.color as 'default' | 'secondary' | 'destructive') || 'secondary'} className="text-sm px-3 py-1">
+                  {ROLE_LABELS[r]?.label || r}
+                </Badge>
+              ))}
+            </div>
           </div>
-          {(user.role === 'admin' || user.role === 'manager') && (
+          {isAdminOrManager(user) && (
             <div className="flex gap-2 pt-2">
               <Button variant="default" onClick={() => navigate('/admin/dashboard')}>
                 <Icon name="LayoutDashboard" size={16} className="mr-2" />

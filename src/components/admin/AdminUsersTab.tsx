@@ -1,11 +1,19 @@
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Badge } from '@/components/ui/badge';
 import Icon from '@/components/ui/icon';
-import { User } from '@/services/api';
+import { User, UserRole } from '@/services/api';
 import { DeleteConfirm } from './adminConstants';
+import { ROLE_LABELS } from '@/utils/roles';
 
 interface AdminUsersTabProps {
   filteredUsers: User[];
@@ -13,9 +21,11 @@ interface AdminUsersTabProps {
   onSearchChange: (v: string) => void;
   currentUserId: number | undefined;
   actionLoading: boolean;
-  onChangeRole: (userId: number, role: User['role']) => void;
+  onChangeRoles: (userId: number, roles: UserRole[]) => void;
   onDeleteClick: (confirm: DeleteConfirm) => void;
 }
+
+const ALL_ROLES: UserRole[] = ['investor', 'broker', 'manager', 'admin'];
 
 const AdminUsersTab = ({
   filteredUsers,
@@ -23,9 +33,24 @@ const AdminUsersTab = ({
   onSearchChange,
   currentUserId,
   actionLoading,
-  onChangeRole,
+  onChangeRoles,
   onDeleteClick,
 }: AdminUsersTabProps) => {
+  const navigate = useNavigate();
+
+  const toggleRole = (u: User, role: UserRole) => {
+    const current = u.roles && u.roles.length > 0 ? u.roles : [u.role];
+    const has = current.includes(role);
+    let next: UserRole[];
+    if (has) {
+      next = current.filter((r) => r !== role);
+      if (next.length === 0) return;
+    } else {
+      next = [...current, role];
+    }
+    onChangeRoles(u.id, next);
+  };
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between pb-4">
@@ -47,50 +72,83 @@ const AdminUsersTab = ({
               <TableHead className="w-12">ID</TableHead>
               <TableHead>Имя</TableHead>
               <TableHead>Email</TableHead>
-              <TableHead>Роль</TableHead>
+              <TableHead>Телефон</TableHead>
+              <TableHead>Роли</TableHead>
               <TableHead>Дата</TableHead>
               <TableHead className="text-right">Действия</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredUsers.map(u => (
-              <TableRow key={u.id}>
-                <TableCell className="text-muted-foreground">{u.id}</TableCell>
-                <TableCell className="font-medium">{u.name}</TableCell>
-                <TableCell className="text-muted-foreground">{u.email}</TableCell>
-                <TableCell>
-                  <Select
-                    value={u.role}
-                    onValueChange={(role) => onChangeRole(u.id, role as User['role'])}
-                    disabled={actionLoading || u.id === currentUserId}
-                  >
-                    <SelectTrigger className="w-32 h-7 text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="investor">Инвестор</SelectItem>
-                      <SelectItem value="broker">Брокер</SelectItem>
-                      <SelectItem value="manager">Менеджер</SelectItem>
-                      <SelectItem value="admin">Админ</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </TableCell>
-                <TableCell className="text-muted-foreground text-sm">
-                  {u.created_at ? new Date(u.created_at).toLocaleDateString('ru-RU') : '—'}
-                </TableCell>
-                <TableCell className="text-right">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-destructive hover:text-destructive"
-                    disabled={u.id === currentUserId}
-                    onClick={() => onDeleteClick({ type: 'user', id: u.id, name: u.name })}
-                  >
-                    <Icon name="Trash2" size={14} />
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
+            {filteredUsers.map(u => {
+              const userRoles = u.roles && u.roles.length > 0 ? u.roles : [u.role];
+              return (
+                <TableRow
+                  key={u.id}
+                  className="cursor-pointer hover:bg-muted/50"
+                  onClick={() => navigate(`/admin/users/${u.id}`)}
+                >
+                  <TableCell className="text-muted-foreground">{u.id}</TableCell>
+                  <TableCell className="font-medium">{u.name}</TableCell>
+                  <TableCell className="text-muted-foreground">{u.email}</TableCell>
+                  <TableCell className="text-muted-foreground">{u.phone || '—'}</TableCell>
+                  <TableCell onClick={(e) => e.stopPropagation()}>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-7 text-xs gap-1"
+                          disabled={actionLoading || u.id === currentUserId}
+                        >
+                          <div className="flex gap-1 flex-wrap">
+                            {userRoles.map((r) => (
+                              <Badge key={r} variant="secondary" className="text-[10px] px-1.5 py-0">
+                                {ROLE_LABELS[r]}
+                              </Badge>
+                            ))}
+                          </div>
+                          <Icon name="ChevronDown" size={12} />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start">
+                        {ALL_ROLES.map((role) => (
+                          <DropdownMenuCheckboxItem
+                            key={role}
+                            checked={userRoles.includes(role)}
+                            onCheckedChange={() => toggleRole(u, role)}
+                            onSelect={(e) => e.preventDefault()}
+                          >
+                            {ROLE_LABELS[role]}
+                          </DropdownMenuCheckboxItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground text-sm">
+                    {u.created_at ? new Date(u.created_at).toLocaleDateString('ru-RU') : '—'}
+                  </TableCell>
+                  <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => navigate(`/admin/users/${u.id}`)}
+                      className="mr-1"
+                    >
+                      <Icon name="Eye" size={14} />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-destructive hover:text-destructive"
+                      disabled={u.id === currentUserId}
+                      onClick={() => onDeleteClick({ type: 'user', id: u.id, name: u.name })}
+                    >
+                      <Icon name="Trash2" size={14} />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       </CardContent>

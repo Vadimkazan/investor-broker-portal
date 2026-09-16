@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import Icon from "@/components/ui/icon";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { isAdminOrManager } from "@/utils/roles";
 
 interface User {
   id: number;
@@ -49,7 +50,7 @@ const AdminPage = () => {
   };
 
   useEffect(() => {
-    if (!user || (user.role !== 'admin' && user.role !== 'manager')) {
+    if (!isAdminOrManager(user)) {
       toast({
         title: 'Доступ запрещен',
         description: 'У вас нет прав для доступа к админ-панели',

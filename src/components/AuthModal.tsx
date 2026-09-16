@@ -8,12 +8,12 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import Icon from '@/components/ui/icon';
 import { useAuth } from '@/contexts/AuthContext';
-import { api, User } from '@/services/api';
+import { api, User, UserRole } from '@/services/api';
 
 interface AuthModalProps {
   open: boolean;
   onClose: () => void;
-  onAuth?: (user: { name: string; email: string; role: string }) => void;
+  onAuth?: (user: { name: string; email: string; role: UserRole; roles?: UserRole[] }) => void;
 }
 
 const AuthModal = ({ open, onClose, onAuth }: AuthModalProps) => {
@@ -46,7 +46,7 @@ const AuthModal = ({ open, onClose, onAuth }: AuthModalProps) => {
     setLoginLoading(true);
     try {
       const user = await login(loginEmail.trim().toLowerCase(), loginPassword);
-      onAuth?.({ name: user.name, email: user.email, role: user.role });
+      onAuth?.({ name: user.name, email: user.email, role: user.role, roles: user.roles });
       onClose();
     } catch (err: unknown) {
       setLoginError(err instanceof Error ? err.message : 'Ошибка входа');
@@ -67,7 +67,7 @@ const AuthModal = ({ open, onClose, onAuth }: AuthModalProps) => {
         regRole,
         regRole === 'investor' && regBrokerId ? Number(regBrokerId) : undefined
       );
-      onAuth?.({ name: user.name, email: user.email, role: user.role });
+      onAuth?.({ name: user.name, email: user.email, role: user.role, roles: user.roles });
       onClose();
     } catch (err: unknown) {
       setRegError(err instanceof Error ? err.message : 'Ошибка регистрации');

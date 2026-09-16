@@ -4,6 +4,7 @@ import { Textarea } from '@/components/ui/textarea';
 import Icon from '@/components/ui/icon';
 import { useChatGPT } from '@/components/extensions/chatgpt-polza/useChatGPT';
 import { useAuth } from '@/contexts/AuthContext';
+import { getUserRoles, ROLE_LABELS } from '@/utils/roles';
 
 const API_URL = 'https://functions.poehali.dev/9900f4e9-9b8a-4671-9500-d2d0019e24b4';
 
@@ -53,7 +54,7 @@ const SiteAssistantWidget = () => {
     setInput('');
 
     const roleContext = user
-      ? `\n\nТекущий пользователь авторизован, его роль: ${user.role === 'broker' ? 'брокер' : 'инвестор'}, имя: ${user.name}.`
+      ? `\n\nТекущий пользователь авторизован, его роли: ${getUserRoles(user).map((r) => ROLE_LABELS[r]).join(', ')}, имя: ${user.name}.`
       : '\n\nТекущий посетитель не авторизован (гость).';
 
     const apiMessages = [

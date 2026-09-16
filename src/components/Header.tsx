@@ -3,6 +3,8 @@ import { Badge } from '@/components/ui/badge';
 import Icon from '@/components/ui/icon';
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { hasAnyRole, ROLE_LABELS, getUserRoles } from '@/utils/roles';
+import { UserRole } from '@/services/api';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,7 +17,7 @@ import {
 interface HeaderProps {
   activeTab: string;
   onTabChange: (tab: string) => void;
-  user: { name: string; email: string; role: 'investor' | 'broker' | 'admin' | 'manager' } | null;
+  user: { name: string; email: string; role: UserRole; roles?: UserRole[] } | null;
   onAuthClick: () => void;
   onLogout: () => void;
   onRoleSwitch: () => void;
@@ -112,7 +114,7 @@ const Header = ({ activeTab, onTabChange, user, onAuthClick, onLogout, onRoleSwi
                     <div className="text-left hidden sm:block">
                       <p className="text-sm font-semibold">{user.name}</p>
                       <p className="text-xs text-muted-foreground">
-                        {user.role === 'admin' ? 'Администратор' : user.role === 'manager' ? 'Менеджер' : user.role === 'broker' ? 'Брокер' : 'Инвестор'}
+                        {getUserRoles(user).map((r) => ROLE_LABELS[r]).join(', ')}
                       </p>
                     </div>
                     <Icon name="User" size={18} className="sm:hidden" />
@@ -123,12 +125,12 @@ const Header = ({ activeTab, onTabChange, user, onAuthClick, onLogout, onRoleSwi
                   <DropdownMenuLabel className="sm:hidden">
                     <p className="font-semibold">{user.name}</p>
                     <p className="text-xs text-muted-foreground font-normal">
-                      {user.role === 'admin' ? 'Администратор' : user.role === 'manager' ? 'Менеджер' : user.role === 'broker' ? 'Брокер' : 'Инвестор'}
+                      {getUserRoles(user).map((r) => ROLE_LABELS[r]).join(', ')}
                     </p>
                   </DropdownMenuLabel>
                   <DropdownMenuLabel className="hidden sm:block">Мой аккаунт</DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  {(user.role === 'admin' || user.role === 'manager') && (
+                  {hasAnyRole(user, ['admin', 'manager']) && (
                     <>
                       <DropdownMenuItem onClick={() => window.location.href = '/admin/dashboard'} className="gap-2">
                         <Icon name="Shield" size={16} />
@@ -140,7 +142,7 @@ const Header = ({ activeTab, onTabChange, user, onAuthClick, onLogout, onRoleSwi
                       <DropdownMenuSeparator />
                     </>
                   )}
-                  {(user.role === 'investor' || user.role === 'broker') && (
+                  {hasAnyRole(user, ['investor', 'broker']) && (
                     <>
                       <DropdownMenuItem onClick={onRoleSwitch} className="gap-2">
                         <Icon name="RefreshCw" size={16} />

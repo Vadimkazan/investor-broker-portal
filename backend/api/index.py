@@ -71,17 +71,35 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             conn.close()
 
 
-USER_COLS = "id, email, name, role, created_at, broker_id, phone, photo_url, bio, city, surname, first_name"
+ALLOWED_ROLES = ['investor', 'broker', 'admin', 'manager']
+
+USER_COLS = (
+    "id, email, name, role, roles, created_at, broker_id, phone, photo_url, bio, city, "
+    "surname, first_name, country, club, training_stream, telegram_username, "
+    "telegram_channel, youtube_channel, vk_group, notify_new_objects, updated_at, telegram_chat_id"
+)
 
 
 def format_user(row) -> Dict[str, Any]:
     return {
         'id': row[0], 'email': row[1], 'name': row[2], 'role': row[3],
-        'created_at': row[4].isoformat() if row[4] else None,
-        'broker_id': row[5],
-        'phone': row[6], 'photo_url': row[7], 'bio': row[8], 'city': row[9],
-        'surname': row[10], 'first_name': row[11]
+        'roles': row[4] if row[4] else ([row[3]] if row[3] else []),
+        'created_at': row[5].isoformat() if row[5] else None,
+        'broker_id': row[6],
+        'phone': row[7], 'photo_url': row[8], 'bio': row[9], 'city': row[10],
+        'surname': row[11], 'first_name': row[12], 'country': row[13],
+        'club': row[14], 'training_stream': row[15], 'telegram_username': row[16],
+        'telegram_channel': row[17], 'youtube_channel': row[18], 'vk_group': row[19],
+        'notify_new_objects': row[20],
+        'updated_at': row[21].isoformat() if row[21] else None,
+        'telegram_chat_id': row[22],
     }
+
+
+def roles_array_sql(roles: List[str]) -> str:
+    if not roles:
+        return "'{}'::text[]"
+    return "ARRAY[" + ",".join(escape_sql(r) for r in roles) + "]::text[]"
 
 
 def handle_users(cur, method: str, event: Dict[str, Any]) -> Dict[str, Any]:
@@ -110,7 +128,7 @@ def handle_users(cur, method: str, event: Dict[str, Any]) -> Dict[str, Any]:
         else:
             query = f"SELECT {USER_COLS} FROM users"
             if role:
-                query += f" WHERE role = {escape_sql(role)}"
+                query += f" WHERE {escape_sql(role)} = ANY(roles)"
             query += " ORDER BY created_at DESC LIMIT 100"
             cur.execute(query)
             rows = cur.fetchall()
@@ -132,7 +150,11 @@ def handle_users(cur, method: str, event: Dict[str, Any]) -> Dict[str, Any]:
         if existing:
             return success_response({'id': existing[0], 'message': 'User already exists'})
         
-        query = f"INSERT INTO users (email, name, role) VALUES ({escape_sql(email)}, {escape_sql(name)}, {escape_sql(role)}) RETURNING id, email, name, role, created_at"
+        query = (
+            f"INSERT INTO users (email, name, role, roles) "
+            f"VALUES ({escape_sql(email)}, {escape_sql(name)}, {escape_sql(role)}, {roles_array_sql([role])}) "
+            f"RETURNING id, email, name, role, created_at"
+        )
         cur.execute(query)
         row = cur.fetchone()
         
@@ -147,24 +169,43 @@ def handle_users(cur, method: str, event: Dict[str, Any]) -> Dict[str, Any]:
         if not user_id:
             return error_response('User ID required', 400)
         fields = []
-        if 'name' in body:
-            fields.append(f"name = {escape_sql(body['name'])}")
-        if 'role' in body:
-            allowed_roles = ['investor', 'broker', 'admin', 'manager']
-            if body['role'] not in allowed_roles:
+
+        if 'roles' in body:
+            roles = body['roles']
+            if not isinstance(roles, list) or not roles:
+                return error_response('roles must be a non-empty list', 400)
+            for r in roles:
+                if r not in ALLOWED_ROLES:
+                    return error_response(f'Invalid role: {r}', 400)
+            fields.append(f"roles = {roles_array_sql(roles)}")
+            fields.append(f"role = {escape_sql(roles[0])}")
+        elif 'role' in body:
+            if body['role'] not in ALLOWED_ROLES:
                 return error_response('Invalid role', 400)
             fields.append(f"role = {escape_sql(body['role'])}")
+            fields.append(f"roles = {roles_array_sql([body['role']])}")
+
+        simple_text_fields = [
+            'name', 'phone', 'photo_url', 'bio', 'city', 'surname', 'first_name',
+            'country', 'club', 'training_stream', 'telegram_username',
+            'telegram_channel', 'youtube_channel', 'vk_group', 'telegram_chat_id',
+        ]
+        for f in simple_text_fields:
+            if f in body:
+                fields.append(f"{f} = {escape_sql(body[f])}")
+
         if 'notify_new_objects' in body:
             fields.append(f"notify_new_objects = {escape_sql(body['notify_new_objects'])}")
         if 'broker_id' in body:
             broker_id = body['broker_id']
             if broker_id is not None:
-                cur.execute(f"SELECT id FROM users WHERE id = {escape_sql(int(broker_id))} AND role = 'broker'")
+                cur.execute(f"SELECT id FROM users WHERE id = {escape_sql(int(broker_id))} AND 'broker' = ANY(roles)")
                 if not cur.fetchone():
                     return error_response('Broker not found', 404)
             fields.append(f"broker_id = {escape_sql(broker_id)}")
         if not fields:
             return error_response('No fields to update', 400)
+        fields.append("updated_at = CURRENT_TIMESTAMP")
         cur.execute(f"UPDATE users SET {', '.join(fields)} WHERE id = {escape_sql(int(user_id))} RETURNING {USER_COLS}")
         row = cur.fetchone()
         if not row:
@@ -513,7 +554,7 @@ def handle_auth(cur, method: str, event: Dict[str, Any]) -> Dict[str, Any]:
         if role == 'investor':
             broker_id = body.get('broker_id')
             if broker_id is not None:
-                cur.execute(f"SELECT id FROM users WHERE id = {escape_sql(int(broker_id))} AND role = 'broker'")
+                cur.execute(f"SELECT id FROM users WHERE id = {escape_sql(int(broker_id))} AND 'broker' = ANY(roles)")
                 if not cur.fetchone():
                     broker_id = None
             if broker_id is None:
@@ -524,7 +565,11 @@ def handle_auth(cur, method: str, event: Dict[str, Any]) -> Dict[str, Any]:
                     broker_id = crm_row[0]
 
         ph = hash_password(password)
-        cur.execute(f"INSERT INTO users (email, name, role, password_hash, broker_id) VALUES ({escape_sql(email)}, {escape_sql(name)}, {escape_sql(role)}, {escape_sql(ph)}, {escape_sql(broker_id)}) RETURNING {USER_COLS}")
+        cur.execute(
+            f"INSERT INTO users (email, name, role, roles, password_hash, broker_id) "
+            f"VALUES ({escape_sql(email)}, {escape_sql(name)}, {escape_sql(role)}, {roles_array_sql([role])}, {escape_sql(ph)}, {escape_sql(broker_id)}) "
+            f"RETURNING {USER_COLS}"
+        )
         row = cur.fetchone()
         return success_response(format_user(row), 201)
 

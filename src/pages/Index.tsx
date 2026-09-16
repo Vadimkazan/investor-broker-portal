@@ -8,6 +8,8 @@ import NewBrokerDashboard from '@/components/NewBrokerDashboard';
 import InvestorDashboard from '@/components/InvestorDashboard';
 import { loadSpreadsheetData } from '@/utils/importSpreadsheetData';
 import type { PropertyObject } from '@/types/investment';
+import { hasAnyRole } from '@/utils/roles';
+import { UserRole } from '@/services/api';
 
 const Index = () => {
   const navigate = useNavigate();
@@ -32,7 +34,7 @@ const Index = () => {
   const [investmentPeriod, setInvestmentPeriod] = useState(12);
   const [expectedReturn, setExpectedReturn] = useState(15);
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const [user, setUser] = useState<{ name: string; email: string; role: 'investor' | 'broker' | 'admin' | 'manager'; id?: number } | null>(() => {
+  const [user, setUser] = useState<{ name: string; email: string; role: UserRole; roles?: UserRole[]; id?: number } | null>(() => {
     const savedUser = localStorage.getItem('investpro-user');
     return savedUser ? JSON.parse(savedUser) : null;
   });
@@ -135,9 +137,9 @@ const Index = () => {
     }
   ];
 
-  const handleAuth = (userData: { name: string; email: string; role: 'investor' | 'broker' | 'admin' | 'manager'; id?: number }) => {
+  const handleAuth = (userData: { name: string; email: string; role: UserRole; roles?: UserRole[]; id?: number }) => {
     setUser(userData);
-    if (userData.role === 'admin' || userData.role === 'manager') {
+    if (hasAnyRole(userData, ['admin', 'manager'])) {
       navigate('/admin/dashboard');
     } else {
       setActiveTab('dashboard');
@@ -161,7 +163,7 @@ const Index = () => {
   const handleTabChange = (tab: string) => {
     if (tab === 'objects') {
       navigate('/objects');
-    } else if (tab === 'dashboard' && user && (user.role === 'admin' || user.role === 'manager')) {
+    } else if (tab === 'dashboard' && hasAnyRole(user, ['admin', 'manager'])) {
       navigate('/admin/dashboard');
     } else {
       setActiveTab(tab);
@@ -210,7 +212,7 @@ const Index = () => {
 
           {activeTab === 'dashboard' && user && (
             <>
-              {user.role === 'broker' ? (
+              {hasAnyRole(user, ['broker']) ? (
                 <NewBrokerDashboard userName={user.name} brokerId={user.id} />
               ) : (
                 <InvestorDashboard userName={user.name} />

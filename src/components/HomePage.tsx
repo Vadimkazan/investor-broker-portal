@@ -8,6 +8,7 @@ import TestimonialsSection from './home/TestimonialsSection';
 import BrokersSection from './home/BrokersSection';
 import FinalCTASection from './home/FinalCTASection';
 import { api } from '@/services/api';
+import { hasRole } from '@/utils/roles';
 
 interface InvestmentObject {
   id: number;
@@ -80,7 +81,7 @@ const HomePage = ({ investmentObjects, onRegisterClick }: HomePageProps) => {
       const avgReturn = objects.length > 0
         ? objects.reduce((sum, obj) => sum + Number(obj.yield_percent), 0) / objects.length
         : 0;
-      const investorsCount = users.filter(u => u.role === 'investor').length;
+      const investorsCount = users.filter(u => hasRole(u, 'investor')).length;
       
       setDashboardStats([
         { label: 'Активных объектов', value: activeObjects.toString(), change: `${objects.length} всего`, icon: 'Building2', color: 'text-primary' },
