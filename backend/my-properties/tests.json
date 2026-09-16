@@ -1,0 +1,20 @@
+{
+  "tests": [
+    {
+      "name": "Список личной недвижимости инвестора",
+      "method": "GET",
+      "path": "/?user_id=3",
+      "expectedStatus": 200,
+      "expectedBody": {"items": []},
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Без user_id возвращает ошибку",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 400,
+      "expectedBody": {"error": "string"},
+      "bodyMatcher": "partial"
+    }
+  ]
+}
