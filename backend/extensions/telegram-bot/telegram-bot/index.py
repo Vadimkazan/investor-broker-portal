@@ -136,6 +136,21 @@ def save_auth_token(
     return token
 
 
+def link_chat_id(telegram_id: str, chat_id: int) -> None:
+    """Привязывает chat_id к пользователю, чтобы он получал рассылку."""
+    schema = get_schema()
+    conn = psycopg2.connect(os.environ["DATABASE_URL"])
+    try:
+        cursor = conn.cursor()
+        cursor.execute(f"""
+            UPDATE {schema}users SET telegram_chat_id = %s
+            WHERE telegram_id = %s
+        """, (str(chat_id), str(telegram_id)))
+        conn.commit()
+    finally:
+        conn.close()
+
+
 # =============================================================================
 # WEBHOOK HANDLERS (Authorization)
 # =============================================================================
@@ -148,6 +163,11 @@ def handle_web_auth(chat_id: int, user: dict) -> None:
     last_name = user.get("last_name")
 
     token = save_auth_token(telegram_id, username, first_name, last_name)
+
+    try:
+        link_chat_id(telegram_id, chat_id)
+    except Exception as e:
+        print(f"Failed to link chat_id: {e}")
 
     site_url = os.environ["SITE_URL"].rstrip("/")
     auth_url = f"{site_url}/auth/telegram/callback?token={token}"
@@ -168,8 +188,58 @@ def handle_start(chat_id: int) -> None:
     bot.send_message(chat_id, "Привет! Используйте кнопку «Войти через Telegram» на сайте.")
 
 
+def get_channel_subscribers() -> list:
+    """Получить chat_id всех подписчиков на посты канала."""
+    schema = get_schema()
+    conn = psycopg2.connect(os.environ["DATABASE_URL"])
+    try:
+        cursor = conn.cursor()
+        cursor.execute(f"""
+            SELECT telegram_chat_id FROM {schema}users
+            WHERE notify_channel_posts = TRUE
+              AND telegram_chat_id IS NOT NULL
+              AND telegram_chat_id <> ''
+        """)
+        return [row[0] for row in cursor.fetchall()]
+    finally:
+        conn.close()
+
+
+def handle_channel_post(post: dict) -> None:
+    """Пересылает новый пост канала всем подписчикам."""
+    chat = post.get("chat", {})
+    expected = os.environ.get("TELEGRAM_CHANNEL_USERNAME", "Arealvest_klub").lstrip("@").lower()
+
+    if (chat.get("username") or "").lower() != expected:
+        return
+
+    from_chat_id = chat.get("id")
+    message_id = post.get("message_id")
+    if not from_chat_id or not message_id:
+        return
+
+    bot = get_bot()
+    for chat_id in get_channel_subscribers():
+        try:
+            bot.copy_message(
+                chat_id=chat_id,
+                from_chat_id=from_chat_id,
+                message_id=message_id,
+            )
+        except Exception as e:
+            print(f"Broadcast failed for {chat_id}: {e}")
+
+
 def process_webhook(body: dict) -> dict:
     """Обработка webhook от Telegram."""
+    channel_post = body.get("channel_post")
+    if channel_post:
+        try:
+            handle_channel_post(channel_post)
+        except Exception as e:
+            print(f"Error processing channel post: {e}")
+        return {"statusCode": 200, "body": json.dumps({"ok": True})}
+
     message = body.get("message")
 
     if not message:
@@ -347,12 +417,22 @@ def handler(event: dict, context) -> dict:
         elif action == "test" and method == "POST":
             return handle_test(body)
 
-        elif action == "debug-secret":
-            out = {}
-            for key in ["TELEGRAM_AUTH_WEBHOOK_SECRET", "TELEGRAM_AUTH_BOT_TOKEN", "TELEGRAM_AUTH_BOT_USERNAME", "SITE_URL"]:
-                v = os.environ.get(key, "")
-                out[key] = {"len": len(v), "prefix": v[:8], "suffix": v[-6:] if len(v) >= 6 else v}
-            return cors_response(200, out)
+        elif action == "set-webhook":
+            try:
+                import requests as _requests
+                token = get_bot_token()
+                resp = _requests.post(
+                    f"https://api.telegram.org/bot{token}/setWebhook",
+                    json={
+                        "url": body.get("url", ""),
+                        "secret_token": os.environ.get("TELEGRAM_AUTH_WEBHOOK_SECRET", ""),
+                        "allowed_updates": ["message", "channel_post"],
+                    },
+                    timeout=4,
+                )
+                return cors_response(200, resp.json())
+            except Exception as e:
+                return cors_response(500, {"error": f"{type(e).__name__}: {e}"})
         elif action == "webhook-info":
             try:
                 import requests as _requests
