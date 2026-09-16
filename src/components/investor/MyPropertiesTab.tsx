@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import Icon from '@/components/ui/icon';
 import { useToast } from '@/hooks/use-toast';
 import MyPropertyDialog from '@/components/investor/MyPropertyDialog';
+import PortfolioGrowthChart from '@/components/investor/PortfolioGrowthChart';
 import {
   MyProperty,
   MyPropertyInput,
@@ -56,14 +57,29 @@ const MyPropertiesTab = ({ userId }: MyPropertiesTabProps) => {
       ? `${MY_PROPERTIES_URL}?user_id=${userId}&id=${editing.id}`
       : `${MY_PROPERTIES_URL}?user_id=${userId}`;
 
-    const res = await fetch(url, {
-      method: editing ? 'PUT' : 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
+    let res: Response;
+    try {
+      res = await fetch(url, {
+        method: editing ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+    } catch {
+      toast({
+        title: 'Нет связи с сервером',
+        description: 'Проверьте интернет и попробуйте ещё раз',
+        variant: 'destructive',
+      });
+      throw new Error('network');
+    }
 
     if (!res.ok) {
-      toast({ title: 'Не удалось сохранить', variant: 'destructive' });
+      const info = await res.json().catch(() => ({}));
+      toast({
+        title: 'Не удалось сохранить',
+        description: info.error || 'Попробуйте ещё раз через минуту',
+        variant: 'destructive',
+      });
       throw new Error('save failed');
     }
 
@@ -152,6 +168,8 @@ const MyPropertiesTab = ({ userId }: MyPropertiesTabProps) => {
           </Card>
         </div>
       )}
+
+      {!loading && items.length > 0 && <PortfolioGrowthChart items={items} />}
 
       {loading ? (
         <div className="flex justify-center py-12">

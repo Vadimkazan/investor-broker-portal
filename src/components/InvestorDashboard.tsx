@@ -285,7 +285,9 @@ const InvestorDashboard = ({ userName }: InvestorDashboardProps) => {
         </TabsContent>
 
         <TabsContent value="objects" className="mt-6">
-          <MyPropertiesTab userId={Number(userId)} />
+          {user?.id ? (
+            <MyPropertiesTab userId={Number(user.id)} />
+          ) : null}
         </TabsContent>
 
         <TabsContent value="education" className="mt-6">
