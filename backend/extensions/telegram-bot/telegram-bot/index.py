@@ -412,9 +412,13 @@ def handle_send_photo(body: dict) -> dict:
         return cors_response(500, {"error": str(e)})
 
 
-def get_object_subscribers() -> list:
-    """Получить chat_id подписчиков на уведомления о новых объектах."""
+def get_object_subscribers(audience: str = "all") -> list:
+    """Получить chat_id подписчиков. audience: all | investor | broker."""
     schema = get_schema()
+    role_filter = ""
+    if audience in ("investor", "broker"):
+        role_filter = f"AND (role = '{audience}' OR '{audience}' = ANY(roles))"
+
     conn = psycopg2.connect(os.environ["DATABASE_URL"])
     try:
         cursor = conn.cursor()
@@ -423,6 +427,7 @@ def get_object_subscribers() -> list:
             WHERE notify_new_objects = TRUE
               AND telegram_chat_id IS NOT NULL
               AND telegram_chat_id <> ''
+              {role_filter}
         """)
         return [row[0] for row in cursor.fetchall()]
     finally:
@@ -512,7 +517,11 @@ def handle_broadcast(body: dict) -> dict:
     if len(text) > limit:
         return cors_response(400, {"error": f"Слишком длинный текст (максимум {limit} символов)"})
 
-    subscribers = get_object_subscribers()
+    audience = body.get("audience") or "all"
+    if audience not in ("all", "investor", "broker"):
+        return cors_response(400, {"error": "Неверная аудитория"})
+
+    subscribers = get_object_subscribers(audience)
     if not subscribers:
         return cors_response(200, {"success": True, "sent": 0, "failed": 0})
 
@@ -534,7 +543,12 @@ def handle_broadcast(body: dict) -> dict:
 
 def handle_subscribers_count(body: dict) -> dict:
     """GET/POST ?action=subscribers-count — сколько людей получит рассылку."""
-    return cors_response(200, {"count": len(get_object_subscribers())})
+    return cors_response(200, {
+        "count": len(get_object_subscribers("all")),
+        "all": len(get_object_subscribers("all")),
+        "investor": len(get_object_subscribers("investor")),
+        "broker": len(get_object_subscribers("broker")),
+    })
 
 
 def handle_test(body: dict) -> dict:

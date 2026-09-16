@@ -9,13 +9,24 @@ import { useToast } from '@/hooks/use-toast';
 
 const TELEGRAM_BOT_URL = 'https://functions.poehali.dev/0db3f807-568e-4315-90c1-bc467c92575b';
 
+type Audience = 'all' | 'investor' | 'broker';
+
+const AUDIENCES: { value: Audience; label: string; icon: string }[] = [
+  { value: 'all', label: 'Всем', icon: 'Users' },
+  { value: 'investor', label: 'Инвесторам', icon: 'TrendingUp' },
+  { value: 'broker', label: 'Брокерам', icon: 'Briefcase' },
+];
+
 const AdminBroadcastTab = () => {
   const [text, setText] = useState('');
   const [photoUrl, setPhotoUrl] = useState('');
+  const [audience, setAudience] = useState<Audience>('all');
   const [sending, setSending] = useState(false);
   const [confirming, setConfirming] = useState(false);
-  const [subscribers, setSubscribers] = useState<number | null>(null);
+  const [counts, setCounts] = useState<Record<Audience, number> | null>(null);
   const { toast } = useToast();
+
+  const subscribers = counts ? counts[audience] : null;
 
   const maxLength = photoUrl.trim() ? 1024 : 4096;
 
@@ -31,9 +42,13 @@ const AdminBroadcastTab = () => {
         body: JSON.stringify({}),
       });
       const data = await res.json();
-      setSubscribers(data.count ?? 0);
+      setCounts({
+        all: data.all ?? 0,
+        investor: data.investor ?? 0,
+        broker: data.broker ?? 0,
+      });
     } catch {
-      setSubscribers(null);
+      setCounts(null);
     }
   };
 
@@ -43,7 +58,7 @@ const AdminBroadcastTab = () => {
       const res = await fetch(`${TELEGRAM_BOT_URL}?action=broadcast`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: text.trim(), photo_url: photoUrl.trim() }),
+        body: JSON.stringify({ text: text.trim(), photo_url: photoUrl.trim(), audience }),
       });
       const data = await res.json();
 
@@ -73,7 +88,8 @@ const AdminBroadcastTab = () => {
   };
 
   const tooLong = text.length > maxLength;
-  const canSend = !!text.trim() && !tooLong && !sending;
+  const audienceLabel = AUDIENCES.find((a) => a.value === audience)?.label || 'Всем';
+  const canSend = !!text.trim() && !tooLong && !sending && subscribers !== 0;
 
   return (
     <Card>
@@ -84,12 +100,50 @@ const AdminBroadcastTab = () => {
         </CardTitle>
         <CardDescription>
           {subscribers === null
-            ? 'Сообщение получат все подписчики'
-            : `Сообщение получат ${subscribers} чел. с подключённым Telegram`}
+            ? 'Сообщение получат подписчики с подключённым Telegram'
+            : `Получат ${subscribers} чел. — ${audienceLabel.toLowerCase()} с подключённым Telegram`}
         </CardDescription>
       </CardHeader>
 
       <CardContent className="space-y-4">
+        <div className="space-y-2">
+          <Label>Кому отправить</Label>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            {AUDIENCES.map((a) => {
+              const active = audience === a.value;
+              return (
+                <button
+                  key={a.value}
+                  type="button"
+                  onClick={() => {
+                    setAudience(a.value);
+                    setConfirming(false);
+                  }}
+                  className={`flex items-center gap-2 rounded-lg border p-3 text-left transition-colors ${
+                    active
+                      ? 'border-primary bg-primary/10'
+                      : 'border-border hover:bg-muted/50'
+                  }`}
+                >
+                  <Icon
+                    name={a.icon}
+                    size={18}
+                    className={active ? 'text-primary' : 'text-muted-foreground'}
+                  />
+                  <div className="min-w-0">
+                    <p className={`text-sm font-medium ${active ? 'text-primary' : ''}`}>
+                      {a.label}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {counts ? `${counts[a.value]} чел.` : '—'}
+                    </p>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         <div className="space-y-2">
           <Label htmlFor="broadcast-text">Текст сообщения</Label>
           <Textarea
@@ -141,7 +195,8 @@ const AdminBroadcastTab = () => {
               <p className="text-sm">
                 Отправить сообщение{' '}
                 <span className="font-medium">
-                  {subscribers === null ? 'всем подписчикам' : `${subscribers} подписчикам`}
+                  {audienceLabel.toLowerCase()}
+                  {subscribers !== null ? ` — ${subscribers} чел.` : ''}
                 </span>
                 ? Отменить рассылку после отправки нельзя.
               </p>
@@ -166,10 +221,17 @@ const AdminBroadcastTab = () => {
             </div>
           </div>
         ) : (
-          <Button onClick={() => setConfirming(true)} disabled={!canSend} className="w-full">
-            <Icon name="Send" size={16} className="mr-2" />
-            Отправить рассылку
-          </Button>
+          <div className="space-y-2">
+            {subscribers === 0 && (
+              <p className="text-sm text-muted-foreground text-center">
+                В этой группе пока никто не подключил Telegram
+              </p>
+            )}
+            <Button onClick={() => setConfirming(true)} disabled={!canSend} className="w-full">
+              <Icon name="Send" size={16} className="mr-2" />
+              Отправить рассылку
+            </Button>
+          </div>
         )}
       </CardContent>
     </Card>
