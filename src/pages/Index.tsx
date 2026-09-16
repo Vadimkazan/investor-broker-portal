@@ -10,6 +10,7 @@ import { loadSpreadsheetData } from '@/utils/importSpreadsheetData';
 import type { PropertyObject } from '@/types/investment';
 import { hasAnyRole } from '@/utils/roles';
 import { UserRole } from '@/services/api';
+import { useAuth } from '@/contexts/AuthContext';
 
 const Index = () => {
   const navigate = useNavigate();
@@ -34,7 +35,8 @@ const Index = () => {
   const [investmentPeriod, setInvestmentPeriod] = useState(12);
   const [expectedReturn, setExpectedReturn] = useState(15);
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const [user, setUser] = useState<{ name: string; email: string; role: UserRole; roles?: UserRole[]; id?: number } | null>(() => {
+  const { user: authUser } = useAuth();
+  const [user, setUser] = useState<{ name: string; email: string; role: UserRole; roles?: UserRole[]; id?: number; photo_url?: string } | null>(() => {
     const savedUser = localStorage.getItem('investpro-user');
     return savedUser ? JSON.parse(savedUser) : null;
   });
@@ -46,6 +48,12 @@ const Index = () => {
       localStorage.removeItem('investpro-user');
     }
   }, [user]);
+
+  useEffect(() => {
+    if (authUser) {
+      setUser((prev) => (prev ? { ...prev, photo_url: authUser.photo_url, name: authUser.name } : prev));
+    }
+  }, [authUser?.photo_url, authUser?.name]);
 
   const [allProperties, setAllProperties] = useState<PropertyObject[]>([]);
 
@@ -137,7 +145,7 @@ const Index = () => {
     }
   ];
 
-  const handleAuth = (userData: { name: string; email: string; role: UserRole; roles?: UserRole[]; id?: number }) => {
+  const handleAuth = (userData: { name: string; email: string; role: UserRole; roles?: UserRole[]; id?: number; photo_url?: string }) => {
     setUser(userData);
     if (hasAnyRole(userData, ['admin', 'manager'])) {
       navigate('/admin/dashboard');

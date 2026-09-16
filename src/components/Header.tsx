@@ -1,10 +1,18 @@
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import Icon from '@/components/ui/icon';
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { hasAnyRole, ROLE_LABELS, getUserRoles } from '@/utils/roles';
 import { UserRole } from '@/services/api';
+
+const getInitials = (name: string) => {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '?';
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[1][0]).toUpperCase();
+};
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,7 +25,7 @@ import {
 interface HeaderProps {
   activeTab: string;
   onTabChange: (tab: string) => void;
-  user: { name: string; email: string; role: UserRole; roles?: UserRole[] } | null;
+  user: { name: string; email: string; role: UserRole; roles?: UserRole[]; photo_url?: string } | null;
   onAuthClick: () => void;
   onLogout: () => void;
   onRoleSwitch: () => void;
@@ -111,13 +119,16 @@ const Header = ({ activeTab, onTabChange, user, onAuthClick, onLogout, onRoleSwi
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" className="gap-2 px-2 sm:px-4 flex-shrink-0">
+                    <Avatar className="h-7 w-7">
+                      <AvatarImage src={user.photo_url} alt={user.name} className="object-cover" />
+                      <AvatarFallback className="text-xs">{getInitials(user.name)}</AvatarFallback>
+                    </Avatar>
                     <div className="text-left hidden sm:block">
                       <p className="text-sm font-semibold">{user.name}</p>
                       <p className="text-xs text-muted-foreground">
                         {getUserRoles(user).map((r) => ROLE_LABELS[r]).join(', ')}
                       </p>
                     </div>
-                    <Icon name="User" size={18} className="sm:hidden" />
                     <Icon name="ChevronDown" size={16} />
                   </Button>
                 </DropdownMenuTrigger>

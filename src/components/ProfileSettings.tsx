@@ -9,7 +9,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 import { getUserRoles, isAdminOrManager } from '@/utils/roles';
-import { UserRole } from '@/services/api';
+import { api, UserRole } from '@/services/api';
+import AvatarUpload from '@/components/profile/AvatarUpload';
 
 const AUTH_URL = 'https://functions.poehali.dev/fc00dc4e-18bf-4893-bb9d-331e8abda973?resource=auth';
 
@@ -21,7 +22,7 @@ const ROLE_LABELS: Record<UserRole, { label: string; color: string }> = {
 };
 
 const ProfileSettings = () => {
-  const { user, logout } = useAuth();
+  const { user, logout, refreshUser } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -66,6 +67,11 @@ const ProfileSettings = () => {
     }
   };
 
+  const handlePhotoUploaded = async (url: string) => {
+    await api.updateUser(user.id, { photo_url: url });
+    await refreshUser();
+  };
+
   const handleChangeEmail = async (e: React.FormEvent) => {
     e.preventDefault();
     setEmailLoading(true);
@@ -98,10 +104,17 @@ const ProfileSettings = () => {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="font-semibold text-lg">{user.name}</p>
-              <p className="text-muted-foreground">{user.email}</p>
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <div className="flex items-center gap-4">
+              <AvatarUpload
+                photoUrl={user.photo_url}
+                name={user.name}
+                onUploaded={handlePhotoUploaded}
+              />
+              <div>
+                <p className="font-semibold text-lg">{user.name}</p>
+                <p className="text-muted-foreground">{user.email}</p>
+              </div>
             </div>
             <div className="flex gap-1 flex-wrap justify-end">
               {userRoles.map((r) => (

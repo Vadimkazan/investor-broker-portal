@@ -11,6 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { api, User, UserRole } from '@/services/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { ROLE_LABELS, isAdminOrManager } from '@/utils/roles';
+import AvatarUpload from '@/components/profile/AvatarUpload';
 
 const ALL_ROLES: UserRole[] = ['investor', 'broker', 'manager', 'admin'];
 
@@ -87,6 +88,12 @@ const AdminUserDetailPage = () => {
     }
   };
 
+  const handlePhotoUploaded = async (url: string) => {
+    if (!user) return;
+    const updated = await api.updateUser(user.id, { photo_url: url });
+    setUser(updated);
+  };
+
   const toggleRole = (role: UserRole) => {
     setRoles((prev) => {
       if (prev.includes(role)) {
@@ -130,14 +137,21 @@ const AdminUserDetailPage = () => {
   return (
     <div className="min-h-screen bg-muted/30">
       <div className="container mx-auto p-6 space-y-6 max-w-3xl">
-        <div className="flex items-center justify-between">
-          <div>
-            <Button variant="ghost" size="sm" onClick={() => navigate('/admin/dashboard')} className="mb-2 -ml-2">
-              <Icon name="ArrowLeft" size={16} className="mr-2" />
-              К списку пользователей
-            </Button>
-            <h1 className="text-2xl font-bold">{user.name}</h1>
-            <p className="text-muted-foreground">{user.email}</p>
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <div className="flex items-center gap-4">
+            <AvatarUpload
+              photoUrl={user.photo_url}
+              name={user.name}
+              onUploaded={handlePhotoUploaded}
+            />
+            <div>
+              <Button variant="ghost" size="sm" onClick={() => navigate('/admin/dashboard')} className="mb-2 -ml-2">
+                <Icon name="ArrowLeft" size={16} className="mr-2" />
+                К списку пользователей
+              </Button>
+              <h1 className="text-2xl font-bold">{user.name}</h1>
+              <p className="text-muted-foreground">{user.email}</p>
+            </div>
           </div>
           <Button onClick={handleSave} disabled={saving}>
             {saving ? (
