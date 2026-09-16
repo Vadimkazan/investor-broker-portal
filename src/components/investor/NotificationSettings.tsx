@@ -3,10 +3,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import Icon from '@/components/ui/icon';
 import { useToast } from '@/hooks/use-toast';
 import { api } from '@/services/api';
+
+const TELEGRAM_BOT_URL = 'https://functions.poehali.dev/0db3f807-568e-4315-90c1-bc467c92575b';
 
 interface NotificationSettingsProps {
   userId: number;
@@ -16,13 +17,39 @@ const NotificationSettings = ({ userId }: NotificationSettingsProps) => {
   const [notifyNewObjects, setNotifyNewObjects] = useState(false);
   const [notifyChannelPosts, setNotifyChannelPosts] = useState(true);
   const [telegramChatId, setTelegramChatId] = useState('');
-  const [telegramInput, setTelegramInput] = useState('');
   const [loading, setLoading] = useState(true);
+  const [connecting, setConnecting] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
     loadSettings();
   }, [userId]);
+
+  useEffect(() => {
+    if (!connecting) return;
+    const interval = setInterval(async () => {
+      try {
+        const user = await api.getUserById(userId);
+        if (user.telegram_chat_id) {
+          setTelegramChatId(user.telegram_chat_id);
+          setConnecting(false);
+          toast({
+            title: 'Telegram подключен',
+            description: 'Уведомления будут приходить вам в Telegram',
+          });
+        }
+      } catch (error) {
+        console.error('Ошибка проверки подключения:', error);
+      }
+    }, 3000);
+
+    const timeout = setTimeout(() => setConnecting(false), 180000);
+
+    return () => {
+      clearInterval(interval);
+      clearTimeout(timeout);
+    };
+  }, [connecting, userId]);
 
   const loadSettings = async () => {
     try {
@@ -30,7 +57,6 @@ const NotificationSettings = ({ userId }: NotificationSettingsProps) => {
       setNotifyNewObjects(user.notify_new_objects || false);
       setNotifyChannelPosts(user.notify_channel_posts !== false);
       setTelegramChatId(user.telegram_chat_id || '');
-      setTelegramInput(user.telegram_chat_id || '');
     } catch (error) {
       console.error('Ошибка загрузки настроек:', error);
     } finally {
@@ -82,19 +108,25 @@ const NotificationSettings = ({ userId }: NotificationSettingsProps) => {
     }
   };
 
-  const handleSaveTelegram = async () => {
+  const handleConnectTelegram = async () => {
     try {
-      await api.updateUser(userId, { telegram_chat_id: telegramInput });
-      setTelegramChatId(telegramInput);
-      
-      toast({
-        title: 'Telegram подключен',
-        description: 'Теперь вы будете получать уведомления в Telegram',
+      const res = await fetch(`${TELEGRAM_BOT_URL}?action=link-start`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: userId }),
       });
+      const data = await res.json();
+
+      if (!res.ok || !data.url) {
+        throw new Error(data.error || 'Не удалось создать ссылку');
+      }
+
+      window.open(data.url, '_blank');
+      setConnecting(true);
     } catch (error) {
       toast({
         title: 'Ошибка',
-        description: 'Не удалось сохранить Telegram ID',
+        description: 'Не удалось начать подключение Telegram',
         variant: 'destructive',
       });
     }
@@ -104,7 +136,7 @@ const NotificationSettings = ({ userId }: NotificationSettingsProps) => {
     try {
       await api.updateUser(userId, { telegram_chat_id: null });
       setTelegramChatId('');
-      setTelegramInput('');
+      setConnecting(false);
       
       toast({
         title: 'Telegram отключен',
@@ -202,7 +234,7 @@ const NotificationSettings = ({ userId }: NotificationSettingsProps) => {
                   Telegram не подключен
                 </p>
                 <p className="text-muted-foreground">
-                  Чтобы получать посты, подключите Telegram ниже — иначе рассылка не придёт
+                  Нажмите «Подключить Telegram» ниже — иначе рассылка не придёт
                 </p>
               </div>
             </div>
@@ -217,33 +249,35 @@ const NotificationSettings = ({ userId }: NotificationSettingsProps) => {
 
           {!telegramChatId ? (
             <div className="space-y-4">
-              <div className="bg-muted/50 rounded-lg p-4 space-y-3">
-                <p className="text-sm text-muted-foreground">
-                  Получайте мгновенные уведомления в Telegram:
-                </p>
-                <ol className="text-sm space-y-2 list-decimal list-inside text-muted-foreground">
-                  <li>Откройте бот <a href="https://t.me/arealvests_bot" target="_blank" rel="noopener noreferrer" className="text-primary underline">@arealvests_bot</a></li>
-                  <li>Отправьте команду /start</li>
-                  <li>Скопируйте ваш Chat ID</li>
-                  <li>Вставьте его в поле ниже</li>
-                </ol>
-              </div>
+              <p className="text-sm text-muted-foreground">
+                Нажмите кнопку — откроется чат с ботом, где нужно нажать «Старт».
+                Уведомления подключатся автоматически.
+              </p>
 
-              <div className="flex gap-2">
-                <Input
-                  placeholder="Ваш Telegram Chat ID"
-                  value={telegramInput}
-                  onChange={(e) => setTelegramInput(e.target.value)}
-                  className="flex-1"
-                />
-                <Button 
-                  onClick={handleSaveTelegram}
-                  disabled={!telegramInput.trim()}
-                >
-                  <Icon name="Check" size={16} className="mr-2" />
-                  Подключить
+              {connecting ? (
+                <div className="space-y-3">
+                  <div className="bg-primary/10 border border-primary/20 rounded-lg p-4">
+                    <div className="flex items-start gap-3">
+                      <Icon name="Loader2" size={20} className="text-primary mt-0.5 animate-spin" />
+                      <div className="text-sm">
+                        <p className="font-medium text-primary mb-1">Ожидание подтверждения</p>
+                        <p className="text-muted-foreground">
+                          Нажмите «Старт» в открывшемся чате с ботом — статус обновится автоматически
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  <Button variant="outline" size="sm" onClick={handleConnectTelegram} className="w-full">
+                    <Icon name="RefreshCw" size={16} className="mr-2" />
+                    Открыть чат с ботом снова
+                  </Button>
+                </div>
+              ) : (
+                <Button onClick={handleConnectTelegram} className="w-full">
+                  <Icon name="Send" size={16} className="mr-2" />
+                  Подключить Telegram
                 </Button>
-              </div>
+              )}
             </div>
           ) : (
             <div className="space-y-4">
@@ -255,7 +289,7 @@ const NotificationSettings = ({ userId }: NotificationSettingsProps) => {
                       Telegram подключен
                     </p>
                     <p className="text-muted-foreground">
-                      Chat ID: <span className="font-mono">{telegramChatId}</span>
+                      Уведомления приходят вам в чат с ботом @arealvests_bot
                     </p>
                   </div>
                 </div>

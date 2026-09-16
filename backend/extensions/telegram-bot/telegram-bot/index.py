@@ -136,6 +136,47 @@ def save_auth_token(
     return token
 
 
+def create_link_code(user_id: int) -> str:
+    """Создаёт одноразовый код привязки Telegram для пользователя."""
+    code = uuid.uuid4().hex[:16]
+    schema = get_schema()
+    conn = psycopg2.connect(os.environ["DATABASE_URL"])
+    try:
+        cursor = conn.cursor()
+        cursor.execute(f"""
+            UPDATE {schema}users
+            SET telegram_link_code = %s, telegram_link_expires_at = %s
+            WHERE id = %s
+        """, (code, datetime.now(timezone.utc) + timedelta(minutes=15), int(user_id)))
+        conn.commit()
+    finally:
+        conn.close()
+    return code
+
+
+def link_chat_by_code(code: str, chat_id: int, telegram_id: str) -> bool:
+    """Привязывает чат к пользователю по одноразовому коду."""
+    schema = get_schema()
+    conn = psycopg2.connect(os.environ["DATABASE_URL"])
+    try:
+        cursor = conn.cursor()
+        cursor.execute(f"""
+            UPDATE {schema}users
+            SET telegram_chat_id = %s,
+                telegram_id = COALESCE(telegram_id, %s),
+                telegram_link_code = NULL,
+                telegram_link_expires_at = NULL
+            WHERE telegram_link_code = %s
+              AND telegram_link_expires_at > NOW()
+            RETURNING id
+        """, (str(chat_id), str(telegram_id), code))
+        row = cursor.fetchone()
+        conn.commit()
+        return row is not None
+    finally:
+        conn.close()
+
+
 def link_chat_id(telegram_id: str, chat_id: int) -> None:
     """Привязывает chat_id к пользователю, чтобы он получал рассылку."""
     schema = get_schema()
@@ -180,6 +221,25 @@ def handle_web_auth(chat_id: int, user: dict) -> None:
             telebot.types.InlineKeyboardButton("Войти на сайт", url=auth_url)
         )
     )
+
+
+def handle_link(chat_id: int, user: dict, code: str) -> None:
+    """Обработка команды /start link_<код> — привязка уведомлений."""
+    bot = get_bot()
+    telegram_id = str(user.get("id", ""))
+
+    if link_chat_by_code(code, chat_id, telegram_id):
+        bot.send_message(
+            chat_id,
+            "Готово! Уведомления подключены.\n\n"
+            "Теперь новые посты клуба и оповещения об объектах будут приходить сюда."
+        )
+    else:
+        bot.send_message(
+            chat_id,
+            "Ссылка устарела или уже использована.\n\n"
+            "Откройте настройки уведомлений на сайте и нажмите «Подключить Telegram» снова."
+        )
 
 
 def handle_start(chat_id: int) -> None:
@@ -255,8 +315,11 @@ def process_webhook(body: dict) -> dict:
     try:
         if text.startswith("/start"):
             parts = text.split(" ", 1)
-            if len(parts) > 1 and parts[1] == "web_auth":
+            param = parts[1].strip() if len(parts) > 1 else ""
+            if param == "web_auth":
                 handle_web_auth(chat_id, user)
+            elif param.startswith("link_"):
+                handle_link(chat_id, user, param[5:])
             else:
                 handle_start(chat_id)
     except telebot.apihelper.ApiTelegramException as e:
@@ -417,6 +480,16 @@ def handler(event: dict, context) -> dict:
         elif action == "test" and method == "POST":
             return handle_test(body)
 
+        elif action == "link-start" and method == "POST":
+            user_id = body.get("user_id")
+            if not user_id:
+                return cors_response(400, {"error": "user_id is required"})
+            code = create_link_code(int(user_id))
+            bot_username = os.environ.get("TELEGRAM_AUTH_BOT_USERNAME", "").lstrip("@")
+            return cors_response(200, {
+                "success": True,
+                "url": f"https://t.me/{bot_username}?start=link_{code}",
+            })
         elif action == "set-webhook":
             try:
                 import requests as _requests
