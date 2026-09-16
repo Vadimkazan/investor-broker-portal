@@ -80,7 +80,8 @@ ALLOWED_ROLES = ['investor', 'broker', 'admin', 'manager']
 USER_COLS = (
     "id, email, name, role, roles, created_at, broker_id, phone, photo_url, bio, city, "
     "surname, first_name, country, club, training_stream, telegram_username, "
-    "telegram_channel, youtube_channel, vk_group, notify_new_objects, updated_at, telegram_chat_id"
+    "telegram_channel, youtube_channel, vk_group, notify_new_objects, updated_at, telegram_chat_id, "
+    "notify_channel_posts"
 )
 
 
@@ -97,6 +98,7 @@ def format_user(row) -> Dict[str, Any]:
         'notify_new_objects': row[20],
         'updated_at': row[21].isoformat() if row[21] else None,
         'telegram_chat_id': row[22],
+        'notify_channel_posts': row[23],
     }
 
 
@@ -206,6 +208,8 @@ def handle_users(cur, method: str, event: Dict[str, Any]) -> Dict[str, Any]:
 
         if 'notify_new_objects' in body:
             fields.append(f"notify_new_objects = {escape_sql(body['notify_new_objects'])}")
+        if 'notify_channel_posts' in body:
+            fields.append(f"notify_channel_posts = {escape_sql(body['notify_channel_posts'])}")
         if 'broker_id' in body:
             broker_id = body['broker_id']
             if broker_id is not None:

@@ -14,6 +14,7 @@ interface NotificationSettingsProps {
 
 const NotificationSettings = ({ userId }: NotificationSettingsProps) => {
   const [notifyNewObjects, setNotifyNewObjects] = useState(false);
+  const [notifyChannelPosts, setNotifyChannelPosts] = useState(true);
   const [telegramChatId, setTelegramChatId] = useState('');
   const [telegramInput, setTelegramInput] = useState('');
   const [loading, setLoading] = useState(true);
@@ -27,6 +28,7 @@ const NotificationSettings = ({ userId }: NotificationSettingsProps) => {
     try {
       const user = await api.getUserById(userId);
       setNotifyNewObjects(user.notify_new_objects || false);
+      setNotifyChannelPosts(user.notify_channel_posts !== false);
       setTelegramChatId(user.telegram_chat_id || '');
       setTelegramInput(user.telegram_chat_id || '');
     } catch (error) {
@@ -50,6 +52,28 @@ const NotificationSettings = ({ userId }: NotificationSettingsProps) => {
       });
     } catch (error) {
       setNotifyNewObjects(!enabled);
+      toast({
+        title: 'Ошибка',
+        description: 'Не удалось обновить настройки',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleToggleChannelPosts = async (enabled: boolean) => {
+    setNotifyChannelPosts(enabled);
+
+    try {
+      await api.updateUser(userId, { notify_channel_posts: enabled });
+
+      toast({
+        title: enabled ? 'Подписка на клуб включена' : 'Подписка на клуб отключена',
+        description: enabled
+          ? 'Новые посты клуба будут приходить вам в Telegram'
+          : 'Посты клуба больше не будут приходить',
+      });
+    } catch (error) {
+      setNotifyChannelPosts(!enabled);
       toast({
         title: 'Ошибка',
         description: 'Не удалось обновить настройки',
@@ -138,6 +162,47 @@ const NotificationSettings = ({ userId }: NotificationSettingsProps) => {
                 <p className="font-medium text-primary mb-1">Подписка активна</p>
                 <p className="text-muted-foreground">
                   Вы будете получать уведомления о всех новых объектах, добавленных на платформу
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="flex items-center justify-between space-x-2 pt-4 border-t">
+          <div className="flex-1 space-y-1">
+            <Label htmlFor="notify-channel-posts" className="text-base font-medium">
+              Получать посты из клуба
+            </Label>
+            <p className="text-sm text-muted-foreground">
+              Новые публикации из{' '}
+              <a
+                href="https://t.me/Arealvest_klub"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary underline"
+              >
+                клуба Arealvest
+              </a>{' '}
+              будут приходить вам в Telegram
+            </p>
+          </div>
+          <Switch
+            id="notify-channel-posts"
+            checked={notifyChannelPosts}
+            onCheckedChange={handleToggleChannelPosts}
+          />
+        </div>
+
+        {notifyChannelPosts && !telegramChatId && (
+          <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <Icon name="TriangleAlert" size={20} className="text-amber-500 mt-0.5" />
+              <div className="text-sm">
+                <p className="font-medium text-amber-700 dark:text-amber-400 mb-1">
+                  Telegram не подключен
+                </p>
+                <p className="text-muted-foreground">
+                  Чтобы получать посты, подключите Telegram ниже — иначе рассылка не придёт
                 </p>
               </div>
             </div>

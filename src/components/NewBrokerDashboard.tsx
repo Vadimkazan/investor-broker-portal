@@ -6,6 +6,7 @@ import BrokerObjectsManager from './broker/BrokerObjectsManager';
 import AddNewObjectDialog from './broker/AddNewObjectDialog';
 import ProfileSettings from './ProfileSettings';
 import BrokerRegisteredInvestors from './broker/BrokerRegisteredInvestors';
+import NotificationSettings from './investor/NotificationSettings';
 
 interface NewBrokerDashboardProps {
   userName: string;
@@ -55,8 +56,9 @@ const NewBrokerDashboard = ({ userName, brokerId }: NewBrokerDashboardProps) => 
           <ReferralSystem brokerId={String(brokerId)} brokerName={userName} />
         </TabsContent>
 
-        <TabsContent value="settings">
+        <TabsContent value="settings" className="space-y-6">
           <ProfileSettings />
+          <NotificationSettings userId={brokerId} />
         </TabsContent>
       </Tabs>
     </div>

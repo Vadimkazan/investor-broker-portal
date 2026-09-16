@@ -10,6 +10,7 @@ export interface User {
   roles: UserRole[];
   is_admin?: boolean;
   notify_new_objects?: boolean;
+  notify_channel_posts?: boolean;
   created_at?: string;
   updated_at?: string;
   broker_id?: number | null;
@@ -190,6 +191,7 @@ class ApiClient {
   async updateUser(id: number, data: Partial<{
     name: string;
     notify_new_objects: boolean;
+    notify_channel_posts: boolean;
     role: UserRole;
     roles: UserRole[];
     broker_id: number | null;

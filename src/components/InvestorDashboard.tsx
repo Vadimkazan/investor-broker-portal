@@ -369,7 +369,7 @@ const InvestorDashboard = ({ userName }: InvestorDashboardProps) => {
         <TabsContent value="settings" className="mt-6 space-y-6">
           <ProfileSettings />
           <MyBrokerCard />
-          <NotificationSettings userId={1} />
+          {user?.id && <NotificationSettings userId={Number(user.id)} />}
         </TabsContent>
       </Tabs>
 
