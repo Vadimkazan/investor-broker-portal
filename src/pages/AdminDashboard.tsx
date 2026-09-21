@@ -170,6 +170,10 @@ const AdminDashboard = () => {
               <Icon name="ArrowLeft" size={16} className="mr-2" />
               На главную
             </Button>
+            <Button variant="outline" onClick={() => navigate('/crm')}>
+              <Icon name="MessagesSquare" size={16} className="mr-2" />
+              Центр общения
+            </Button>
             <Button onClick={loadData}>
               <Icon name="RefreshCw" size={16} className="mr-2" />
               Обновить

@@ -11,6 +11,7 @@ import AddObjectPage from "./components/objects/AddObjectPage";
 import EditObjectPage from "./components/objects/EditObjectPage";
 import AdminPage from "./pages/AdminPage";
 import AdminDashboard from "./pages/AdminDashboard";
+import CrmPage from "./pages/CrmPage";
 import AdminUserDetailPage from "./pages/AdminUserDetailPage";
 import TelegramCallbackPage from "./pages/TelegramCallbackPage";
 import NotFound from "./pages/NotFound";
@@ -46,6 +47,7 @@ const App = () => {
               <Route path="/admin" element={<ProtectedRoute roles={['admin', 'manager']}><AdminPage /></ProtectedRoute>} />
               <Route path="/admin/dashboard" element={<ProtectedRoute roles={['admin', 'manager']}><AdminDashboard /></ProtectedRoute>} />
               <Route path="/admin/users/:id" element={<ProtectedRoute roles={['admin', 'manager']}><AdminUserDetailPage /></ProtectedRoute>} />
+              <Route path="/crm" element={<ProtectedRoute roles={['admin', 'manager', 'broker']}><CrmPage /></ProtectedRoute>} />
               <Route path="/auth/telegram/callback" element={<TelegramCallbackPage />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />

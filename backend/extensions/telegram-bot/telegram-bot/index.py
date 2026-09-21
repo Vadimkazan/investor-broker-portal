@@ -290,6 +290,24 @@ def handle_channel_post(post: dict) -> None:
             print(f"Broadcast failed for {chat_id}: {e}")
 
 
+def forward_to_crm(update: dict) -> None:
+    """Передаёт обычное сообщение клиента в CRM (не блокирует ответ Telegram)."""
+    crm_url = os.environ.get("CRM_FUNCTION_URL", "")
+    if not crm_url:
+        return
+    try:
+        import urllib.request
+        req = urllib.request.Request(
+            f"{crm_url}?action=webhook&channel=telegram",
+            data=json.dumps(update).encode(),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        urllib.request.urlopen(req, timeout=3)
+    except Exception as e:
+        print(f"CRM forward failed: {e}")
+
+
 def process_webhook(body: dict) -> dict:
     """Обработка webhook от Telegram."""
     channel_post = body.get("channel_post")
@@ -322,6 +340,8 @@ def process_webhook(body: dict) -> dict:
                 handle_link(chat_id, user, param[5:])
             else:
                 handle_start(chat_id)
+        else:
+            forward_to_crm(body)
     except telebot.apihelper.ApiTelegramException as e:
         print(f"Telegram API error: {e}")
     except Exception as e:
