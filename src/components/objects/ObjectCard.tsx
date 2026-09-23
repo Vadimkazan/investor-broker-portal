@@ -7,6 +7,7 @@ import { InvestmentObject, PROPERTY_TYPE_LABELS } from '@/types/investment-objec
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { formatPrice } from '@/utils/formatPrice';
+import { canManageObject } from '@/utils/roles';
 
 interface ObjectCardProps {
   object: InvestmentObject;
@@ -20,7 +21,7 @@ const ObjectCard = ({ object }: ObjectCardProps) => {
     return favorites.includes(object.id);
   });
 
-  const isOwner = user && object.brokerId === user.id;
+  const isOwner = canManageObject(user, object.brokerId);
 
   const propertyTypeLabels = PROPERTY_TYPE_LABELS;
 
@@ -140,6 +141,16 @@ const ObjectCard = ({ object }: ObjectCardProps) => {
             </div>
           ) : null}
         </div>
+
+        {object.broker?.name && (
+          <div className="flex items-center gap-1.5 pt-2 text-xs text-muted-foreground">
+            <Icon name="UserCheck" size={13} />
+            <span className="truncate">Брокер: {object.broker.name}</span>
+            {isOwner && (
+              <Badge variant="secondary" className="ml-auto text-[10px] px-1.5 py-0">Ваш объект</Badge>
+            )}
+          </div>
+        )}
 
         <div className="flex gap-2 pt-2">
           <Button className="flex-1" onClick={handleCardClick}>

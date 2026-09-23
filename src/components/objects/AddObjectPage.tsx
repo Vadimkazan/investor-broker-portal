@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import Icon from '@/components/ui/icon';
 import ImageUploader from '@/components/ui/image-uploader';
 import PropertyTypeSelect from '@/components/ui/property-type-select';
+import { canPublishObjects } from '@/utils/roles';
 
 const AddObjectPage = () => {
   const navigate = useNavigate();
@@ -35,6 +36,11 @@ const AddObjectPage = () => {
       return;
     }
 
+    if (!canPublishObjects(user)) {
+      setErrorMsg('Выставлять объекты могут только брокеры');
+      return;
+    }
+
     setErrorMsg('');
     setLoading(true);
 
@@ -58,6 +64,7 @@ const AddObjectPage = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'X-User-Id': String(user.id),
         },
         body: JSON.stringify(objectData)
       });

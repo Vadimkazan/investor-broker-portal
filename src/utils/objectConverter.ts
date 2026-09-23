@@ -1,24 +1,35 @@
 import { InvestmentObjectDB } from '@/services/api';
 import { InvestmentObject } from '@/types/investment-object';
 
-export const convertDBObjectToFrontend = (obj: InvestmentObjectDB): InvestmentObject => {
+type RawObject = InvestmentObjectDB & {
+  brokerId?: number;
+  propertyType?: string;
+  yieldPercent?: number;
+  paybackYears?: number;
+  createdAt?: string;
+  broker?: { id: number; name: string; email: string; phone?: string; city?: string; club?: string };
+};
+
+export const convertDBObjectToFrontend = (input: InvestmentObjectDB): InvestmentObject => {
+  const obj = input as RawObject;
   return {
     id: obj.id,
     title: obj.title,
     city: obj.city,
     address: obj.address,
-    type: obj.property_type,
+    type: (obj.property_type ?? obj.propertyType) as InvestmentObject['type'],
     price: obj.price,
-    yield: obj.yield_percent,
-    paybackPeriod: obj.payback_years,
+    yield: Number(obj.yield_percent ?? obj.yieldPercent ?? 0),
+    paybackPeriod: Number(obj.payback_years ?? obj.paybackYears ?? 0),
     area: obj.area || 0,
     images: obj.images || [],
     videos: obj.videos || [],
     documents: obj.documents || [],
     description: obj.description || '',
     status: obj.status,
-    createdAt: obj.created_at || new Date().toISOString(),
-    brokerId: obj.broker_id || 1,
+    createdAt: obj.created_at || obj.createdAt || new Date().toISOString(),
+    brokerId: obj.broker_id ?? obj.brokerId ?? 0,
+    broker: obj.broker,
     minInvestment: obj.min_investment,
     monthlyPayment: obj.monthly_payment,
     strategy: obj.strategy,
@@ -33,7 +44,7 @@ export const convertFrontendToDBObject = (obj: InvestmentObject): Omit<Investmen
     title: obj.title,
     city: obj.city,
     address: obj.address,
-    property_type: obj.type,
+    property_type: obj.type as InvestmentObjectDB['property_type'],
     area: obj.area,
     price: obj.price,
     yield_percent: obj.yield,

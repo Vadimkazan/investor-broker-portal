@@ -44,6 +44,58 @@ def send_inquiry_to_crm(payload: dict) -> None:
         print(f"CRM inquiry forward failed: {e}")
 
 
+def get_actor(cur, event: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    '''Кто совершает действие — читаем из заголовка X-User-Id'''
+    headers = {k.lower(): v for k, v in (event.get('headers') or {}).items()}
+    raw_id = headers.get('x-user-id') or ''
+    if not str(raw_id).strip().isdigit():
+        return None
+    cur.execute(
+        f"SELECT id, role, roles, is_admin FROM users WHERE id = {escape_sql(int(raw_id))}"
+    )
+    row = cur.fetchone()
+    if not row:
+        return None
+    return {'id': row[0], 'role': row[1], 'roles': row[2] or [], 'is_admin': bool(row[3])}
+
+
+def user_roles(actor: Dict[str, Any]) -> set:
+    roles = set(actor.get('roles') or [])
+    if actor.get('role'):
+        roles.add(actor['role'])
+    if actor.get('is_admin'):
+        roles.add('admin')
+    return roles
+
+
+def is_privileged(actor: Dict[str, Any]) -> bool:
+    '''Админ или менеджер — может управлять любыми объектами'''
+    return bool(user_roles(actor) & {'admin', 'manager'})
+
+
+def can_publish(actor: Dict[str, Any]) -> bool:
+    '''Выставлять объекты могут только брокеры (и админы/менеджеры)'''
+    return bool(user_roles(actor) & {'broker', 'admin', 'manager'})
+
+
+def ensure_can_manage(cur, event: Dict[str, Any], object_id: int):
+    '''Проверяет право менять/удалять объект. Возвращает ошибку или None'''
+    actor = get_actor(cur, event)
+    if not actor:
+        return error_response('Нужно войти в систему', 401)
+    if is_privileged(actor):
+        return None
+    cur.execute(
+        f"SELECT broker_id FROM investment_objects WHERE id = {escape_sql(int(object_id))}"
+    )
+    row = cur.fetchone()
+    if not row:
+        return error_response('Объект не найден', 404)
+    if row[0] != actor['id']:
+        return error_response('Этот объект выставил другой брокер', 403)
+    return None
+
+
 def escape_sql(value):
     '''Escape values for Simple Query Protocol'''
     if value is None:
@@ -279,7 +331,7 @@ def handle_objects(cur, method: str, event: Dict[str, Any]) -> Dict[str, Any]:
             query = f"""
                 SELECT o.id, o.broker_id, o.title, o.city, o.address, o.property_type, o.area, o.price, 
                        o.yield_percent, o.description, o.images, o.status, o.created_at,
-                       u.id, u.name, u.email
+                       u.id, u.name, u.email, u.phone, u.photo_url, u.city, u.club
                 FROM investment_objects o
                 LEFT JOIN users u ON o.broker_id = u.id
                 WHERE o.id = {escape_sql(int(object_id))}
@@ -294,7 +346,7 @@ def handle_objects(cur, method: str, event: Dict[str, Any]) -> Dict[str, Any]:
             query = """
                 SELECT o.id, o.broker_id, o.title, o.city, o.address, o.property_type, o.area, o.price, 
                        o.yield_percent, o.description, o.images, o.status, o.created_at,
-                       u.id, u.name, u.email
+                       u.id, u.name, u.email, u.phone, u.photo_url, u.city, u.club
                 FROM investment_objects o
                 LEFT JOIN users u ON o.broker_id = u.id
                 ORDER BY o.created_at DESC LIMIT 100
@@ -305,6 +357,19 @@ def handle_objects(cur, method: str, event: Dict[str, Any]) -> Dict[str, Any]:
 
     elif method == 'POST':
         body = json.loads(event.get('body', '{}'))
+
+        broker_id = body.get('broker_id')
+        if not broker_id:
+            return error_response('Объект должен быть привязан к брокеру', 400)
+
+        author = get_actor(cur, event)
+        if not author:
+            return error_response('Нужно войти в систему', 401)
+        if not can_publish(author):
+            return error_response('Выставлять объекты могут только брокеры', 403)
+        if not is_privileged(author) and int(broker_id) != author['id']:
+            return error_response('Нельзя выставить объект от имени другого брокера', 403)
+
         images_json = escape_sql(json.dumps(body.get('images', [])))
         query = f"""
             INSERT INTO investment_objects (
@@ -332,7 +397,7 @@ def handle_objects(cur, method: str, event: Dict[str, Any]) -> Dict[str, Any]:
         cur.execute(f"""
             SELECT o.id, o.broker_id, o.title, o.city, o.address, o.property_type, o.area, o.price, 
                    o.yield_percent, o.description, o.images, o.status, o.created_at,
-                   u.id, u.name, u.email
+                   u.id, u.name, u.email, u.phone, u.photo_url, u.city, u.club
             FROM investment_objects o
             LEFT JOIN users u ON o.broker_id = u.id
             WHERE o.id = {escape_sql(new_id)}
@@ -349,6 +414,10 @@ def handle_objects(cur, method: str, event: Dict[str, Any]) -> Dict[str, Any]:
         object_id = body.get('id')
         if not object_id:
             return error_response('Object ID required', 400)
+
+        denied = ensure_can_manage(cur, event, int(object_id))
+        if denied:
+            return denied
 
         images_json = escape_sql(json.dumps(body.get('images', [])))
         query = f"""
@@ -371,7 +440,7 @@ def handle_objects(cur, method: str, event: Dict[str, Any]) -> Dict[str, Any]:
         cur.execute(f"""
             SELECT o.id, o.broker_id, o.title, o.city, o.address, o.property_type, o.area, o.price, 
                    o.yield_percent, o.description, o.images, o.status, o.created_at,
-                   u.id, u.name, u.email
+                   u.id, u.name, u.email, u.phone, u.photo_url, u.city, u.club
             FROM investment_objects o
             LEFT JOIN users u ON o.broker_id = u.id
             WHERE o.id = {escape_sql(int(object_id))}
@@ -383,6 +452,11 @@ def handle_objects(cur, method: str, event: Dict[str, Any]) -> Dict[str, Any]:
         object_id = params.get('id')
         if not object_id:
             return error_response('Object ID required', 400)
+
+        denied = ensure_can_manage(cur, event, int(object_id))
+        if denied:
+            return denied
+
         oid = escape_sql(int(object_id))
         for table in ('object_views', 'favorites', 'inquiries', 'notifications'):
             cur.execute(f"DELETE FROM {table} WHERE object_id = {oid}")
@@ -797,7 +871,10 @@ def format_object_with_broker(row) -> Dict[str, Any]:
         'address': row[4], 'propertyType': row[5], 'area': row[6], 'price': row[7],
         'yieldPercent': row[8], 'description': row[9], 'images': row[10],
         'status': row[11], 'createdAt': row[12].isoformat() if row[12] else None,
-        'broker': {'id': row[13], 'name': row[14], 'email': row[15]} if row[13] else None
+        'broker': {
+            'id': row[13], 'name': row[14], 'email': row[15],
+            'phone': row[16], 'photoUrl': row[17], 'city': row[18], 'club': row[19],
+        } if row[13] else None
     }
 
 

@@ -62,18 +62,24 @@ const ObjectDetailPage = () => {
     }
   }, [user]);
 
-  const loadBroker = (brokerId: number) => {
-    const mockBroker: Broker = {
-      id: brokerId,
-      name: 'Иван Петров',
-      company: 'Премиум Недвижимость',
-      photo: 'https://via.placeholder.com/150',
-      rating: 4.8,
-      phone: '+7 (495) 123-45-67',
-      email: 'broker@example.com',
-      dealsCompleted: 156
-    };
-    setBroker(mockBroker);
+  const loadBroker = async (brokerId: number) => {
+    try {
+      const users = await api.getUsers();
+      const found = users.find(u => u.id === brokerId);
+      if (found) {
+        setBroker({
+          id: found.id,
+          name: found.name,
+          company: found.club || '',
+          photo: found.photo_url || '',
+          phone: found.phone || '',
+          email: found.email || '',
+          city: found.city || '',
+        } as Broker);
+      }
+    } catch {
+      setBroker(null);
+    }
   };
 
   const propertyTypeLabels: Record<string, string> = {
@@ -384,30 +390,32 @@ const ObjectDetailPage = () => {
                     </div>
                     <div>
                       <p className="font-semibold">{broker.name}</p>
-                      <p className="text-sm text-muted-foreground">{broker.company}</p>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2 mb-4">
-                    <div className="flex items-center gap-2">
-                      <Icon name="Star" size={16} className="text-yellow-500 fill-current" />
-                      <span className="text-sm">Рейтинг: {broker.rating}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Icon name="CheckCircle" size={16} className="text-green-500" />
-                      <span className="text-sm">Сделок: {broker.dealsCompleted}</span>
+                      {broker.company && (
+                        <p className="text-sm text-muted-foreground">{broker.company}</p>
+                      )}
+                      {broker.city && (
+                        <p className="text-xs text-muted-foreground">{broker.city}</p>
+                      )}
                     </div>
                   </div>
 
                   <div className="space-y-2">
-                    <Button variant="outline" className="w-full justify-start">
-                      <Icon name="Phone" size={16} className="mr-2" />
-                      {broker.phone}
-                    </Button>
-                    <Button variant="outline" className="w-full justify-start">
-                      <Icon name="Mail" size={16} className="mr-2" />
-                      {broker.email}
-                    </Button>
+                    {broker.phone && (
+                      <Button variant="outline" className="w-full justify-start" asChild>
+                        <a href={`tel:${broker.phone}`}>
+                          <Icon name="Phone" size={16} className="mr-2" />
+                          {broker.phone}
+                        </a>
+                      </Button>
+                    )}
+                    {broker.email && (
+                      <Button variant="outline" className="w-full justify-start" asChild>
+                        <a href={`mailto:${broker.email}`}>
+                          <Icon name="Mail" size={16} className="mr-2" />
+                          {broker.email}
+                        </a>
+                      </Button>
+                    )}
                   </div>
                 </CardContent>
               </Card>

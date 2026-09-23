@@ -151,12 +151,21 @@ class ApiClient {
     const queryParams = new URLSearchParams({ resource, ...params });
     const url = `${this.baseUrl}?${queryParams}`;
 
-    const options: RequestInit = {
-      method,
-      headers: {
-        'Content-Type': 'application/json',
-      },
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
     };
+
+    try {
+      const stored = localStorage.getItem('investpro-user');
+      if (stored) {
+        const currentUser = JSON.parse(stored);
+        if (currentUser?.id) headers['X-User-Id'] = String(currentUser.id);
+      }
+    } catch {
+      // нет сохранённого пользователя — запрос уйдёт как гостевой
+    }
+
+    const options: RequestInit = { method, headers };
 
     if (body && (method === 'POST' || method === 'PUT')) {
       options.body = JSON.stringify(body);

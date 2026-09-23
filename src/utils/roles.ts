@@ -27,3 +27,21 @@ export const hasAnyRole = (user: RoleBearing | null | undefined, roles: UserRole
 export const isAdminOrManager = (user: RoleBearing | null | undefined): boolean => {
   return hasAnyRole(user, ['admin', 'manager']);
 };
+
+export const isBroker = (user: RoleBearing | null | undefined): boolean => {
+  return hasRole(user, 'broker');
+};
+
+export const canPublishObjects = (user: RoleBearing | null | undefined): boolean => {
+  return hasAnyRole(user, ['broker', 'admin', 'manager']);
+};
+
+export const canManageObject = (
+  user: (RoleBearing & { id?: number }) | null | undefined,
+  objectBrokerId: number | null | undefined,
+): boolean => {
+  if (!user) return false;
+  if (isAdminOrManager(user)) return true;
+  if (!isBroker(user) || !objectBrokerId) return false;
+  return user.id === objectBrokerId;
+};

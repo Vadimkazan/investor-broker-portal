@@ -112,7 +112,11 @@
       "expectedBody": {
         "title": "Тестовый объект"
       },
-      "bodyMatcher": "partial"
+      "bodyMatcher": "partial",
+      "headers": {
+        "Content-Type": "application/json",
+        "X-User-Id": "2"
+      }
     },
     {
       "name": "Create inquiry",
@@ -160,6 +164,43 @@
       "path": "/?resource=views&user_id=2",
       "expectedStatus": 200,
       "bodyMatcher": "partial"
+    },
+    {
+      "name": "Инвестор не может выставить объект",
+      "method": "POST",
+      "path": "/?resource=objects",
+      "headers": {
+        "Content-Type": "application/json",
+        "X-User-Id": "11"
+      },
+      "body": {
+        "broker_id": 11,
+        "title": "Запрещённый",
+        "city": "Москва",
+        "address": "тест",
+        "property_type": "new_flat",
+        "area": 10,
+        "price": 100000,
+        "yield_percent": 5,
+        "payback_years": 5,
+        "images": [],
+        "status": "available"
+      },
+      "expectedStatus": 403
+    },
+    {
+      "name": "Чужой брокер не может править объект",
+      "method": "PUT",
+      "path": "/?resource=objects",
+      "headers": {
+        "Content-Type": "application/json",
+        "X-User-Id": "1"
+      },
+      "body": {
+        "id": 43,
+        "title": "Взлом"
+      },
+      "expectedStatus": 403
     }
   ]
 }
