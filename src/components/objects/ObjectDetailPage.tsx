@@ -15,6 +15,7 @@ import { useFavorites, useAddToFavorites, useRemoveFromFavorites } from '@/hooks
 import { useAuth } from '@/contexts/AuthContext';
 import { api } from '@/services/api';
 import { useToast } from '@/hooks/use-toast';
+import { formatPrice } from '@/utils/formatPrice';
 
 const ObjectDetailPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -272,7 +273,7 @@ const ObjectDetailPage = () => {
                         <CardContent className="p-4 text-center">
                           <p className="text-sm text-muted-foreground mb-1">Сумма входа</p>
                           <p className="text-xl font-bold">
-                            {(object.minInvestment / 1000000).toFixed(1)} млн ₽
+                            {formatPrice(object.minInvestment)}
                           </p>
                         </CardContent>
                       </Card>
@@ -282,7 +283,7 @@ const ObjectDetailPage = () => {
                         <CardContent className="p-4 text-center">
                           <p className="text-sm text-muted-foreground mb-1">Стоимость</p>
                           <p className="text-xl font-bold">
-                            {(object.price / 1000000).toFixed(1)} млн ₽
+                            {formatPrice(object.price)}
                           </p>
                         </CardContent>
                       </Card>

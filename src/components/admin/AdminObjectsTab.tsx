@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import Icon from '@/components/ui/icon';
 import { InvestmentObjectDB } from '@/services/api';
 import { TYPE_LABELS, DeleteConfirm } from './adminConstants';
+import { formatPrice } from '@/utils/formatPrice';
 
 type ObjRow = InvestmentObjectDB & { propertyType?: string; yieldPercent?: number | string };
 
@@ -79,7 +80,7 @@ const AdminObjectsTab = ({
                 <TableCell className="font-medium max-w-40 truncate">{obj.title}</TableCell>
                 <TableCell>{obj.city}</TableCell>
                 <TableCell className="text-muted-foreground">{objType(obj)}</TableCell>
-                <TableCell>{(Number(obj.price) / 1_000_000).toFixed(1)} млн ₽</TableCell>
+                <TableCell>{formatPrice(obj.price)}</TableCell>
                 <TableCell className="text-primary font-medium">{objYield(obj)}</TableCell>
                 <TableCell>
                   <Select

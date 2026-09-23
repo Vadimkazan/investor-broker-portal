@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import Icon from '@/components/ui/icon';
 import type { PropertyObject, PropertyStatus } from '@/types/investment';
+import { formatPrice } from '@/utils/formatPrice';
 
 interface PropertyCardProps {
   property: PropertyObject;
@@ -64,7 +65,7 @@ const PropertyCard = ({ property, onEdit, onDelete, onShare, getStatusBadge }: P
           </div>
           <div>
             <p className="text-muted-foreground">Цена</p>
-            <p className="font-medium">₽{(property.pricing.totalPrice / 1000000).toFixed(1)}M</p>
+            <p className="font-medium">{formatPrice(property.pricing.totalPrice)}</p>
           </div>
           <div>
             <p className="text-muted-foreground">Доходность</p>

@@ -6,6 +6,7 @@ import Icon from '@/components/ui/icon';
 import { InvestmentObject, PROPERTY_TYPE_LABELS } from '@/types/investment-object';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { formatPrice } from '@/utils/formatPrice';
 
 interface ObjectCardProps {
   object: InvestmentObject;
@@ -105,13 +106,13 @@ const ObjectCard = ({ object }: ObjectCardProps) => {
           {object.minInvestment ? (
             <div className="flex justify-between items-center">
               <span className="text-sm text-muted-foreground">Сумма входа:</span>
-              <span className="font-semibold">{(object.minInvestment / 1000000).toFixed(1)} млн ₽</span>
+              <span className="font-semibold">{formatPrice(object.minInvestment)}</span>
             </div>
           ) : null}
           {object.price ? (
             <div className="flex justify-between items-center">
               <span className="text-sm text-muted-foreground">Стоимость:</span>
-              <span className="font-semibold">{(object.price / 1000000).toFixed(1)} млн ₽</span>
+              <span className="font-semibold">{formatPrice(object.price)}</span>
             </div>
           ) : null}
           {object.monthlyPayment ? (

@@ -8,6 +8,7 @@ import { Slider } from '@/components/ui/slider';
 import { Button } from '@/components/ui/button';
 import Icon from '@/components/ui/icon';
 import { ObjectFilters, PropertyType, ObjectStatus, PROPERTY_TYPE_LABELS } from '@/types/investment-object';
+import { formatPriceShort } from '@/utils/formatPrice';
 
 interface ObjectsFiltersProps {
   filters: ObjectFilters;
@@ -180,8 +181,8 @@ const ObjectsFilters = ({ filters, onFiltersChange }: ObjectsFiltersProps) => {
             />
           </div>
           <div className="flex justify-between text-xs text-muted-foreground">
-            <span>{(filters.priceRange[0] / 1000000).toFixed(0)} млн</span>
-            <span>{(filters.priceRange[1] / 1000000).toFixed(0)} млн</span>
+            <span>{formatPriceShort(filters.priceRange[0])} ₽</span>
+            <span>{formatPriceShort(filters.priceRange[1])} ₽</span>
           </div>
         </div>
 

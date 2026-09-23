@@ -11,6 +11,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { PropertyType } from '@/types/investment-object';
 import PropertyTypeSelect from '@/components/ui/property-type-select';
 import ImportObjectsExcel from '@/components/broker/ImportObjectsExcel';
+import { formatPrice } from '@/utils/formatPrice';
 
 interface BrokerObjectsManagerProps {
   onAddClick: () => void;
@@ -247,7 +248,7 @@ const BrokerObjectsManager = ({ onAddClick }: BrokerObjectsManagerProps) => {
                       <div>
                         <p className="text-sm text-muted-foreground">Цена</p>
                         <p className="font-semibold">
-                          {(object.price / 1000000).toFixed(1)} млн ₽
+                          {formatPrice(object.price)}
                         </p>
                       </div>
                       <div>

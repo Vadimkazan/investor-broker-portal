@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { COLORS } from './adminConstants';
+import { formatPrice } from '@/utils/formatPrice';
 
 interface ChartEntry {
   name: string;
@@ -30,7 +31,7 @@ const AdminAnalyticsTab = ({ cityData, typeData, statusData, stats }: AdminAnaly
     },
     {
       label: 'Средняя цена объекта',
-      value: stats.totalObjects > 0 ? `${(stats.totalValue / stats.totalObjects / 1_000_000).toFixed(1)} млн ₽` : '—',
+      value: stats.totalObjects > 0 ? formatPrice(stats.totalValue / stats.totalObjects) : '—',
     },
     {
       label: 'Объектов на брокера',

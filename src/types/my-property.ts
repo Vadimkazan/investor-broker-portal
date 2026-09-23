@@ -49,8 +49,6 @@ export interface MyPropertyInput {
 }
 
 export const formatMoney = (value: number): string => {
-  if (!value) return '0 ₽';
-  if (Math.abs(value) >= 1000000) return `${(value / 1000000).toFixed(2)} млн ₽`;
-  if (Math.abs(value) >= 1000) return `${Math.round(value / 1000)} тыс ₽`;
-  return `${Math.round(value)} ₽`;
+  if (!value) return '0\u00A0₽';
+  return `${Math.round(value).toLocaleString('ru-RU').replace(/\s/g, '\u00A0')}\u00A0₽`;
 };

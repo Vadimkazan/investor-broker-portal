@@ -9,6 +9,7 @@ import Icon from '@/components/ui/icon';
 import { useToast } from '@/hooks/use-toast';
 import { api } from '@/services/api';
 import { MyProperty, MyPropertyInput, PROPERTY_KIND_LABELS } from '@/types/my-property';
+import { formatPriceSigned } from '@/utils/formatPrice';
 
 interface MyPropertyDialogProps {
   open: boolean;
@@ -197,8 +198,7 @@ const MyPropertyDialog = ({ open, onClose, onSave, property }: MyPropertyDialogP
               <span className={growth > 0 ? 'text-emerald-700' : 'text-red-700'}>
                 {growth > 0 ? 'Рост' : 'Снижение'} стоимости:{' '}
                 <strong>
-                  {growth > 0 ? '+' : ''}
-                  {(growth / 1000000).toFixed(2)} млн ₽ ({growthPct > 0 ? '+' : ''}
+                  {formatPriceSigned(growth)} ({growthPct > 0 ? '+' : ''}
                   {growthPct.toFixed(1)}%)
                 </strong>
               </span>
