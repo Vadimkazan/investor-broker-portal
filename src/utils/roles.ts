@@ -32,8 +32,25 @@ export const isBroker = (user: RoleBearing | null | undefined): boolean => {
   return hasRole(user, 'broker');
 };
 
+export const hasAllRoles = (user: RoleBearing | null | undefined, roles: UserRole[]): boolean => {
+  const userRoles = getUserRoles(user);
+  return roles.every((r) => userRoles.includes(r));
+};
+
+export const canSwitchMode = (user: RoleBearing | null | undefined): boolean => {
+  return hasAllRoles(user, ['investor', 'broker']);
+};
+
+export const getActiveMode = (user: RoleBearing | null | undefined): UserRole | null => {
+  if (!user) return null;
+  if (user.role && getUserRoles(user).includes(user.role)) return user.role;
+  return getUserRoles(user)[0] ?? null;
+};
+
 export const canPublishObjects = (user: RoleBearing | null | undefined): boolean => {
-  return hasAnyRole(user, ['broker', 'admin', 'manager']);
+  if (isAdminOrManager(user)) return true;
+  if (!isBroker(user)) return false;
+  return getActiveMode(user) === 'broker';
 };
 
 export const canManageObject = (
@@ -43,5 +60,6 @@ export const canManageObject = (
   if (!user) return false;
   if (isAdminOrManager(user)) return true;
   if (!isBroker(user) || !objectBrokerId) return false;
+  if (getActiveMode(user) !== 'broker') return false;
   return user.id === objectBrokerId;
 };

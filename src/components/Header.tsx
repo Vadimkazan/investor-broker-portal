@@ -4,7 +4,7 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import Icon from '@/components/ui/icon';
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { hasAnyRole, ROLE_LABELS, getUserRoles } from '@/utils/roles';
+import { hasAnyRole, ROLE_LABELS, getUserRoles, canSwitchMode, getActiveMode } from '@/utils/roles';
 import { UserRole } from '@/services/api';
 
 const getInitials = (name: string) => {
@@ -126,7 +126,9 @@ const Header = ({ activeTab, onTabChange, user, onAuthClick, onLogout, onRoleSwi
                     <div className="text-left hidden sm:block">
                       <p className="text-sm font-semibold">{user.name}</p>
                       <p className="text-xs text-muted-foreground">
-                        {getUserRoles(user).map((r) => ROLE_LABELS[r]).join(', ')}
+                        {canSwitchMode(user)
+                        ? ROLE_LABELS[getActiveMode(user)!]
+                        : getUserRoles(user).map((r) => ROLE_LABELS[r]).join(', ')}
                       </p>
                     </div>
                     <Icon name="ChevronDown" size={16} />
@@ -136,7 +138,9 @@ const Header = ({ activeTab, onTabChange, user, onAuthClick, onLogout, onRoleSwi
                   <DropdownMenuLabel className="sm:hidden">
                     <p className="font-semibold">{user.name}</p>
                     <p className="text-xs text-muted-foreground font-normal">
-                      {getUserRoles(user).map((r) => ROLE_LABELS[r]).join(', ')}
+                      {canSwitchMode(user)
+                        ? ROLE_LABELS[getActiveMode(user)!]
+                        : getUserRoles(user).map((r) => ROLE_LABELS[r]).join(', ')}
                     </p>
                   </DropdownMenuLabel>
                   <DropdownMenuLabel className="hidden sm:block">Мой аккаунт</DropdownMenuLabel>
@@ -153,16 +157,16 @@ const Header = ({ activeTab, onTabChange, user, onAuthClick, onLogout, onRoleSwi
                       <DropdownMenuSeparator />
                     </>
                   )}
-                  {hasAnyRole(user, ['investor', 'broker']) && (
+                  {canSwitchMode(user) && (
                     <>
                       <DropdownMenuItem onClick={onRoleSwitch} className="gap-2">
                         <Icon name="RefreshCw" size={16} />
                         <div>
                           <p className="font-medium">
-                            {user.role === 'broker' ? 'Режим инвестора' : 'Режим брокера'}
+                            {getActiveMode(user) === 'broker' ? 'Режим инвестора' : 'Режим брокера'}
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            {user.role === 'broker' ? 'Инвестировать в объекты' : 'Управлять объектами'}
+                            {getActiveMode(user) === 'broker' ? 'Инвестировать в объекты' : 'Управлять объектами'}
                           </p>
                         </div>
                       </DropdownMenuItem>

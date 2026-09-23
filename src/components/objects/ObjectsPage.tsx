@@ -14,7 +14,7 @@ import { canPublishObjects } from '@/utils/roles';
 
 const ObjectsPage = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, switchRole } = useAuth();
   const [importing, setImporting] = useState(false);
   const [filters, setFilters] = useState<ObjectFilters>({
     search: '',
@@ -201,7 +201,7 @@ const ObjectsPage = () => {
           user={user} 
           onAuthClick={() => navigate('/')}
           onLogout={handleLogout}
-          onRoleSwitch={() => {}}
+          onRoleSwitch={switchRole}
         />
         <div className="text-center py-16">
           <Icon name="Loader2" size={48} className="mx-auto text-primary animate-spin mb-4" />
@@ -220,7 +220,7 @@ const ObjectsPage = () => {
           user={user} 
           onAuthClick={() => navigate('/')}
           onLogout={handleLogout}
-          onRoleSwitch={() => {}}
+          onRoleSwitch={switchRole}
         />
         <div className="text-center py-16">
           <Icon name="AlertCircle" size={48} className="mx-auto text-destructive mb-4" />
@@ -240,7 +240,7 @@ const ObjectsPage = () => {
         user={user} 
         onAuthClick={() => navigate('/')}
         onLogout={handleLogout}
-        onRoleSwitch={() => {}}
+        onRoleSwitch={switchRole}
       />
       
       <div className="container mx-auto px-4 pt-20 pb-8">

@@ -1,7 +1,21 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { api, User } from '@/services/api';
+import { api, User, UserRole } from '@/services/api';
+import { canSwitchMode, getActiveMode, getUserRoles } from '@/utils/roles';
 
 const AUTH_URL = 'https://functions.poehali.dev/fc00dc4e-18bf-4893-bb9d-331e8abda973?resource=auth';
+const ACTIVE_MODE_KEY = 'investpro-active-mode';
+
+const applySavedMode = (dbUser: User): User => {
+  if (!canSwitchMode(dbUser)) {
+    localStorage.removeItem(ACTIVE_MODE_KEY);
+    return dbUser;
+  }
+  const saved = localStorage.getItem(ACTIVE_MODE_KEY) as UserRole | null;
+  if (saved && getUserRoles(dbUser).includes(saved)) {
+    return { ...dbUser, role: saved };
+  }
+  return dbUser;
+};
 
 async function authRequest(body: Record<string, unknown>): Promise<User> {
   const res = await fetch(AUTH_URL, {
@@ -63,8 +77,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     api.getUserByEmail(userData.email)
       .then(dbUser => {
-        setUser(dbUser);
-        localStorage.setItem('investpro-user', JSON.stringify(dbUser));
+        const withMode = applySavedMode(dbUser);
+        setUser(withMode);
+        localStorage.setItem('investpro-user', JSON.stringify(withMode));
       })
       .catch(() => {
         // Сеть могла отвалиться — оставляем сохранённый вход, не выкидываем пользователя
@@ -77,6 +92,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const login = async (email: string, password: string): Promise<User> => {
     const dbUser = await authRequest({ action: 'login', email, password });
+    localStorage.removeItem(ACTIVE_MODE_KEY);
     setUser(dbUser);
     localStorage.setItem('investpro-user', JSON.stringify(dbUser));
     return dbUser;
@@ -93,8 +109,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (!user) return;
     try {
       const dbUser = await api.getUserById(user.id);
-      setUser(dbUser);
-      localStorage.setItem('investpro-user', JSON.stringify(dbUser));
+      const withMode = applySavedMode(dbUser);
+      setUser(withMode);
+      localStorage.setItem('investpro-user', JSON.stringify(withMode));
     } catch { /* ignore */ }
   };
 
@@ -108,14 +125,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const logout = () => {
     setUser(null);
     localStorage.removeItem('investpro-user');
+    localStorage.removeItem(ACTIVE_MODE_KEY);
   };
 
   const switchRole = async () => {
-    if (!user) return;
-    const newRole = user.role === 'broker' ? 'investor' : 'broker';
-    const updated = { ...user, role: newRole };
-    setUser(updated as User);
+    if (!user || !canSwitchMode(user)) return;
+    const newRole = getActiveMode(user) === 'broker' ? 'investor' : 'broker';
+    const updated = { ...user, role: newRole } as User;
+    setUser(updated);
     localStorage.setItem('investpro-user', JSON.stringify(updated));
+    localStorage.setItem(ACTIVE_MODE_KEY, newRole);
   };
 
   return (

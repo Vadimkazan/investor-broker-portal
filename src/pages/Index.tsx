@@ -8,7 +8,7 @@ import NewBrokerDashboard from '@/components/NewBrokerDashboard';
 import InvestorDashboard from '@/components/InvestorDashboard';
 import { loadSpreadsheetData } from '@/utils/importSpreadsheetData';
 import type { PropertyObject } from '@/types/investment';
-import { hasAnyRole } from '@/utils/roles';
+import { hasAnyRole, getActiveMode } from '@/utils/roles';
 import { UserRole } from '@/services/api';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -35,7 +35,7 @@ const Index = () => {
   const [investmentPeriod, setInvestmentPeriod] = useState(12);
   const [expectedReturn, setExpectedReturn] = useState(15);
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const { user: authUser } = useAuth();
+  const { user: authUser, switchRole } = useAuth();
   const [user, setUser] = useState<{ name: string; email: string; role: UserRole; roles?: UserRole[]; id?: number; photo_url?: string } | null>(() => {
     const savedUser = localStorage.getItem('investpro-user');
     return savedUser ? JSON.parse(savedUser) : null;
@@ -51,9 +51,19 @@ const Index = () => {
 
   useEffect(() => {
     if (authUser) {
-      setUser((prev) => (prev ? { ...prev, photo_url: authUser.photo_url, name: authUser.name } : prev));
+      setUser((prev) =>
+        prev
+          ? {
+              ...prev,
+              photo_url: authUser.photo_url,
+              name: authUser.name,
+              role: authUser.role,
+              roles: authUser.roles,
+            }
+          : prev,
+      );
     }
-  }, [authUser?.photo_url, authUser?.name]);
+  }, [authUser?.photo_url, authUser?.name, authUser?.role, authUser?.roles]);
 
   const [allProperties, setAllProperties] = useState<PropertyObject[]>([]);
 
@@ -160,12 +170,7 @@ const Index = () => {
   };
 
   const handleRoleSwitch = () => {
-    if (user) {
-      setUser({
-        ...user,
-        role: user.role === 'broker' ? 'investor' : 'broker',
-      });
-    }
+    switchRole();
   };
 
   const handleTabChange = (tab: string) => {
@@ -220,7 +225,7 @@ const Index = () => {
 
           {activeTab === 'dashboard' && user && (
             <>
-              {hasAnyRole(user, ['broker']) ? (
+              {getActiveMode(user) === 'broker' && user.id ? (
                 <NewBrokerDashboard userName={user.name} brokerId={user.id} />
               ) : (
                 <InvestorDashboard userName={user.name} />

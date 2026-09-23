@@ -21,7 +21,7 @@ import { formatPrice } from '@/utils/formatPrice';
 const ObjectDetailPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, logout, switchRole } = useAuth();
   const { toast } = useToast();
   const objectId = id ? parseInt(id) : 0;
   
@@ -166,7 +166,7 @@ const ObjectDetailPage = () => {
           user={user}
           onAuthClick={() => navigate('/')}
           onLogout={handleLogout}
-          onRoleSwitch={() => {}}
+          onRoleSwitch={switchRole}
         />
         <div className="text-center py-16">
           <Icon name="Loader2" size={48} className="mx-auto text-primary animate-spin mb-4" />
@@ -185,7 +185,7 @@ const ObjectDetailPage = () => {
           user={user}
           onAuthClick={() => navigate('/')}
           onLogout={handleLogout}
-          onRoleSwitch={() => {}}
+          onRoleSwitch={switchRole}
         />
         <div className="text-center py-16">
           <Icon name="AlertCircle" size={48} className="mx-auto text-destructive mb-4" />
@@ -207,7 +207,7 @@ const ObjectDetailPage = () => {
         user={user}
         onAuthClick={() => navigate('/')}
         onLogout={handleLogout}
-        onRoleSwitch={() => {}}
+        onRoleSwitch={switchRole}
       />
       
       <div className="container mx-auto px-4 pt-20 pb-8">
