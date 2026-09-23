@@ -22,12 +22,12 @@ const Index = () => {
     const timer = setTimeout(() => setIsTransitioning(false), 300);
     
     const titles: Record<string, string> = {
-      home: 'Инвестиционный портал недвижимости',
-      objects: 'Объекты - Инвестиционный портал',
-      calculator: 'Калькулятор доходности - Инвестиционный портал',
-      dashboard: 'Личный кабинет - Инвестиционный портал'
+      home: 'AREALVEST — инвестиции в недвижимость: готовые объекты с доходностью',
+      objects: 'Купить инвестиционную недвижимость — каталог объектов | AREALVEST',
+      calculator: 'Калькулятор доходности недвижимости | AREALVEST',
+      dashboard: 'Личный кабинет инвестора | AREALVEST'
     };
-    document.title = titles[activeTab] || 'Инвестиционный портал недвижимости';
+    document.title = titles[activeTab] || 'AREALVEST — инвестиции в недвижимость';
     
     return () => clearTimeout(timer);
   }, [activeTab]);

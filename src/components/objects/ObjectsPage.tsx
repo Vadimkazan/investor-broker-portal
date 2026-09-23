@@ -34,7 +34,14 @@ const ObjectsPage = () => {
   const { data: objects = [], isLoading, error } = useObjects();
 
   useEffect(() => {
-    document.title = 'Каталог объектов для инвестиций - AREALVEST';
+    document.title = 'Купить инвестиционную недвижимость — каталог объектов | AREALVEST';
+    const tag = document.querySelector('meta[name="description"]');
+    if (tag) {
+      tag.setAttribute(
+        'content',
+        'Каталог инвестиционных объектов недвижимости AREALVEST: квартиры, коммерция, парковки, кладовые и земельные участки. Фильтры по цене, доходности и сроку окупаемости — выберите объект для пассивного дохода.',
+      );
+    }
     loadFiltersFromStorage();
   }, []);
 

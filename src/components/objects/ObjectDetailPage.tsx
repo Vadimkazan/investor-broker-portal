@@ -43,7 +43,26 @@ const ObjectDetailPage = () => {
 
   useEffect(() => {
     if (object) {
-      document.title = `${object.title} - AREALVEST`;
+      const priceText = object.price ? `${formatPrice(object.price)}` : '';
+      const yieldText = object.yield ? `, доходность ${object.yield}% годовых` : '';
+      document.title = `${object.title}${priceText ? ` — ${priceText}` : ''} | AREALVEST`;
+
+      const parts = [
+        `${object.title} в городе ${object.city}, ${object.address}.`,
+        priceText ? `Цена ${priceText}.` : '',
+        object.area ? `Площадь ${object.area} м².` : '',
+        yieldText ? `Ожидаемая${yieldText}.` : '',
+        'Инвестиционный объект на платформе AREALVEST.',
+      ].filter(Boolean);
+
+      let tag = document.querySelector('meta[name="description"]');
+      if (!tag) {
+        tag = document.createElement('meta');
+        tag.setAttribute('name', 'description');
+        document.head.appendChild(tag);
+      }
+      tag.setAttribute('content', parts.join(' '));
+
       if (object.brokerId) {
         loadBroker(object.brokerId);
       }
