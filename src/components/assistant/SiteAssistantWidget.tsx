@@ -5,6 +5,7 @@ import Icon from '@/components/ui/icon';
 import { useChatGPT } from '@/components/extensions/chatgpt-polza/useChatGPT';
 import { useAuth } from '@/contexts/AuthContext';
 import { getUserRoles, ROLE_LABELS } from '@/utils/roles';
+import ManagerContacts from './ManagerContacts';
 
 const API_URL = 'https://functions.poehali.dev/9900f4e9-9b8a-4671-9500-d2d0019e24b4';
 
@@ -12,7 +13,12 @@ interface Message {
   id: string;
   role: 'user' | 'assistant';
   content: string;
+  showManager?: boolean;
 }
+
+const MANAGER_TAG = '[MANAGER]';
+
+const MANAGER_INTENT = /(менеджер|человек|живой|оператор|специалист|консультац|перезвон|позвон|связать|свяж|телефон|контакт|whatsapp|ватсап|telegram|телеграм|подробнее об объекте|оставить заявку|заявк)/i;
 
 const SYSTEM_PROMPT = `Ты — ИИ-консультант платформы AREALVEST, помогаешь всем посетителям сайта: инвесторам, брокерам и гостям.
 
@@ -29,13 +35,20 @@ const SYSTEM_PROMPT = `Ты — ИИ-консультант платформы A
 - Помогай разобраться, как пользоваться сайтом: где что найти, как зарегистрироваться, как оставить заявку на объект, как работает калькулятор.
 - Если спрашивают про конкретный объект недвижимости — посоветуй открыть карточку объекта, там есть отдельный ИИ-консультант по этому объекту.
 - Если вопрос не связан с платформой или инвестициями в недвижимость — вежливо скажи, что специализируешься на вопросах о платформе AREALVEST и инвестициях в недвижимость.
-- Не выдумывай точные цифры (цены, доходности) — это индивидуально для каждого объекта, направляй в каталог объектов.`;
+- Не выдумывай точные цифры (цены, доходности) — это индивидуально для каждого объекта, направляй в каталог объектов.
+
+Передача менеджеру:
+- Если клиент хочет поговорить с человеком, просит консультацию менеджера, хочет оставить заявку, узнать подробнее об объекте, продолжить общение с менеджером, или задаёт вопрос, на который ты не можешь ответить — предложи связаться с менеджером напрямую.
+- В таком случае напиши короткий ответ и в САМОМ КОНЦЕ сообщения добавь отдельной строкой тег ${MANAGER_TAG} — интерфейс сам покажет кнопки Telegram, MAX, WhatsApp и «Позвонить».
+- Никогда не пиши ссылки и номер телефона текстом и не описывай кнопки словами — просто ставь тег ${MANAGER_TAG}.
+- Не проси клиента заполнить форму или оставить заявку на сайте, если он прямо хочет связаться с менеджером.`;
 
 const SiteAssistantWidget = () => {
   const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
+  const [showManagerPanel, setShowManagerPanel] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { generate, isLoading } = useChatGPT({ apiUrl: API_URL });
 
@@ -65,12 +78,20 @@ const SiteAssistantWidget = () => {
 
     const result = await generate({ messages: apiMessages, model: 'gpt-5.4-mini', temperature: 0.5 });
 
+    const raw = result.success && result.content ? result.content : '';
+    const failed = !raw;
+    const tagged = raw.includes(MANAGER_TAG);
+    const content = tagged ? raw.replaceAll(MANAGER_TAG, '').trim() : raw;
+
     setMessages((prev) => [
       ...prev,
       {
         id: crypto.randomUUID(),
         role: 'assistant',
-        content: result.success && result.content ? result.content : 'Не удалось получить ответ. Попробуйте ещё раз чуть позже.',
+        content: failed
+          ? 'Не удалось получить ответ. Попробуйте ещё раз чуть позже или свяжитесь с менеджером напрямую.'
+          : content || 'Могу передать вас менеджеру.',
+        showManager: failed || tagged || MANAGER_INTENT.test(text),
       },
     ]);
   };
@@ -135,20 +156,37 @@ const SiteAssistantWidget = () => {
                       {q}
                     </button>
                   ))}
+                  <button
+                    type="button"
+                    onClick={() => setShowManagerPanel((v) => !v)}
+                    className="flex items-center justify-between gap-2 text-left text-sm px-3 py-2 rounded-md border bg-muted/50 hover:bg-muted transition-colors"
+                  >
+                    <span className="flex items-center gap-2">
+                      <Icon name="Headset" size={15} />
+                      Связаться с менеджером
+                    </span>
+                    <Icon name={showManagerPanel ? 'ChevronUp' : 'ChevronDown'} size={15} />
+                  </button>
                 </div>
+                {showManagerPanel && (
+                  <ManagerContacts title="Выберите удобный способ связи с менеджером 👇" />
+                )}
               </div>
             ) : (
               messages.map((msg) => (
-                <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                  <div
-                    className={`max-w-[85%] px-3 py-2 rounded-lg text-sm whitespace-pre-wrap ${
-                      msg.role === 'user'
-                        ? 'bg-primary text-primary-foreground'
-                        : 'bg-muted text-foreground'
-                    }`}
-                  >
-                    {msg.content}
+                <div key={msg.id} className="space-y-2">
+                  <div className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                    <div
+                      className={`max-w-[85%] px-3 py-2 rounded-lg text-sm whitespace-pre-wrap ${
+                        msg.role === 'user'
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-muted text-foreground'
+                      }`}
+                    >
+                      {msg.content}
+                    </div>
                   </div>
+                  {msg.role === 'assistant' && msg.showManager && <ManagerContacts />}
                 </div>
               ))
             )}
