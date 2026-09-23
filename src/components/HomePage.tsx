@@ -7,6 +7,7 @@ import SecuritySection from './home/SecuritySection';
 import TestimonialsSection from './home/TestimonialsSection';
 import BrokersSection from './home/BrokersSection';
 import FinalCTASection from './home/FinalCTASection';
+import Footer from './Footer';
 import { api } from '@/services/api';
 import { hasRole } from '@/utils/roles';
 
@@ -129,6 +130,8 @@ const HomePage = ({ investmentObjects, onRegisterClick }: HomePageProps) => {
       />
 
       <FinalCTASection onRegisterClick={onRegisterClick} />
+
+      <Footer />
     </div>
   );
 };
