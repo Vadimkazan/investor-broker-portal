@@ -458,8 +458,13 @@ def handle_objects(cur, method: str, event: Dict[str, Any]) -> Dict[str, Any]:
             return denied
 
         oid = escape_sql(int(object_id))
-        for table in ('object_views', 'favorites', 'inquiries', 'notifications'):
+
+        for table in ('object_views', 'favorites', 'notifications'):
             cur.execute(f"DELETE FROM {table} WHERE object_id = {oid}")
+
+        cur.execute(f"UPDATE inquiries SET object_id = NULL WHERE object_id = {oid}")
+        cur.execute(f"UPDATE crm_conversations SET object_id = NULL WHERE object_id = {oid}")
+
         cur.execute(f"DELETE FROM investment_objects WHERE id = {oid}")
         return success_response({'message': 'Deleted'})
 
