@@ -21,7 +21,7 @@ const GrowthSection = ({ isVisible }: GrowthSectionProps) => {
     },
     {
       icon: 'GraduationCap',
-      title: 'Академия Rielvestor',
+      title: 'Академия AREALVEST',
       description: 'Курсы и вебинары по стратегиям приумножения капитала',
       features: ['Обучение от экспертов', 'Практические кейсы', 'Сертификаты']
     }

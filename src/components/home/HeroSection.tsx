@@ -40,7 +40,7 @@ const HeroSection = ({ dashboardStats, onRegisterClick, scrollToSection }: HeroS
           </p>
           
           <p className="text-base sm:text-lg text-white/80 max-w-2xl mx-auto">
-            Rielvestor — экосистема, где будущие миллионеры встречаются с проверенными брокерами. 
+            AREALVEST — экосистема, где будущие миллионеры встречаются с проверенными брокерами. 
             Начните с малого и масштабируйтесь безопасно.
           </p>
           

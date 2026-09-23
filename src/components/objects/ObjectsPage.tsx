@@ -34,7 +34,7 @@ const ObjectsPage = () => {
   const { data: objects = [], isLoading, error } = useObjects();
 
   useEffect(() => {
-    document.title = 'Каталог объектов для инвестиций - InvestPro';
+    document.title = 'Каталог объектов для инвестиций - AREALVEST';
     loadFiltersFromStorage();
   }, []);
 

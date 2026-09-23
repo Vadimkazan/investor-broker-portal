@@ -87,7 +87,7 @@ const AuthModal = ({ open, onClose, onAuth }: AuthModalProps) => {
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-2xl">Добро пожаловать в InvestPro</DialogTitle>
+          <DialogTitle className="text-2xl">Добро пожаловать в AREALVEST</DialogTitle>
           <DialogDescription>
             Войдите или создайте аккаунт для доступа к платформе
           </DialogDescription>

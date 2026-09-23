@@ -55,7 +55,7 @@ const Header = ({ activeTab, onTabChange, user, onAuthClick, onLogout, onRoleSwi
               <Icon name="TrendingUp" className="text-white" size={22} />
             </div>
             <div className="hidden sm:block">
-              <h1 className="text-xl font-bold">InvestPro</h1>
+              <h1 className="text-xl font-bold">AREALVEST</h1>
               <p className="text-xs text-muted-foreground">Платформа инвестиций в недвижимость</p>
             </div>
           </div>

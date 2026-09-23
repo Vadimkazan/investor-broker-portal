@@ -43,7 +43,7 @@ const ObjectDetailPage = () => {
 
   useEffect(() => {
     if (object) {
-      document.title = `${object.title} - InvestPro`;
+      document.title = `${object.title} - AREALVEST`;
       if (object.brokerId) {
         loadBroker(object.brokerId);
       }
