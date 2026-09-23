@@ -1,5 +1,8 @@
+import { useLocation } from 'react-router-dom';
 import { siTelegram, siWhatsapp, siVk } from 'simple-icons';
 import Icon from '@/components/ui/icon';
+
+const HIDDEN_PREFIXES = ['/admin', '/crm', '/auth'];
 
 const SOCIALS = [
   {
@@ -31,7 +34,12 @@ const SOCIALS = [
 const EMAILS = ['arealvest@ya.ru', 'arealvest@mail.ru'];
 
 const Footer = () => {
+  const { pathname } = useLocation();
   const year = new Date().getFullYear();
+
+  if (HIDDEN_PREFIXES.some((p) => pathname.startsWith(p))) {
+    return null;
+  }
 
   return (
     <footer className="border-t border-border bg-card">

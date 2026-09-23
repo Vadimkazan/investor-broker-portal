@@ -17,6 +17,7 @@ import TelegramCallbackPage from "./pages/TelegramCallbackPage";
 import NotFound from "./pages/NotFound";
 import { AuthProvider } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import Footer from "@/components/Footer";
 import SiteAssistantWidget from "@/components/assistant/SiteAssistantWidget";
 
 const queryClient = new QueryClient({
@@ -52,6 +53,7 @@ const App = () => {
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
+            <Footer />
             <SiteAssistantWidget />
           </BrowserRouter>
         </TooltipProvider>
