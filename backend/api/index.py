@@ -24,9 +24,25 @@ def notify_new_object(object_id: int) -> None:
             headers={'Content-Type': 'application/json'},
             method='POST',
         )
-        urllib.request.urlopen(req, timeout=3)
+        urllib.request.urlopen(req, timeout=0.6)
     except Exception as e:
         print(f"Broadcast trigger failed: {e}")
+
+def send_inquiry_to_crm(payload: dict) -> None:
+    '''Передаёт заявку с сайта в центр общения (не блокирует ответ клиенту)'''
+    crm_url = os.environ.get('CRM_FUNCTION_URL') or 'https://functions.poehali.dev/6355e82d-9e2f-46ae-aff7-9e71c49f4b28'
+    try:
+        import urllib.request
+        req = urllib.request.Request(
+            f"{crm_url}?action=webhook&channel=site",
+            data=json.dumps(payload).encode(),
+            headers={'Content-Type': 'application/json'},
+            method='POST',
+        )
+        urllib.request.urlopen(req, timeout=1.5)
+    except Exception as e:
+        print(f"CRM inquiry forward failed: {e}")
+
 
 def escape_sql(value):
     '''Escape values for Simple Query Protocol'''
@@ -505,6 +521,17 @@ def handle_inquiries(cur, method: str, event: Dict[str, Any]) -> Dict[str, Any]:
         )
         cur.execute(query)
         row = cur.fetchone()
+
+        object_title = None
+        cur.execute(f"SELECT title FROM investment_objects WHERE id = {escape_sql(int(object_id))}")
+        title_row = cur.fetchone()
+        if title_row:
+            object_title = title_row[0]
+
+        send_inquiry_to_crm({
+            'inquiry_id': row[0], 'name': name, 'email': email, 'phone': phone,
+            'message': message, 'object_id': object_id, 'object_title': object_title,
+        })
 
         return success_response({
             'id': row[0], 'objectId': row[1], 'userId': row[2], 'name': row[3], 'email': row[4],

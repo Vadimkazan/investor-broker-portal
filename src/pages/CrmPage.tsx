@@ -6,6 +6,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import ConversationList from '@/components/crm/ConversationList';
 import ConversationView from '@/components/crm/ConversationView';
+import AddClientDialog from '@/components/crm/AddClientDialog';
 import crmApi, { Conversation, ConversationDetail, CrmMessage, Manager } from '@/services/crm';
 
 const CrmPage = () => {
@@ -23,6 +24,8 @@ const CrmPage = () => {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [channelFilter, setChannelFilter] = useState('all');
+  const [addOpen, setAddOpen] = useState(false);
+  const [creating, setCreating] = useState(false);
 
   const loadList = useCallback(async () => {
     try {
@@ -99,6 +102,25 @@ const CrmPage = () => {
     }
   };
 
+  const handleCreate = async (data: Parameters<typeof crmApi.createConversation>[0]) => {
+    setCreating(true);
+    try {
+      const res = await crmApi.createConversation(data);
+      setAddOpen(false);
+      await loadList();
+      select(res.conversationId);
+      toast({ title: res.existing ? 'Такой клиент уже был — открыл его диалог' : 'Клиент добавлен' });
+    } catch (e) {
+      toast({
+        title: 'Не удалось добавить клиента',
+        description: e instanceof Error ? e.message : undefined,
+        variant: 'destructive',
+      });
+    } finally {
+      setCreating(false);
+    }
+  };
+
   const totalUnread = items.reduce((s, c) => s + c.unread, 0);
 
   return (
@@ -115,9 +137,14 @@ const CrmPage = () => {
             </p>
           </div>
         </div>
-        <Button variant="outline" size="sm" onClick={() => { loadList(); if (activeId) loadDetail(activeId); }}>
-          <Icon name="RefreshCw" size={15} className="mr-1" />Обновить
-        </Button>
+        <div className="flex gap-2">
+          <Button size="sm" onClick={() => setAddOpen(true)}>
+            <Icon name="UserPlus" size={15} className="mr-1" />Новый клиент
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => { loadList(); if (activeId) loadDetail(activeId); }}>
+            <Icon name="RefreshCw" size={15} className="mr-1" />Обновить
+          </Button>
+        </div>
       </header>
 
       <div className="flex-1 flex min-h-0">
@@ -145,6 +172,14 @@ const CrmPage = () => {
           onPatch={handlePatch}
         />
       </div>
+
+      <AddClientDialog
+        open={addOpen}
+        managers={managers}
+        saving={creating}
+        onOpenChange={setAddOpen}
+        onCreate={handleCreate}
+      />
     </div>
   );
 };

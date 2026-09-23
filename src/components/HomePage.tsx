@@ -78,8 +78,11 @@ const HomePage = ({ investmentObjects, onRegisterClick }: HomePageProps) => {
 
       const activeObjects = objects.filter(obj => obj.status === 'available').length;
       const totalVolume = objects.reduce((sum, obj) => sum + Number(obj.price), 0);
-      const avgReturn = objects.length > 0
-        ? objects.reduce((sum, obj) => sum + Number(obj.yield_percent), 0) / objects.length
+      const yields = objects
+        .map(obj => Number(obj.yield_percent ?? (obj as { yieldPercent?: number }).yieldPercent))
+        .filter(v => Number.isFinite(v) && v > 0);
+      const avgReturn = yields.length > 0
+        ? yields.reduce((sum, v) => sum + v, 0) / yields.length
         : 0;
       const investorsCount = users.filter(u => hasRole(u, 'investor')).length;
       

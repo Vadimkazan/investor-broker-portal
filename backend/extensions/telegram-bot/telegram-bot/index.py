@@ -292,9 +292,7 @@ def handle_channel_post(post: dict) -> None:
 
 def forward_to_crm(update: dict) -> None:
     """Передаёт обычное сообщение клиента в CRM (не блокирует ответ Telegram)."""
-    crm_url = os.environ.get("CRM_FUNCTION_URL", "")
-    if not crm_url:
-        return
+    crm_url = os.environ.get("CRM_FUNCTION_URL") or "https://functions.poehali.dev/6355e82d-9e2f-46ae-aff7-9e71c49f4b28"
     try:
         import urllib.request
         req = urllib.request.Request(

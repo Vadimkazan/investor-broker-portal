@@ -18,9 +18,14 @@
       "name": "Update user role",
       "method": "PUT",
       "path": "/?resource=users",
-      "body": { "id": 2, "role": "admin" },
+      "body": {
+        "id": 2,
+        "role": "admin"
+      },
       "expectedStatus": 200,
-      "expectedBody": { "role": "admin" },
+      "expectedBody": {
+        "role": "admin"
+      },
       "bodyMatcher": "partial"
     },
     {
@@ -34,16 +39,26 @@
       "name": "Login with correct password",
       "method": "POST",
       "path": "/?resource=auth",
-      "body": { "action": "login", "email": "login.v1@yandex.ru", "password": "933651" },
+      "body": {
+        "action": "login",
+        "email": "login.v1@yandex.ru",
+        "password": "933651"
+      },
       "expectedStatus": 200,
-      "expectedBody": { "role": "admin" },
+      "expectedBody": {
+        "role": "admin"
+      },
       "bodyMatcher": "partial"
     },
     {
       "name": "Login with wrong password",
       "method": "POST",
       "path": "/?resource=auth",
-      "body": { "action": "login", "email": "login.v1@yandex.ru", "password": "wrongpass" },
+      "body": {
+        "action": "login",
+        "email": "login.v1@yandex.ru",
+        "password": "wrongpass"
+      },
       "expectedStatus": 401,
       "bodyMatcher": "partial"
     },
@@ -63,7 +78,9 @@
         "timeline": []
       },
       "expectedStatus": 201,
-      "expectedBody": { "stage": "lead" },
+      "expectedBody": {
+        "stage": "lead"
+      },
       "bodyMatcher": "partial"
     },
     {
@@ -92,7 +109,9 @@
         "status": "available"
       },
       "expectedStatus": 201,
-      "expectedBody": { "title": "Тестовый объект" },
+      "expectedBody": {
+        "title": "Тестовый объект"
+      },
       "bodyMatcher": "partial"
     },
     {
@@ -100,21 +119,23 @@
       "method": "POST",
       "path": "/?resource=inquiries",
       "body": {
-        "object_id": 23,
-        "user_id": 3,
+        "object_id": 43,
+        "user_id": 2,
         "name": "Тест Инвестор",
         "email": "test.inv@example.com",
         "phone": "+70000000000",
         "message": "Интересует объект"
       },
       "expectedStatus": 201,
-      "expectedBody": { "name": "Тест Инвестор" },
+      "expectedBody": {
+        "name": "Тест Инвестор"
+      },
       "bodyMatcher": "partial"
     },
     {
       "name": "Get inquiries by user",
       "method": "GET",
-      "path": "/?resource=inquiries&user_id=3",
+      "path": "/?resource=inquiries&user_id=2",
       "expectedStatus": 200,
       "bodyMatcher": "partial"
     },
@@ -122,15 +143,21 @@
       "name": "Create object view",
       "method": "POST",
       "path": "/?resource=views",
-      "body": { "user_id": 3, "object_id": 23 },
+      "body": {
+        "user_id": 2,
+        "object_id": 43
+      },
       "expectedStatus": 201,
-      "expectedBody": { "userId": 3, "objectId": 23 },
+      "expectedBody": {
+        "userId": 2,
+        "objectId": 43
+      },
       "bodyMatcher": "partial"
     },
     {
       "name": "Get views by user",
       "method": "GET",
-      "path": "/?resource=views&user_id=3",
+      "path": "/?resource=views&user_id=2",
       "expectedStatus": 200,
       "bodyMatcher": "partial"
     }

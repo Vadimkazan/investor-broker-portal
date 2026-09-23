@@ -7,6 +7,8 @@ import { Conversation, STATUS_LABELS } from '@/services/crm';
 const CHANNEL_ICON: Record<string, string> = {
   telegram: 'Send',
   max: 'MessageCircle',
+  site: 'Globe',
+  manual: 'User',
 };
 
 const STATUS_STYLE: Record<string, string> = {
@@ -66,6 +68,8 @@ const ConversationList = ({
             <SelectItem value="all">Все каналы</SelectItem>
             <SelectItem value="telegram">Telegram</SelectItem>
             <SelectItem value="max">MAX</SelectItem>
+            <SelectItem value="site">Заявки с сайта</SelectItem>
+            <SelectItem value="manual">Добавленные вручную</SelectItem>
           </SelectContent>
         </Select>
       </div>

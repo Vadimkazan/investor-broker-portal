@@ -26,7 +26,9 @@ CORS = {
     'Content-Type': 'application/json',
 }
 
-CHANNEL_LABELS = {'telegram': 'Telegram', 'max': 'MAX'}
+CHANNEL_LABELS = {'telegram': 'Telegram', 'max': 'MAX', 'site': 'Заявка с сайта', 'manual': 'Добавлен вручную'}
+
+SENDABLE_CHANNELS = ('telegram', 'max')
 
 
 def esc(value):
@@ -244,7 +246,10 @@ def handle_reply(cur, body) -> Dict[str, Any]:
     elif channel == 'max':
         ok, info = send_max(external_id, text)
     else:
-        ok, info = False, f'Канал {channel} не поддерживается'
+        ok, info = False, (
+            'В этот диалог нельзя написать из системы — у клиента нет привязанного мессенджера. '
+            'Свяжитесь по телефону или email, а результат запишите в заметку.'
+        )
 
     status = 'sent' if ok else 'failed'
     error = None if ok else info
@@ -303,6 +308,58 @@ def handle_update(cur, body) -> Dict[str, Any]:
     return resp(200, {'message': 'Обновлено'})
 
 
+def handle_create(cur, body) -> Dict[str, Any]:
+    """Ручное добавление клиента менеджером."""
+    name = (body.get('display_name') or '').strip()
+    if not name:
+        return resp(400, {'error': 'Укажите имя клиента'})
+
+    phone = (body.get('phone') or '').strip()
+    email = (body.get('email') or '').strip()
+    note = (body.get('note') or '').strip()
+    channel = body.get('channel') or 'manual'
+    telegram_id = (body.get('telegram_id') or '').strip()
+    assignee_id = body.get('assignee_id')
+
+    if channel == 'telegram' and telegram_id:
+        external_id = telegram_id
+    elif channel == 'max' and telegram_id:
+        external_id = telegram_id
+    else:
+        channel = 'manual'
+        external_id = f"manual-{phone or email or name}"
+
+    cur.execute(
+        f"SELECT id FROM crm_conversations WHERE channel = {esc(channel)} "
+        f"AND external_id = {esc(external_id)}"
+    )
+    existing = cur.fetchone()
+    if existing:
+        return resp(200, {'conversationId': existing[0], 'existing': True})
+
+    cur.execute(
+        f"INSERT INTO crm_contacts (display_name, phone, email, note) VALUES "
+        f"({esc(name)}, {esc(phone or None)}, {esc(email or None)}, {esc(note or None)}) RETURNING id"
+    )
+    contact_id = cur.fetchone()[0]
+
+    cur.execute(
+        f"INSERT INTO crm_conversations (contact_id, channel, external_id, status, assignee_id, "
+        f"last_message_text, last_message_at) VALUES ({contact_id}, {esc(channel)}, {esc(external_id)}, "
+        f"'new', {int(assignee_id) if assignee_id else 'NULL'}, "
+        f"{esc('Клиент добавлен вручную')}, CURRENT_TIMESTAMP) RETURNING id"
+    )
+    conv_id = cur.fetchone()[0]
+
+    if note:
+        cur.execute(
+            f"INSERT INTO crm_messages (conversation_id, direction, body, delivery_status) "
+            f"VALUES ({conv_id}, 'in', {esc(note)}, 'sent')"
+        )
+
+    return resp(201, {'conversationId': conv_id, 'existing': False})
+
+
 def handle_webhook(cur, channel: str, payload: dict) -> Dict[str, Any]:
     if channel == 'telegram':
         msg = payload.get('message') or payload.get('edited_message') or {}
@@ -316,6 +373,45 @@ def handle_webhook(cur, channel: str, payload: dict) -> Dict[str, Any]:
         store_incoming(cur, 'telegram', str(chat_id), chat.get('username'),
                        name, text, str(msg.get('message_id') or ''))
         return resp(200, {'ok': True})
+
+    if channel == 'site':
+        name = (payload.get('name') or '').strip() or 'Заявка с сайта'
+        phone = (payload.get('phone') or '').strip()
+        email = (payload.get('email') or '').strip()
+        object_id = payload.get('object_id')
+        object_title = payload.get('object_title')
+        note = (payload.get('message') or '').strip()
+        inquiry_id = payload.get('inquiry_id')
+
+        external_id = f"inquiry-{inquiry_id}" if inquiry_id else f"site-{phone or email or name}"
+
+        lines = ['Новая заявка с сайта']
+        if object_title:
+            lines.append(f'Объект: {object_title}')
+        if phone:
+            lines.append(f'Телефон: {phone}')
+        if email:
+            lines.append(f'Email: {email}')
+        if note:
+            lines.append(f'Сообщение: {note}')
+        text = '\n'.join(lines)
+
+        conv_id = store_incoming(cur, 'site', external_id, None, name, text, str(inquiry_id or ''))
+
+        sets = []
+        if phone:
+            sets.append(f"phone = {esc(phone)}")
+        if email:
+            sets.append(f"email = {esc(email)}")
+        if sets:
+            cur.execute(
+                f"UPDATE crm_contacts SET {', '.join(sets)} "
+                f"WHERE id = (SELECT contact_id FROM crm_conversations WHERE id = {conv_id})"
+            )
+        if object_id:
+            cur.execute(f"UPDATE crm_conversations SET object_id = {int(object_id)} WHERE id = {conv_id}")
+
+        return resp(200, {'ok': True, 'conversationId': conv_id})
 
     if channel == 'max':
         msg = (payload.get('message') or {})
@@ -367,6 +463,8 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             return handle_reply(cur, body)
         if action == 'update' and method in ('POST', 'PUT'):
             return handle_update(cur, body)
+        if action == 'create' and method == 'POST':
+            return handle_create(cur, body)
         if action == 'webhook' and method == 'POST':
             return handle_webhook(cur, params.get('channel', 'telegram'), body)
         if action == 'managers':

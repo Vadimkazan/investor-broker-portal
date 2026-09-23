@@ -16,20 +16,78 @@
       "name": "Приём входящего из Telegram",
       "method": "POST",
       "path": "/?action=webhook&channel=telegram",
-      "body": {"message": {"message_id": 1, "chat": {"id": 999000111, "first_name": "Тест", "username": "testuser"}, "text": "Здравствуйте, интересует объект"}},
+      "body": {
+        "message": {
+          "message_id": 1,
+          "chat": {
+            "id": 999000111,
+            "first_name": "Тест",
+            "username": "testuser"
+          },
+          "text": "Здравствуйте, интересует объект"
+        }
+      },
       "expectedStatus": 200
     },
     {
       "name": "Приём входящего из MAX",
       "method": "POST",
       "path": "/?action=webhook&channel=max",
-      "body": {"message": {"sender": {"user_id": 555000, "name": "Тест MAX"}, "recipient": {"chat_id": 555000}, "body": {"mid": "m1", "text": "Добрый день"}}},
+      "body": {
+        "message": {
+          "sender": {
+            "user_id": 555000,
+            "name": "Тест MAX"
+          },
+          "recipient": {
+            "chat_id": 555000
+          },
+          "body": {
+            "mid": "m1",
+            "text": "Добрый день"
+          }
+        }
+      },
       "expectedStatus": 200
     },
     {
       "name": "Неизвестное действие",
       "method": "GET",
       "path": "/?action=nope",
+      "expectedStatus": 400
+    },
+    {
+      "name": "Заявка с сайта в CRM",
+      "method": "POST",
+      "path": "/?action=webhook&channel=site",
+      "body": {
+        "inquiry_id": 999001,
+        "name": "Иван Тестов",
+        "phone": "+79001112233",
+        "email": "t@t.ru",
+        "message": "Хочу узнать детали",
+        "object_title": "ЖК Тест"
+      },
+      "expectedStatus": 200
+    },
+    {
+      "name": "Ручное добавление клиента",
+      "method": "POST",
+      "path": "/?action=create",
+      "body": {
+        "display_name": "Пётр Ручной",
+        "phone": "+79005556677",
+        "note": "Звонил по телефону"
+      },
+      "expectedStatus": 201
+    },
+    {
+      "name": "Добавление без имени",
+      "method": "POST",
+      "path": "/?action=create",
+      "body": {
+        "phone": "+79000000000"
+      },
       "expectedStatus": 400
     }
   ]

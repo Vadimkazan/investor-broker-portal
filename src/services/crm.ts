@@ -88,6 +88,21 @@ export const crmApi = {
     });
   },
 
+  createConversation(data: {
+    display_name: string;
+    phone?: string;
+    email?: string;
+    note?: string;
+    channel?: string;
+    telegram_id?: string;
+    assignee_id?: number | null;
+  }) {
+    return call<{ conversationId: number; existing: boolean }>('?action=create', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
   getManagers() {
     return call<Manager[]>('?action=managers');
   },
