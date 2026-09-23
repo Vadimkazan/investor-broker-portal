@@ -306,8 +306,12 @@ const EditObjectPage = () => {
                 value={formData.description}
                 onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                 required
-                rows={5}
+                rows={10}
+                className="min-h-[220px]"
               />
+              <p className="text-xs text-muted-foreground">
+                Пустая строка — новый абзац, строка с дефиса — пункт списка.
+              </p>
             </div>
 
             <div className="space-y-2">

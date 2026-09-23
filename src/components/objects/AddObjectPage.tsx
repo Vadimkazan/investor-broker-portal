@@ -199,9 +199,13 @@ const AddObjectPage = () => {
                 value={formData.description}
                 onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                 required
-                placeholder="Подробное описание объекта..."
-                rows={5}
+                placeholder={'Подробное описание объекта.\n\nПустая строка начинает новый абзац.\nСтрока, начинающаяся с дефиса, станет пунктом списка:\n- круглосуточное видеонаблюдение\n- тёплый паркинг'}
+                rows={10}
+                className="min-h-[220px]"
               />
+              <p className="text-xs text-muted-foreground">
+                Абзацы и списки сохранятся так, как вы их набрали.
+              </p>
             </div>
 
             <div className="space-y-2">

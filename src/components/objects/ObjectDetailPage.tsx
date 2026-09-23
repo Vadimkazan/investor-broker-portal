@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import Icon from '@/components/ui/icon';
 import Header from '@/components/Header';
+import ObjectDescription from '@/components/objects/ObjectDescription';
 import ObjectChatWidget from './ObjectChatWidget';
 import { Broker } from '@/types/investment-object';
 import { useObject } from '@/hooks/useObjects';
@@ -380,11 +381,12 @@ const ObjectDetailPage = () => {
 
                     <div>
                       <h2 className="text-xl font-semibold mb-3">Описание</h2>
-                      <p className="text-muted-foreground leading-relaxed">
-                        {object.description || `Отличная инвестиционная возможность в ${object.city}. 
-                        Объект расположен в развивающемся районе с хорошей инфраструктурой.
-                        Высокая доходность ${object.yield}% годовых делает это предложение особенно привлекательным.`}
-                      </p>
+                      <ObjectDescription
+                        text={
+                          object.description ||
+                          `Отличная инвестиционная возможность в ${object.city}.\nОбъект расположен в развивающемся районе с хорошей инфраструктурой.\nВысокая доходность ${object.yield}% годовых делает это предложение особенно привлекательным.`
+                        }
+                      />
                     </div>
                   </div>
                 </div>
