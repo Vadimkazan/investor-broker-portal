@@ -51,9 +51,11 @@ const Header = ({ activeTab, onTabChange, user, onAuthClick, onLogout, onRoleSwi
       <div className="container mx-auto px-4 sm:px-6 py-3 sm:py-4">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 sm:gap-3 cursor-pointer flex-shrink-0" onClick={() => onTabChange('home')}>
-            <div className="w-9 h-9 sm:w-10 sm:h-10 bg-gradient-to-br from-primary to-secondary rounded-lg flex items-center justify-center flex-shrink-0">
-              <Icon name="TrendingUp" className="text-white" size={22} />
-            </div>
+            <img
+              src="/logo-av.png"
+              alt="AREALVEST"
+              className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg object-cover flex-shrink-0"
+            />
             <div className="hidden sm:block">
               <h1 className="text-xl font-bold">AREALVEST</h1>
               <p className="text-xs text-muted-foreground">Платформа инвестиций в недвижимость</p>
