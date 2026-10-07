@@ -1,0 +1,1 @@
+{"tests": [{"name": "Sitemap xml", "method": "GET", "path": "/", "expectedStatus": 200}]}
