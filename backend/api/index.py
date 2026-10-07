@@ -11,6 +11,28 @@ def hash_password(password: str) -> str:
 def verify_password(password: str, password_hash: str) -> bool:
     return hmac.compare_digest(hash_password(password), password_hash)
 
+def ping_indexnow(object_id: int) -> None:
+    '''Сообщает поисковикам (IndexNow) о новой или изменённой странице объекта'''
+    site = 'https://xn--80aagkc8a6anj.xn--p1ai'
+    key = '823c3232c9c2457b9bc0593762528061'
+    try:
+        import urllib.request
+        payload = {
+            'host': 'xn--80aagkc8a6anj.xn--p1ai',
+            'key': key,
+            'keyLocation': f"{site}/{key}.txt",
+            'urlList': [f"{site}/objects/{object_id}", f"{site}/objects", f"{site}/"],
+        }
+        req = urllib.request.Request(
+            'https://yandex.com/indexnow',
+            data=json.dumps(payload).encode(),
+            headers={'Content-Type': 'application/json; charset=utf-8'},
+            method='POST',
+        )
+        urllib.request.urlopen(req, timeout=1.5)
+    except Exception as e:
+        print(f"IndexNow ping failed: {e}")
+
 def notify_new_object(object_id: int) -> None:
     '''Отправляет подписчикам уведомление о новом объекте (не блокирует ответ)'''
     bot_url = os.environ.get('TELEGRAM_BOT_FUNCTION_URL', '')
@@ -406,6 +428,7 @@ def handle_objects(cur, method: str, event: Dict[str, Any]) -> Dict[str, Any]:
 
         if body.get('status', 'available') == 'available':
             notify_new_object(new_id)
+            ping_indexnow(new_id)
 
         return success_response(result, 201)
 
@@ -432,7 +455,8 @@ def handle_objects(cur, method: str, event: Dict[str, Any]) -> Dict[str, Any]:
                 payback_years = {escape_sql(body.get('payback_years'))},
                 description = {escape_sql(body.get('description'))},
                 images = ARRAY(SELECT json_array_elements_text({images_json}::json)),
-                status = {escape_sql(body.get('status'))}
+                status = {escape_sql(body.get('status'))},
+                updated_at = CURRENT_TIMESTAMP
             WHERE id = {escape_sql(int(object_id))}
         """
         cur.execute(query)
@@ -445,7 +469,9 @@ def handle_objects(cur, method: str, event: Dict[str, Any]) -> Dict[str, Any]:
             LEFT JOIN users u ON o.broker_id = u.id
             WHERE o.id = {escape_sql(int(object_id))}
         """)
-        return success_response(format_object_with_broker(cur.fetchone()))
+        updated = format_object_with_broker(cur.fetchone())
+        ping_indexnow(int(object_id))
+        return success_response(updated)
 
     elif method == 'DELETE':
         params = event.get('queryStringParameters') or {}
