@@ -11,8 +11,10 @@ import { useObjects } from '@/hooks/useObjects';
 import { useAuth } from '@/contexts/AuthContext';
 import ImportObjectsExcel from '@/components/broker/ImportObjectsExcel';
 import { canPublishObjects } from '@/utils/roles';
+import { useCatalogSeo } from '@/hooks/useCatalogSeo';
 
 const ObjectsPage = () => {
+  useCatalogSeo();
   const navigate = useNavigate();
   const { user, switchRole } = useAuth();
   const [importing, setImporting] = useState(false);
@@ -34,14 +36,6 @@ const ObjectsPage = () => {
   const { data: objects = [], isLoading, error } = useObjects();
 
   useEffect(() => {
-    document.title = 'Купить инвестиционную недвижимость — каталог объектов | AREALVEST';
-    const tag = document.querySelector('meta[name="description"]');
-    if (tag) {
-      tag.setAttribute(
-        'content',
-        'Каталог инвестиционных объектов недвижимости AREALVEST: квартиры, коммерция, парковки, кладовые и земельные участки. Фильтры по цене, доходности и сроку окупаемости — выберите объект для пассивного дохода.',
-      );
-    }
     loadFiltersFromStorage();
   }, []);
 
