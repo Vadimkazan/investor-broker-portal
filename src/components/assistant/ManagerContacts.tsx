@@ -4,6 +4,7 @@ import Icon from '@/components/ui/icon';
 export const MANAGER_CONTACTS = [
   {
     name: 'Telegram',
+    goal: 'manager_telegram',
     label: 'Написать менеджеру',
     href: 'https://t.me/arealvest_assistant',
     path: siTelegram.path,
@@ -12,6 +13,7 @@ export const MANAGER_CONTACTS = [
   },
   {
     name: 'MAX',
+    goal: 'manager_max',
     label: 'Написать менеджеру',
     href: 'https://max.ru/u/f9LHodD0cOLmcwSp8VF8tJ5k2fPBnUPrrsMtEemSj5aLbTR1NP83ggAFsqk',
     path: null,
@@ -20,6 +22,7 @@ export const MANAGER_CONTACTS = [
   },
   {
     name: 'WhatsApp',
+    goal: 'manager_whatsapp',
     label: 'Написать менеджеру',
     href: 'https://api.whatsapp.com/send?phone=79959007300',
     path: siWhatsapp.path,
@@ -28,6 +31,7 @@ export const MANAGER_CONTACTS = [
   },
   {
     name: 'Позвонить',
+    goal: 'manager_call',
     label: '+7 995 900 7300',
     href: 'tel:+79959007300',
     path: null,
@@ -36,6 +40,11 @@ export const MANAGER_CONTACTS = [
     external: false,
   },
 ];
+
+const trackGoal = (goal: string) => {
+  const ym = (window as unknown as { ym?: (...args: unknown[]) => void }).ym;
+  if (typeof ym === 'function') ym(113536912, 'reachGoal', goal);
+};
 
 interface ManagerContactsProps {
   title?: string;
@@ -52,6 +61,7 @@ const ManagerContacts = ({
           <a
             key={c.name}
             href={c.href}
+            onClick={() => trackGoal(c.goal)}
             {...(c.external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
             className="flex items-center gap-3 rounded-md border bg-background px-3 py-2 transition-colors hover:border-primary/40 hover:bg-accent"
           >
