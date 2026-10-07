@@ -17,6 +17,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { api } from '@/services/api';
 import { useToast } from '@/hooks/use-toast';
 import { formatPrice } from '@/utils/formatPrice';
+import { useObjectSeo } from '@/hooks/useObjectSeo';
 
 const ObjectDetailPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -30,6 +31,7 @@ const ObjectDetailPage = () => {
   const addToFavorites = useAddToFavorites();
   const removeFromFavorites = useRemoveFromFavorites();
   
+  useObjectSeo(object);
   const [broker, setBroker] = useState<Broker | null>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [submitting, setSubmitting] = useState(false);
@@ -44,26 +46,6 @@ const ObjectDetailPage = () => {
 
   useEffect(() => {
     if (object) {
-      const priceText = object.price ? `${formatPrice(object.price)}` : '';
-      const yieldText = object.yield ? `, доходность ${object.yield}% годовых` : '';
-      document.title = `${object.title}${priceText ? ` — ${priceText}` : ''} | AREALVEST`;
-
-      const parts = [
-        `${object.title} в городе ${object.city}, ${object.address}.`,
-        priceText ? `Цена ${priceText}.` : '',
-        object.area ? `Площадь ${object.area} м².` : '',
-        yieldText ? `Ожидаемая${yieldText}.` : '',
-        'Инвестиционный объект на платформе AREALVEST.',
-      ].filter(Boolean);
-
-      let tag = document.querySelector('meta[name="description"]');
-      if (!tag) {
-        tag = document.createElement('meta');
-        tag.setAttribute('name', 'description');
-        document.head.appendChild(tag);
-      }
-      tag.setAttribute('content', parts.join(' '));
-
       if (object.brokerId) {
         loadBroker(object.brokerId);
       }
