@@ -1,4 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useNavigate } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import Icon from '@/components/ui/icon';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
@@ -20,6 +22,22 @@ const CalculatorPage = ({
   onPeriodChange,
   onReturnChange
 }: CalculatorPageProps) => {
+  const navigate = useNavigate();
+
+  const handleFindObjects = () => {
+    let saved: Record<string, unknown> = {};
+    try {
+      saved = JSON.parse(localStorage.getItem('object-filters') || '{}');
+    } catch {
+      saved = {};
+    }
+    localStorage.setItem(
+      'object-filters',
+      JSON.stringify({ ...saved, priceRange: [0, investmentAmount] })
+    );
+    navigate('/objects');
+  };
+
   const calculateROI = () => {
     const monthlyRate = expectedReturn / 100 / 12;
     const totalAmount = investmentAmount * Math.pow(1 + monthlyRate, investmentPeriod);
@@ -127,6 +145,10 @@ const CalculatorPage = ({
                 <span className="text-muted-foreground">ROI</span>
                 <span className="text-lg font-semibold">{roi.roi}%</span>
               </div>
+              <Button className="w-full mt-2" onClick={handleFindObjects}>
+                <Icon name="Search" size={18} className="mr-2" />
+                Подобрать объекты под эту сумму
+              </Button>
             </div>
           </CardContent>
         </Card>
