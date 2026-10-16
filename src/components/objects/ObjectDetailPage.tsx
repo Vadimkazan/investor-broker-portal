@@ -421,6 +421,17 @@ const ObjectDetailPage = () => {
                   </div>
 
                   <div className="space-y-2">
+                    {!broker.phone && !broker.email && (
+                      <div className="rounded-lg bg-muted p-3 space-y-3">
+                        <p className="text-sm text-muted-foreground">Контакты доступны вашему брокеру</p>
+                        <Button
+                          className="w-full"
+                          onClick={() => document.getElementById('inquiry-form')?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
+                        >
+                          Оставить заявку
+                        </Button>
+                      </div>
+                    )}
                     {broker.phone && (
                       <Button variant="outline" className="w-full justify-start" asChild>
                         <a href={`tel:${broker.phone}`}>
@@ -444,7 +455,7 @@ const ObjectDetailPage = () => {
 
             <ObjectChatWidget object={object} />
 
-            <Card>
+            <Card id="inquiry-form">
               <CardHeader>
                 <CardTitle>Оставить заявку</CardTitle>
               </CardHeader>
