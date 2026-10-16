@@ -240,6 +240,27 @@ const ObjectsPage = () => {
       
       <div className="container mx-auto px-4 pt-20 pb-8">
         <PageBreadcrumbs items={[{ name: 'Главная', path: '/' }, { name: 'Каталог' }]} />
+        {Number(localStorage.getItem('calculator-price-filter')) === filters.priceRange[1] && filters.priceRange[1] < 500000000 && (
+          <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-primary/30 bg-primary/10 px-4 py-3">
+            <div className="flex items-center gap-2 text-sm sm:text-base">
+              <Icon name="Calculator" size={20} className="text-primary" />
+              <span>
+                Подобрано под сумму <span className="font-semibold">{filters.priceRange[1].toLocaleString('ru-RU')} ₽</span>
+              </span>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                localStorage.removeItem('calculator-price-filter');
+                setFilters({ ...filters, priceRange: [0, 500000000] });
+              }}
+            >
+              <Icon name="X" size={16} className="mr-1" />
+              Сбросить
+            </Button>
+          </div>
+        )}
         <div className="mb-8 flex flex-col lg:flex-row lg:justify-between lg:items-center gap-4">
           <div>
             <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-2 sm:mb-4">Инвестиционные объекты</h1>

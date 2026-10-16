@@ -35,6 +35,7 @@ const CalculatorPage = ({
       'object-filters',
       JSON.stringify({ ...saved, priceRange: [0, investmentAmount] })
     );
+    localStorage.setItem('calculator-price-filter', String(investmentAmount));
     navigate('/objects');
   };
 
