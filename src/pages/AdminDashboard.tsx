@@ -12,6 +12,7 @@ import AdminStatsCards from '@/components/admin/AdminStatsCards';
 import AdminUsersTab from '@/components/admin/AdminUsersTab';
 import AdminObjectsTab from '@/components/admin/AdminObjectsTab';
 import AdminAnalyticsTab from '@/components/admin/AdminAnalyticsTab';
+import AdminBrokerRequestsTab from '@/components/admin/AdminBrokerRequestsTab';
 import AdminBroadcastTab from '@/components/admin/AdminBroadcastTab';
 import { hasRole } from '@/utils/roles';
 
@@ -184,9 +185,12 @@ const AdminDashboard = () => {
         <AdminStatsCards stats={stats} />
 
         <Tabs defaultValue="users">
-          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4">
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-5">
             <TabsTrigger value="users">
               <Icon name="Users" size={15} className="mr-2" />Пользователи ({users.length})
+            </TabsTrigger>
+            <TabsTrigger value="requests">
+              <Icon name="BadgeCheck" size={15} className="mr-2" />Заявки ({users.filter((u) => u.broker_status === 'pending' && u.cert_file_url).length})
             </TabsTrigger>
             <TabsTrigger value="objects">
               <Icon name="Building" size={15} className="mr-2" />Объекты ({objects.length})
@@ -209,6 +213,10 @@ const AdminDashboard = () => {
               onChangeRoles={handleChangeRoles}
               onDeleteClick={setDeleteConfirm}
             />
+          </TabsContent>
+
+          <TabsContent value="requests" className="space-y-4 mt-4">
+            <AdminBrokerRequestsTab users={users} onChanged={loadData} />
           </TabsContent>
 
           <TabsContent value="objects" className="space-y-4 mt-4">

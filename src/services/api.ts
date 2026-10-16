@@ -212,6 +212,8 @@ class ApiClient {
     roles: UserRole[];
     broker_id: number | null;
     cert_course: string;
+    broker_status: 'approved' | 'rejected';
+    cert_review_comment: string | null;
     cert_date: string;
     cert_number: string;
     cert_file_url: string;

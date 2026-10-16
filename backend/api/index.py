@@ -324,6 +324,16 @@ def handle_users(cur, method: str, event: Dict[str, Any]) -> Dict[str, Any]:
             if f in body:
                 fields.append(f"{f} = {escape_sql(body[f])}")
 
+        if 'broker_status' in body:
+            reviewer = get_actor(cur, event)
+            if not reviewer or not is_privileged(reviewer):
+                return error_response('Проверять заявки может только администратор', 403)
+            if body['broker_status'] not in ('approved', 'rejected'):
+                return error_response('Invalid broker_status', 400)
+            fields.append(f"broker_status = {escape_sql(body['broker_status'])}")
+            comment = body.get('cert_review_comment') if body['broker_status'] == 'rejected' else None
+            fields.append(f"cert_review_comment = {escape_sql(comment)}")
+
         if body.get('cert_file_url') and body.get('cert_course') and body.get('cert_date') and body.get('cert_number'):
             cur.execute(f"SELECT broker_status FROM users WHERE id = {escape_sql(int(user_id))}")
             cur_row = cur.fetchone()
