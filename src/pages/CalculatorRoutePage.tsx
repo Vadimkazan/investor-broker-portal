@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
 import CalculatorPage from '@/components/CalculatorPage';
+import CalculatorInfoSection from '@/components/calculator/CalculatorInfoSection';
 import PageBreadcrumbs from '@/components/objects/PageBreadcrumbs';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -85,6 +86,7 @@ const CalculatorRoutePage = () => {
           onPeriodChange={setInvestmentPeriod}
           onReturnChange={setExpectedReturn}
         />
+        <CalculatorInfoSection />
       </div>
     </div>
   );
