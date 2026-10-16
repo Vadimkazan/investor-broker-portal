@@ -89,7 +89,7 @@ const HomePage = ({ investmentObjects, onRegisterClick }: HomePageProps) => {
       
       setDashboardStats([
         { label: 'Активных объектов', value: activeObjects.toString(), change: `${objects.length} всего`, icon: 'Building2', color: 'text-primary' },
-        { label: 'Общий объем', value: `₽${(totalVolume / 1_000_000_000).toFixed(1)} млрд`, change: '+8.3%', icon: 'TrendingUp', color: 'text-secondary' },
+        { label: 'Общий объем', value: `${Math.round(totalVolume).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ')} ₽`, change: '+8.3%', icon: 'TrendingUp', color: 'text-secondary' },
         { label: 'Средняя доходность', value: `${avgReturn.toFixed(1)}%`, change: 'годовых', icon: 'Percent', color: 'text-primary' },
         { label: 'Инвесторов', value: investorsCount.toString(), change: `${users.length} всего`, icon: 'Users', color: 'text-secondary' }
       ]);
