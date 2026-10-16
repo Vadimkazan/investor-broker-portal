@@ -41,7 +41,7 @@ def handler(event: dict, context) -> dict:
     cur = conn.cursor()
     cur.execute(
         f"SELECT o.id, o.title, o.city, o.address, o.property_type, o.area, o.price, "
-        f"o.description, o.images, to_char(o.created_at, 'YYYY-MM-DD\"T\"HH24:MI:SS+00:00'), "
+        f"o.description, o.images, o.payback_years, to_char(o.created_at, 'YYYY-MM-DD\"T\"HH24:MI:SS+00:00'), "
         f"to_char(COALESCE(o.updated_at, o.created_at), 'YYYY-MM-DD\"T\"HH24:MI:SS+00:00'), "
         f"u.name, u.phone "
         f"FROM {SCHEMA}.investment_objects o "
@@ -57,7 +57,7 @@ def handler(event: dict, context) -> dict:
     xml += '<realty-feed xmlns="http://webmaster.yandex.ru/schemas/feed/realty/2010-06">\n'
     xml += f"  <generation-date>{now}</generation-date>\n"
 
-    for (oid, title, city, address, ptype, area, price, desc, images,
+    for (oid, title, city, address, ptype, area, price, desc, images, payback,
          created, updated, broker_name, broker_phone) in rows:
         commercial = ptype in COMMERCIAL
         xml += f'  <offer internal-id="{oid}">\n'
@@ -85,7 +85,12 @@ def handler(event: dict, context) -> dict:
             xml += f"      <area>\n        <value>{float(area)}</value>\n        <unit>кв. м</unit>\n      </area>\n"
         for img in (images or [])[:20]:
             xml += tag('image', img)
-        xml += tag('description', desc or title)
+        text = desc or title or ''
+        if payback:
+            years = float(payback)
+            years_str = str(int(years)) if years == int(years) else str(years).replace('.', ',')
+            text = f"{text}\n\nСрок окупаемости: {years_str} лет.".strip()
+        xml += tag('description', text)
         xml += '  </offer>\n'
 
     xml += '</realty-feed>\n'

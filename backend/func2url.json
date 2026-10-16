@@ -7,6 +7,8 @@
   "telegram-bot-telegram-bot": "https://functions.poehali.dev/0db3f807-568e-4315-90c1-bc467c92575b",
   "chatgpt-polza-chatgpt": "https://functions.poehali.dev/9900f4e9-9b8a-4671-9500-d2d0019e24b4",
   "import-objects-excel": "https://functions.poehali.dev/704cf8b2-42c2-4835-aa8e-ad16b91f60f0",
+  "import-sheets": "https://functions.poehali.dev/e865a471-57fb-43e5-a1fb-3f259c247580",
+  "users": "https://functions.poehali.dev/8fa7915b-2477-4216-a766-2d8d39c34a78",
   "upload": "https://functions.poehali.dev/c8226cd3-1426-487a-8f8f-0b22ed0be84e",
   "api": "https://functions.poehali.dev/fc00dc4e-18bf-4893-bb9d-331e8abda973"
 }
