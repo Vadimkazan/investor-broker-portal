@@ -12,6 +12,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import ImportObjectsExcel from '@/components/broker/ImportObjectsExcel';
 import { canPublishObjects } from '@/utils/roles';
 import { useCatalogSeo } from '@/hooks/useCatalogSeo';
+import PageBreadcrumbs from './PageBreadcrumbs';
 
 const ObjectsPage = () => {
   useCatalogSeo();
@@ -238,6 +239,7 @@ const ObjectsPage = () => {
       />
       
       <div className="container mx-auto px-4 pt-20 pb-8">
+        <PageBreadcrumbs items={[{ name: 'Главная', path: '/' }, { name: 'Каталог' }]} />
         <div className="mb-8 flex flex-col lg:flex-row lg:justify-between lg:items-center gap-4">
           <div>
             <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-2 sm:mb-4">Инвестиционные объекты</h1>

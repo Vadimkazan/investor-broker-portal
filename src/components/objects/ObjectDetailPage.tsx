@@ -18,6 +18,7 @@ import { api } from '@/services/api';
 import { useToast } from '@/hooks/use-toast';
 import { formatPrice } from '@/utils/formatPrice';
 import { useObjectSeo } from '@/hooks/useObjectSeo';
+import PageBreadcrumbs from './PageBreadcrumbs';
 
 const ObjectDetailPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -193,6 +194,13 @@ const ObjectDetailPage = () => {
       />
       
       <div className="container mx-auto px-4 pt-20 pb-8">
+        <PageBreadcrumbs
+          items={[
+            { name: 'Главная', path: '/' },
+            { name: 'Каталог', path: '/objects' },
+            { name: object.title, path: `/objects/${object.id}` },
+          ]}
+        />
         <Button 
           variant="ghost" 
           className="mb-4"
