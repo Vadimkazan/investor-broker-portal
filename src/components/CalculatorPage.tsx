@@ -1,6 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { toast } from '@/hooks/use-toast';
 import { Slider } from '@/components/ui/slider';
 import Icon from '@/components/ui/icon';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
@@ -37,6 +38,16 @@ const CalculatorPage = ({
     );
     localStorage.setItem('calculator-price-filter', String(investmentAmount));
     navigate('/objects');
+  };
+
+  const handleShare = async () => {
+    const url = `${window.location.origin}/calculator?sum=${investmentAmount}&term=${investmentPeriod}&rate=${expectedReturn}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      toast({ title: 'Ссылка скопирована' });
+    } catch {
+      window.prompt('Скопируйте ссылку:', url);
+    }
   };
 
   const calculateROI = () => {
@@ -149,6 +160,10 @@ const CalculatorPage = ({
               <Button className="w-full mt-2" onClick={handleFindObjects}>
                 <Icon name="Search" size={18} className="mr-2" />
                 Подобрать объекты под эту сумму
+              </Button>
+              <Button variant="outline" className="w-full mt-2" onClick={handleShare}>
+                <Icon name="Share2" size={18} className="mr-2" />
+                Поделиться ссылкой
               </Button>
             </div>
           </CardContent>

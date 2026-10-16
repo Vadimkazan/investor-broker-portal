@@ -26,12 +26,17 @@ const setMeta = (attr: 'name' | 'property', key: string, content: string) => {
   };
 };
 
+const readParam = (key: string, min: number, max: number, def: number) => {
+  const v = Number(new URLSearchParams(window.location.search).get(key));
+  return Number.isFinite(v) && v >= min && v <= max && v !== 0 ? v : def;
+};
+
 const CalculatorRoutePage = () => {
   const navigate = useNavigate();
   const { user, switchRole } = useAuth();
-  const [investmentAmount, setInvestmentAmount] = useState(1000000);
-  const [investmentPeriod, setInvestmentPeriod] = useState(12);
-  const [expectedReturn, setExpectedReturn] = useState(15);
+  const [investmentAmount, setInvestmentAmount] = useState(() => readParam('sum', 100000, 10000000, 1000000));
+  const [investmentPeriod, setInvestmentPeriod] = useState(() => readParam('term', 6, 600, 12));
+  const [expectedReturn, setExpectedReturn] = useState(() => readParam('rate', 5, 50, 15));
 
   useEffect(() => {
     const prevTitle = document.title;
