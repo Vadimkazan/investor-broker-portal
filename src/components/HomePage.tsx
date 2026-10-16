@@ -42,7 +42,7 @@ const HomePage = ({ investmentObjects, onRegisterClick }: HomePageProps) => {
   const navigate = useNavigate();
   const [dashboardStats, setDashboardStats] = useState<StatItem[]>([
     { label: 'Активных объектов', value: '0', change: '0%', icon: 'Building2', color: 'text-primary' },
-    { label: 'Общий объем', value: '₽0', change: '0%', icon: 'TrendingUp', color: 'text-secondary' },
+    { label: 'Сумма всех объектов в продаже', value: '₽0', change: '0%', icon: 'TrendingUp', color: 'text-secondary' },
     { label: 'Средняя доходность', value: '0%', change: '0%', icon: 'Percent', color: 'text-primary' },
     { label: 'Инвесторов', value: '0', change: '0', icon: 'Users', color: 'text-secondary' }
   ]);
@@ -89,7 +89,7 @@ const HomePage = ({ investmentObjects, onRegisterClick }: HomePageProps) => {
       
       setDashboardStats([
         { label: 'Активных объектов', value: activeObjects.toString(), change: `${objects.length} всего`, icon: 'Building2', color: 'text-primary' },
-        { label: 'Общий объем', value: `${Math.round(totalVolume).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ')} ₽`, change: '+8.3%', icon: 'TrendingUp', color: 'text-secondary' },
+        { label: 'Сумма всех объектов в продаже', value: `${Math.round(totalVolume).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ')} ₽`, change: '+8.3%', icon: 'TrendingUp', color: 'text-secondary' },
         { label: 'Средняя доходность', value: `${avgReturn.toFixed(1)}%`, change: 'годовых', icon: 'Percent', color: 'text-primary' },
         { label: 'Инвесторов', value: investorsCount.toString(), change: `${users.length} всего`, icon: 'Users', color: 'text-secondary' }
       ]);
@@ -97,7 +97,7 @@ const HomePage = ({ investmentObjects, onRegisterClick }: HomePageProps) => {
       console.error('Error loading dashboard stats:', error);
       setDashboardStats([
         { label: 'Активных объектов', value: '8', change: '12 всего', icon: 'Building2', color: 'text-primary' },
-        { label: 'Общий объем', value: '₽2.4 млрд', change: '+8.3%', icon: 'TrendingUp', color: 'text-secondary' },
+        { label: 'Сумма всех объектов в продаже', value: '₽2.4 млрд', change: '+8.3%', icon: 'TrendingUp', color: 'text-secondary' },
         { label: 'Средняя доходность', value: '12.5%', change: 'годовых', icon: 'Percent', color: 'text-primary' },
         { label: 'Инвесторов', value: '2', change: '4 всего', icon: 'Users', color: 'text-secondary' }
       ]);
