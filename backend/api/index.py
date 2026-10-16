@@ -91,6 +91,35 @@ def notify_broker_review(chat_id: str, status: str, comment: Optional[str]) -> N
         print(f"Broker review notify failed: {e}")
 
 
+CONTACT_FIELDS = ('email', 'phone', 'telegram_username', 'telegram_channel', 'youtube_channel', 'vk_group', 'telegram_chat_id')
+
+
+def can_see_broker_contacts(actor: Optional[Dict[str, Any]], broker_id: Optional[int]) -> bool:
+    '''Контакты брокера: админ/менеджер, подтверждённый брокер, сам брокер или его инвестор'''
+    if not actor:
+        return False
+    if is_privileged(actor):
+        return True
+    if actor['id'] == broker_id:
+        return True
+    roles = user_roles(actor)
+    if 'broker' in roles and actor.get('broker_status') == 'approved':
+        return True
+    return broker_id is not None and actor.get('broker_id') == broker_id
+
+
+def mask_user_contacts(data: Dict[str, Any], actor: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    '''Скрывает контакты брокера от тех, кому они не положены'''
+    if 'broker' not in (data.get('roles') or []):
+        return data
+    if can_see_broker_contacts(actor, data.get('id')):
+        return data
+    for f in CONTACT_FIELDS:
+        if f in data:
+            data[f] = None
+    return data
+
+
 def get_actor(cur, event: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     '''Кто совершает действие — читаем из заголовка X-User-Id'''
     headers = {k.lower(): v for k, v in (event.get('headers') or {}).items()}
@@ -98,12 +127,12 @@ def get_actor(cur, event: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     if not str(raw_id).strip().isdigit():
         return None
     cur.execute(
-        f"SELECT id, role, roles, is_admin, broker_status FROM users WHERE id = {escape_sql(int(raw_id))}"
+        f"SELECT id, role, roles, is_admin, broker_status, broker_id FROM users WHERE id = {escape_sql(int(raw_id))}"
     )
     row = cur.fetchone()
     if not row:
         return None
-    return {'id': row[0], 'role': row[1], 'roles': row[2] or [], 'is_admin': bool(row[3]), 'broker_status': row[4]}
+    return {'id': row[0], 'role': row[1], 'roles': row[2] or [], 'is_admin': bool(row[3]), 'broker_status': row[4], 'broker_id': row[5]}
 
 
 def user_roles(actor: Dict[str, Any]) -> set:
@@ -264,7 +293,7 @@ def handle_users(cur, method: str, event: Dict[str, Any]) -> Dict[str, Any]:
             cur.execute(query)
             row = cur.fetchone()
             if row:
-                return success_response(format_user(row))
+                return success_response(mask_user_contacts(format_user(row), get_actor(cur, event)))
             return error_response('User not found', 404)
         
         elif email:
@@ -272,7 +301,7 @@ def handle_users(cur, method: str, event: Dict[str, Any]) -> Dict[str, Any]:
             cur.execute(query)
             row = cur.fetchone()
             if row:
-                return success_response(format_user(row))
+                return success_response(mask_user_contacts(format_user(row), get_actor(cur, event)))
             return error_response('User not found', 404)
         
         else:
@@ -287,7 +316,8 @@ def handle_users(cur, method: str, event: Dict[str, Any]) -> Dict[str, Any]:
             query += " ORDER BY created_at DESC LIMIT 100"
             cur.execute(query)
             rows = cur.fetchall()
-            return success_response([format_user(r) for r in rows])
+            viewer = get_actor(cur, event)
+            return success_response([mask_user_contacts(format_user(r), viewer) for r in rows])
     
     elif method == 'POST':
         body = json.loads(event.get('body', '{}'))
@@ -421,7 +451,7 @@ def handle_objects(cur, method: str, event: Dict[str, Any]) -> Dict[str, Any]:
             cur.execute(query)
             row = cur.fetchone()
             if row:
-                return success_response(format_object_with_broker(row))
+                return success_response(mask_object_broker(format_object_with_broker(row), get_actor(cur, event)))
             return error_response('Object not found', 404)
         
         else:
@@ -435,7 +465,8 @@ def handle_objects(cur, method: str, event: Dict[str, Any]) -> Dict[str, Any]:
             """
             cur.execute(query)
             rows = cur.fetchall()
-            return success_response([format_object_with_broker(r) for r in rows])
+            viewer = get_actor(cur, event)
+            return success_response([mask_object_broker(format_object_with_broker(r), viewer) for r in rows])
 
     elif method == 'POST':
         body = json.loads(event.get('body', '{}'))
@@ -954,6 +985,14 @@ def handle_auth(cur, method: str, event: Dict[str, Any]) -> Dict[str, Any]:
         return success_response(format_user(row))
 
     return error_response('Unknown action', 400)
+
+
+def mask_object_broker(obj: Dict[str, Any], actor: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    broker = obj.get('broker')
+    if broker and not can_see_broker_contacts(actor, broker.get('id')):
+        broker['email'] = None
+        broker['phone'] = None
+    return obj
 
 
 def format_object_with_broker(row) -> Dict[str, Any]:
