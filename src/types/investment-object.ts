@@ -39,6 +39,7 @@ export interface InvestmentObject {
   price: number;
   yield: number;
   paybackPeriod: number;
+  brokerCommission?: number;
   area: number;
   status: ObjectStatus;
   images: string[];

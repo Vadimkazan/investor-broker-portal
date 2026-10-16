@@ -6,6 +6,7 @@ type RawObject = InvestmentObjectDB & {
   propertyType?: string;
   yieldPercent?: number;
   paybackYears?: number;
+  brokerCommission?: number | null;
   createdAt?: string;
   broker?: { id: number; name: string; email: string; phone?: string; city?: string; club?: string };
 };
@@ -21,6 +22,7 @@ export const convertDBObjectToFrontend = (input: InvestmentObjectDB): Investment
     price: obj.price,
     yield: Number(obj.yield_percent ?? obj.yieldPercent ?? 0),
     paybackPeriod: Number(obj.payback_years ?? obj.paybackYears ?? 0),
+    brokerCommission: obj.brokerCommission ?? undefined,
     area: obj.area || 0,
     images: obj.images || [],
     videos: obj.videos || [],

@@ -259,6 +259,12 @@ const BrokerObjectsManager = ({ onAddClick }: BrokerObjectsManagerProps) => {
                         <p className="text-sm text-muted-foreground">Окупаемость</p>
                         <p className="font-semibold">{object.paybackPeriod} лет</p>
                       </div>
+                      {user?.broker_status === 'approved' && object.brokerCommission !== undefined && (
+                        <div>
+                          <p className="text-sm text-muted-foreground">Комиссия брокера</p>
+                          <p className="font-semibold">{object.brokerCommission}%</p>
+                        </div>
+                      )}
                     </div>
 
                     <div className="flex gap-2 flex-wrap">
