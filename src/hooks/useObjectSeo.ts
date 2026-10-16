@@ -90,6 +90,20 @@ export const useObjectSeo = (object: InvestmentObject | undefined) => {
               price: object.price,
               priceCurrency: 'RUB',
               url,
+              ...(object.city || object.address
+                ? {
+                    availableAtOrFrom: {
+                      '@type': 'Place',
+                      name: object.title,
+                      address: {
+                        '@type': 'PostalAddress',
+                        addressCountry: 'RU',
+                        ...(object.city ? { addressLocality: object.city } : {}),
+                        ...(object.address ? { streetAddress: object.address } : {}),
+                      },
+                    },
+                  }
+                : {}),
               availability:
                 object.status === 'available'
                   ? 'https://schema.org/InStock'
