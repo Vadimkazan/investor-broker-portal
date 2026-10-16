@@ -324,6 +324,16 @@ const ObjectDetailPage = () => {
                         </CardContent>
                       </Card>
                     ) : null}
+                    {user?.broker_status === 'approved' && object.brokerCommission !== undefined ? (
+                      <Card>
+                        <CardContent className="p-4 text-center">
+                          <p className="text-sm text-muted-foreground mb-1">Комиссия брокера</p>
+                          <p className="text-xl font-bold">
+                            {object.brokerCommission}%
+                          </p>
+                        </CardContent>
+                      </Card>
+                    ) : null}
                     {object.strategy ? (
                       <Card>
                         <CardContent className="p-4 text-center">
