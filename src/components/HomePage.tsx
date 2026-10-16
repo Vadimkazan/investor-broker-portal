@@ -7,6 +7,7 @@ import SecuritySection from './home/SecuritySection';
 import TestimonialsSection from './home/TestimonialsSection';
 import BrokersSection from './home/BrokersSection';
 import FinalCTASection from './home/FinalCTASection';
+import FaqSection from './home/FaqSection';
 import { api } from '@/services/api';
 import { hasRole } from '@/utils/roles';
 
@@ -127,6 +128,8 @@ const HomePage = ({ investmentObjects, onRegisterClick }: HomePageProps) => {
         isVisible={visibleSections.has('for-brokers')}
         onRegisterClick={onRegisterClick}
       />
+
+      <FaqSection />
 
       <FinalCTASection onRegisterClick={onRegisterClick} />
     </div>
