@@ -132,13 +132,11 @@ def handle_generate(body: dict) -> dict:
         return cors_response(400, {"error": "messages is required"})
 
     model = body.get("model", DEFAULT_MODEL)
-    temperature = body.get("temperature", 0.7)
     max_tokens = body.get("max_tokens")
 
     request_data = {
         "model": model,
         "messages": messages,
-        "temperature": temperature,
     }
 
     if max_tokens:
