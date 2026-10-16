@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import Header from '@/components/Header';
 import HomePage from '@/components/HomePage';
 import CalculatorPage from '@/components/CalculatorPage';
@@ -14,8 +14,18 @@ import { useAuth } from '@/contexts/AuthContext';
 
 const Index = () => {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('home');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState(() => {
+    const tab = searchParams.get('tab');
+    return tab === 'calculator' || tab === 'dashboard' ? tab : 'home';
+  });
   const [isTransitioning, setIsTransitioning] = useState(false);
+
+  useEffect(() => {
+    if (searchParams.has('tab')) {
+      setSearchParams({}, { replace: true });
+    }
+  }, []);
 
   useEffect(() => {
     setIsTransitioning(true);
