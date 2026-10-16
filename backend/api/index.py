@@ -66,6 +66,31 @@ def send_inquiry_to_crm(payload: dict) -> None:
         print(f"CRM inquiry forward failed: {e}")
 
 
+def notify_broker_review(chat_id: str, status: str, comment: Optional[str]) -> None:
+    '''Сообщает брокеру в Telegram о решении по сертификату'''
+    token = os.environ.get('TELEGRAM_BOT_TOKEN', '')
+    if not token or not chat_id:
+        return
+    if status == 'approved':
+        text = 'Ваш сертификат подтверждён. Теперь вы можете публиковать объекты на AREALVEST.'
+    else:
+        text = 'Заявка на подтверждение сертификата отклонена.'
+        if comment:
+            text += f'\nПричина: {comment}'
+        text += '\nИсправьте данные в профиле и отправьте сертификат заново.'
+    try:
+        import urllib.request
+        req = urllib.request.Request(
+            f"https://api.telegram.org/bot{token}/sendMessage",
+            data=json.dumps({'chat_id': chat_id, 'text': text}).encode(),
+            headers={'Content-Type': 'application/json'},
+            method='POST',
+        )
+        urllib.request.urlopen(req, timeout=3)
+    except Exception as e:
+        print(f"Broker review notify failed: {e}")
+
+
 def get_actor(cur, event: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     '''Кто совершает действие — читаем из заголовка X-User-Id'''
     headers = {k.lower(): v for k, v in (event.get('headers') or {}).items()}
@@ -364,6 +389,8 @@ def handle_users(cur, method: str, event: Dict[str, Any]) -> Dict[str, Any]:
         row = cur.fetchone()
         if not row:
             return error_response('User not found', 404)
+        if 'broker_status' in body and row[22]:
+            notify_broker_review(row[22], body['broker_status'], row[30])
         return success_response(format_user(row))
 
     elif method == 'DELETE':
