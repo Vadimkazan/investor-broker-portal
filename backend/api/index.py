@@ -73,12 +73,12 @@ def get_actor(cur, event: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     if not str(raw_id).strip().isdigit():
         return None
     cur.execute(
-        f"SELECT id, role, roles, is_admin FROM users WHERE id = {escape_sql(int(raw_id))}"
+        f"SELECT id, role, roles, is_admin, broker_status FROM users WHERE id = {escape_sql(int(raw_id))}"
     )
     row = cur.fetchone()
     if not row:
         return None
-    return {'id': row[0], 'role': row[1], 'roles': row[2] or [], 'is_admin': bool(row[3])}
+    return {'id': row[0], 'role': row[1], 'roles': row[2] or [], 'is_admin': bool(row[3]), 'broker_status': row[4]}
 
 
 def user_roles(actor: Dict[str, Any]) -> set:
@@ -97,7 +97,10 @@ def is_privileged(actor: Dict[str, Any]) -> bool:
 
 def can_publish(actor: Dict[str, Any]) -> bool:
     '''Выставлять объекты могут только брокеры (и админы/менеджеры)'''
-    return bool(user_roles(actor) & {'broker', 'admin', 'manager'})
+    roles = user_roles(actor)
+    if roles & {'admin', 'manager'}:
+        return True
+    return 'broker' in roles and actor.get('broker_status') == 'approved'
 
 
 def ensure_can_manage(cur, event: Dict[str, Any], object_id: int):
@@ -188,7 +191,8 @@ USER_COLS = (
     "id, email, name, role, roles, created_at, broker_id, phone, photo_url, bio, city, "
     "surname, first_name, country, club, training_stream, telegram_username, "
     "telegram_channel, youtube_channel, vk_group, notify_new_objects, updated_at, telegram_chat_id, "
-    "notify_channel_posts"
+    "notify_channel_posts, broker_status, cert_course, cert_date, cert_number, cert_file_url, "
+    "cert_submitted_at, cert_review_comment"
 )
 
 
@@ -206,6 +210,13 @@ def format_user(row) -> Dict[str, Any]:
         'updated_at': row[21].isoformat() if row[21] else None,
         'telegram_chat_id': row[22],
         'notify_channel_posts': row[23],
+        'broker_status': row[24],
+        'cert_course': row[25],
+        'cert_date': row[26].isoformat() if row[26] else None,
+        'cert_number': row[27],
+        'cert_file_url': row[28],
+        'cert_submitted_at': row[29].isoformat() if row[29] else None,
+        'cert_review_comment': row[30],
     }
 
 
@@ -312,6 +323,18 @@ def handle_users(cur, method: str, event: Dict[str, Any]) -> Dict[str, Any]:
         for f in simple_text_fields:
             if f in body:
                 fields.append(f"{f} = {escape_sql(body[f])}")
+
+        if body.get('cert_file_url') and body.get('cert_course') and body.get('cert_date') and body.get('cert_number'):
+            cur.execute(f"SELECT broker_status FROM users WHERE id = {escape_sql(int(user_id))}")
+            cur_row = cur.fetchone()
+            if cur_row and cur_row[0] != 'approved':
+                fields.append(f"cert_course = {escape_sql(body['cert_course'])}")
+                fields.append(f"cert_date = {escape_sql(body['cert_date'])}::date")
+                fields.append(f"cert_number = {escape_sql(body['cert_number'])}")
+                fields.append(f"cert_file_url = {escape_sql(body['cert_file_url'])}")
+                fields.append("cert_submitted_at = CURRENT_TIMESTAMP")
+                fields.append("cert_review_comment = NULL")
+                fields.append("broker_status = 'pending'")
 
         if 'notify_new_objects' in body:
             fields.append(f"notify_new_objects = {escape_sql(body['notify_new_objects'])}")
@@ -851,8 +874,8 @@ def handle_auth(cur, method: str, event: Dict[str, Any]) -> Dict[str, Any]:
 
         ph = hash_password(password)
         cur.execute(
-            f"INSERT INTO users (email, name, role, roles, password_hash, broker_id) "
-            f"VALUES ({escape_sql(email)}, {escape_sql(name)}, {escape_sql(role)}, {roles_array_sql([role])}, {escape_sql(ph)}, {escape_sql(broker_id)}) "
+            f"INSERT INTO users (email, name, role, roles, password_hash, broker_id, broker_status) "
+            f"VALUES ({escape_sql(email)}, {escape_sql(name)}, {escape_sql(role)}, {roles_array_sql([role])}, {escape_sql(ph)}, {escape_sql(broker_id)}, {escape_sql('pending' if role == 'broker' else 'none')}) "
             f"RETURNING {USER_COLS}"
         )
         row = cur.fetchone()

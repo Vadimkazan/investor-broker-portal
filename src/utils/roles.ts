@@ -7,7 +7,7 @@ export const ROLE_LABELS: Record<UserRole, string> = {
   admin: 'Админ',
 };
 
-type RoleBearing = { role?: UserRole; roles?: UserRole[] };
+type RoleBearing = { role?: UserRole; roles?: UserRole[]; broker_status?: string };
 
 export const getUserRoles = (user: RoleBearing | null | undefined): UserRole[] => {
   if (!user) return [];
@@ -50,6 +50,7 @@ export const getActiveMode = (user: RoleBearing | null | undefined): UserRole | 
 export const canPublishObjects = (user: RoleBearing | null | undefined): boolean => {
   if (isAdminOrManager(user)) return true;
   if (!isBroker(user)) return false;
+  if (user?.broker_status !== 'approved') return false;
   return getActiveMode(user) === 'broker';
 };
 

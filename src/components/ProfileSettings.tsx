@@ -11,6 +11,7 @@ import { useNavigate } from 'react-router-dom';
 import { getUserRoles, isAdminOrManager } from '@/utils/roles';
 import { api, UserRole } from '@/services/api';
 import AvatarUpload from '@/components/profile/AvatarUpload';
+import BrokerCertificateCard from '@/components/profile/BrokerCertificateCard';
 
 const AUTH_URL = 'https://functions.poehali.dev/fc00dc4e-18bf-4893-bb9d-331e8abda973?resource=auth';
 
@@ -116,6 +117,7 @@ const ProfileSettings = () => {
 
   return (
     <div className="space-y-6">
+      {user && getUserRoles(user).includes('broker') && <BrokerCertificateCard />}
       {/* Профиль */}
       <Card>
         <CardHeader>

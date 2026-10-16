@@ -28,6 +28,13 @@ export interface User {
   youtube_channel?: string;
   vk_group?: string;
   telegram_chat_id?: string;
+  broker_status?: 'none' | 'pending' | 'approved' | 'rejected';
+  cert_course?: string | null;
+  cert_date?: string | null;
+  cert_number?: string | null;
+  cert_file_url?: string | null;
+  cert_submitted_at?: string | null;
+  cert_review_comment?: string | null;
 }
 
 export interface BrokerInfo {
@@ -204,6 +211,10 @@ class ApiClient {
     role: UserRole;
     roles: UserRole[];
     broker_id: number | null;
+    cert_course: string;
+    cert_date: string;
+    cert_number: string;
+    cert_file_url: string;
     phone: string;
     photo_url: string;
     bio: string;
