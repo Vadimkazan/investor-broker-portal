@@ -1,0 +1,1 @@
+ALTER TABLE investment_objects ADD COLUMN IF NOT EXISTS commission_percent numeric;

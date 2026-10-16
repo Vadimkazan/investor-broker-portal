@@ -27,6 +27,7 @@ const EditObjectPage = () => {
     price: '',
     yield: '',
     paybackPeriod: '',
+    commission: '',
     area: '',
     description: '',
     images: [''],
@@ -40,7 +41,9 @@ const EditObjectPage = () => {
 
   const loadObject = async () => {
     try {
-      const response = await fetch(`https://functions.poehali.dev/fc00dc4e-18bf-4893-bb9d-331e8abda973?resource=objects&id=${id}`);
+      const response = await fetch(`https://functions.poehali.dev/fc00dc4e-18bf-4893-bb9d-331e8abda973?resource=objects&id=${id}`, {
+        headers: user ? { 'X-User-Id': String(user.id) } : {}
+      });
       
       if (!response.ok) {
         throw new Error('Объект не найден');
@@ -69,6 +72,7 @@ const EditObjectPage = () => {
         price: num(data.price),
         yield: num(data.yieldPercent ?? data.yield_percent ?? data.yield),
         paybackPeriod: num(data.paybackYears ?? data.payback_years ?? data.paybackPeriod),
+        commission: num(data.brokerCommission),
         area: num(data.area),
         description: data.description || '',
         images: Array.isArray(data.images) && data.images.length > 0 ? data.images : [''],
@@ -102,6 +106,7 @@ const EditObjectPage = () => {
         id: parseInt(id!),
         price: parseFloat(formData.price),
         yield_percent: parseFloat(formData.yield),
+        ...(formData.commission !== '' ? { commission_percent: parseFloat(formData.commission) } : {}),
         description: formData.description,
         images: formData.images.filter(img => img.trim() !== ''),
         status: formData.status
@@ -282,6 +287,19 @@ const EditObjectPage = () => {
                   disabled
                   className="bg-muted"
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="commission">Комиссия брокера (%)</Label>
+                <Input
+                  id="commission"
+                  type="number"
+                  step="0.1"
+                  value={formData.commission}
+                  onChange={(e) => setFormData(prev => ({ ...prev, commission: e.target.value }))}
+                  placeholder="3"
+                />
+                <p className="text-xs text-muted-foreground">Видна только подтверждённым брокерам</p>
               </div>
 
               <div className="space-y-2 md:col-span-2">

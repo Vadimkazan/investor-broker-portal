@@ -23,6 +23,7 @@ const AddObjectPage = () => {
     price: '',
     yield: '',
     paybackPeriod: '',
+    commission: '',
     area: '',
     description: '',
     images: ['']
@@ -54,6 +55,7 @@ const AddObjectPage = () => {
         price: parseFloat(formData.price),
         yield_percent: parseFloat(formData.yield),
         payback_years: parseFloat(formData.paybackPeriod),
+        commission_percent: formData.commission !== '' ? parseFloat(formData.commission) : null,
         area: parseFloat(formData.area),
         description: formData.description,
         images: formData.images.filter(img => img.trim() !== ''),
@@ -187,6 +189,19 @@ const AddObjectPage = () => {
                   required
                   placeholder="7"
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="commission">Комиссия брокера (%)</Label>
+                <Input
+                  id="commission"
+                  type="number"
+                  step="0.1"
+                  value={formData.commission}
+                  onChange={(e) => setFormData(prev => ({ ...prev, commission: e.target.value }))}
+                  placeholder="3"
+                />
+                <p className="text-xs text-muted-foreground">Видна только подтверждённым брокерам</p>
               </div>
 
 

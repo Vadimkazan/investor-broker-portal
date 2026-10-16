@@ -443,7 +443,8 @@ def handle_objects(cur, method: str, event: Dict[str, Any]) -> Dict[str, Any]:
             query = f"""
                 SELECT o.id, o.broker_id, o.title, o.city, o.address, o.property_type, o.area, o.price, 
                        o.yield_percent, o.description, o.images, o.status, o.created_at,
-                       u.id, u.name, u.email, u.phone, u.photo_url, u.city, u.club
+                       u.id, u.name, u.email, u.phone, u.photo_url, u.city, u.club,
+                       o.commission_percent
                 FROM investment_objects o
                 LEFT JOIN users u ON o.broker_id = u.id
                 WHERE o.id = {escape_sql(int(object_id))}
@@ -458,7 +459,8 @@ def handle_objects(cur, method: str, event: Dict[str, Any]) -> Dict[str, Any]:
             query = """
                 SELECT o.id, o.broker_id, o.title, o.city, o.address, o.property_type, o.area, o.price, 
                        o.yield_percent, o.description, o.images, o.status, o.created_at,
-                       u.id, u.name, u.email, u.phone, u.photo_url, u.city, u.club
+                       u.id, u.name, u.email, u.phone, u.photo_url, u.city, u.club,
+                       o.commission_percent
                 FROM investment_objects o
                 LEFT JOIN users u ON o.broker_id = u.id
                 ORDER BY o.created_at DESC LIMIT 100
@@ -487,7 +489,7 @@ def handle_objects(cur, method: str, event: Dict[str, Any]) -> Dict[str, Any]:
         query = f"""
             INSERT INTO investment_objects (
                 broker_id, title, city, address, property_type, area, price,
-                yield_percent, payback_years, description, images, status
+                yield_percent, payback_years, description, images, status, commission_percent
             ) VALUES (
                 {escape_sql(body.get('broker_id'))},
                 {escape_sql(body.get('title'))},
@@ -500,7 +502,8 @@ def handle_objects(cur, method: str, event: Dict[str, Any]) -> Dict[str, Any]:
                 {escape_sql(body.get('payback_years', 0))},
                 {escape_sql(body.get('description', ''))},
                 ARRAY(SELECT json_array_elements_text({images_json}::json)),
-                {escape_sql(body.get('status', 'available'))}
+                {escape_sql(body.get('status', 'available'))},
+                {escape_sql(body.get('commission_percent'))}
             ) RETURNING id
         """
         cur.execute(query)
@@ -510,7 +513,8 @@ def handle_objects(cur, method: str, event: Dict[str, Any]) -> Dict[str, Any]:
         cur.execute(f"""
             SELECT o.id, o.broker_id, o.title, o.city, o.address, o.property_type, o.area, o.price, 
                    o.yield_percent, o.description, o.images, o.status, o.created_at,
-                   u.id, u.name, u.email, u.phone, u.photo_url, u.city, u.club
+                   u.id, u.name, u.email, u.phone, u.photo_url, u.city, u.club,
+                       o.commission_percent
             FROM investment_objects o
             LEFT JOIN users u ON o.broker_id = u.id
             WHERE o.id = {escape_sql(new_id)}
@@ -534,6 +538,7 @@ def handle_objects(cur, method: str, event: Dict[str, Any]) -> Dict[str, Any]:
             return denied
 
         images_json = escape_sql(json.dumps(body.get('images', [])))
+        commission_sql = f"commission_percent = {escape_sql(body.get('commission_percent'))}," if 'commission_percent' in body else ''
         query = f"""
             UPDATE investment_objects SET
                 title = {escape_sql(body.get('title'))},
@@ -547,6 +552,7 @@ def handle_objects(cur, method: str, event: Dict[str, Any]) -> Dict[str, Any]:
                 description = {escape_sql(body.get('description'))},
                 images = ARRAY(SELECT json_array_elements_text({images_json}::json)),
                 status = {escape_sql(body.get('status'))},
+                {commission_sql}
                 updated_at = CURRENT_TIMESTAMP
             WHERE id = {escape_sql(int(object_id))}
         """
@@ -555,12 +561,13 @@ def handle_objects(cur, method: str, event: Dict[str, Any]) -> Dict[str, Any]:
         cur.execute(f"""
             SELECT o.id, o.broker_id, o.title, o.city, o.address, o.property_type, o.area, o.price, 
                    o.yield_percent, o.description, o.images, o.status, o.created_at,
-                   u.id, u.name, u.email, u.phone, u.photo_url, u.city, u.club
+                   u.id, u.name, u.email, u.phone, u.photo_url, u.city, u.club,
+                       o.commission_percent
             FROM investment_objects o
             LEFT JOIN users u ON o.broker_id = u.id
             WHERE o.id = {escape_sql(int(object_id))}
         """)
-        updated = format_object_with_broker(cur.fetchone())
+        updated = mask_object_broker(format_object_with_broker(cur.fetchone()), get_actor(cur, event))
         ping_indexnow(int(object_id))
         return success_response(updated)
 
@@ -987,7 +994,17 @@ def handle_auth(cur, method: str, event: Dict[str, Any]) -> Dict[str, Any]:
     return error_response('Unknown action', 400)
 
 
+def can_see_commission(actor: Optional[Dict[str, Any]]) -> bool:
+    if not actor:
+        return False
+    if is_privileged(actor):
+        return True
+    return 'broker' in user_roles(actor) and actor.get('broker_status') == 'approved'
+
+
 def mask_object_broker(obj: Dict[str, Any], actor: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    if not can_see_commission(actor):
+        obj.pop('brokerCommission', None)
     broker = obj.get('broker')
     if broker and not can_see_broker_contacts(actor, broker.get('id')):
         broker['email'] = None
@@ -1004,7 +1021,8 @@ def format_object_with_broker(row) -> Dict[str, Any]:
         'broker': {
             'id': row[13], 'name': row[14], 'email': row[15],
             'phone': row[16], 'photoUrl': row[17], 'city': row[18], 'club': row[19],
-        } if row[13] else None
+        } if row[13] else None,
+        'brokerCommission': float(row[20]) if len(row) > 20 and row[20] is not None else None,
     }
 
 
