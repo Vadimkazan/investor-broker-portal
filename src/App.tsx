@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
+import CalculatorRoutePage from "./pages/CalculatorRoutePage";
 import ObjectsPage from "./components/objects/ObjectsPage";
 import ObjectDetailPage from "./components/objects/ObjectDetailPage";
 import AddObjectPage from "./components/objects/AddObjectPage";
@@ -41,6 +42,7 @@ const App = () => {
           <BrowserRouter>
             <Routes>
               <Route path="/" element={<Index />} />
+              <Route path="/calculator" element={<CalculatorRoutePage />} />
               <Route path="/objects" element={<ObjectsPage />} />
               <Route path="/objects/add" element={<ProtectedRoute roles={['broker', 'admin', 'manager']}><AddObjectPage /></ProtectedRoute>} />
               <Route path="/objects/:id/edit" element={<ProtectedRoute roles={['broker', 'admin', 'manager']}><EditObjectPage /></ProtectedRoute>} />

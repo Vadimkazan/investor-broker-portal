@@ -17,7 +17,7 @@ const Index = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState(() => {
     const tab = searchParams.get('tab');
-    return tab === 'calculator' || tab === 'dashboard' ? tab : 'home';
+    return tab === 'dashboard' ? tab : 'home';
   });
   const [isTransitioning, setIsTransitioning] = useState(false);
 
@@ -186,6 +186,8 @@ const Index = () => {
   const handleTabChange = (tab: string) => {
     if (tab === 'objects') {
       navigate('/objects');
+    } else if (tab === 'calculator') {
+      navigate('/calculator');
     } else if (tab === 'dashboard' && hasAnyRole(user, ['admin', 'manager'])) {
       navigate('/admin/dashboard');
     } else {

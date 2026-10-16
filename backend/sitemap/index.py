@@ -41,6 +41,7 @@ def handler(event: dict, context) -> dict:
     xml = '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
     xml += url_block(f'{SITE}/', latest, 'daily', '1.0')
     xml += url_block(f'{SITE}/objects', latest, 'daily', '0.9')
+    xml += url_block(f'{SITE}/calculator', latest, 'monthly', '0.7')
     for obj_id, lastmod in rows:
         xml += url_block(f'{SITE}/objects/{obj_id}', lastmod or latest, 'weekly', '0.8')
     xml += '</urlset>\n'

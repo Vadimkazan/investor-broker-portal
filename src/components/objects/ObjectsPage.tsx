@@ -149,7 +149,7 @@ const ObjectsPage = () => {
   const handleTabChange = (tab: string) => {
     if (tab === 'home') navigate('/');
     else if (tab === 'objects') navigate('/objects');
-    else if (tab === 'calculator') navigate('/?tab=calculator');
+    else if (tab === 'calculator') navigate('/calculator');
     else if (tab === 'dashboard') navigate('/?tab=dashboard');
   };
 
