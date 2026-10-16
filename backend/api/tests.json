@@ -123,7 +123,7 @@
       "method": "POST",
       "path": "/?resource=inquiries",
       "body": {
-        "object_id": 43,
+        "object_id": 55,
         "user_id": 2,
         "name": "Тест Инвестор",
         "email": "test.inv@example.com",
@@ -149,12 +149,12 @@
       "path": "/?resource=views",
       "body": {
         "user_id": 2,
-        "object_id": 43
+        "object_id": 55
       },
       "expectedStatus": 201,
       "expectedBody": {
         "userId": 2,
-        "objectId": 43
+        "objectId": 55
       },
       "bodyMatcher": "partial"
     },
@@ -197,7 +197,7 @@
         "X-User-Id": "1"
       },
       "body": {
-        "id": 43,
+        "id": 55,
         "title": "Взлом"
       },
       "expectedStatus": 403
