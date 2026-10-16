@@ -162,7 +162,15 @@ const CalculatorPage = ({
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <p className="text-muted-foreground">Срок окупаемости</p>
-                  <p className="font-semibold">{Math.round(investmentPeriod / 2)} мес.</p>
+                  <p className="font-semibold">
+                    {(() => {
+                      const months = Math.round((investmentAmount / (investmentAmount * expectedReturn / 100)) * 12);
+                      const years = Math.floor(months / 12);
+                      const rest = months % 12;
+                      if (years === 0) return `${months} мес.`;
+                      return rest === 0 ? `${years} лет` : `${years} лет ${rest} мес.`;
+                    })()}
+                  </p>
                 </div>
                 <div>
                   <p className="text-muted-foreground">Месячная прибыль</p>
