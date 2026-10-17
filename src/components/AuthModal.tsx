@@ -62,6 +62,11 @@ const AuthModal = ({ open, onClose, onAuth }: AuthModalProps) => {
     }
   };
 
+  useEffect(() => {
+    const ref = new URLSearchParams(window.location.search).get('ref');
+    if (ref && /^\d+$/.test(ref)) localStorage.setItem('ref_broker_id', ref);
+  }, []);
+
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setRegError('');
@@ -72,7 +77,7 @@ const AuthModal = ({ open, onClose, onAuth }: AuthModalProps) => {
         regPassword,
         regName.trim(),
         regRole,
-        regRole === 'investor' && regBrokerId ? Number(regBrokerId) : undefined
+        regRole === 'investor' ? (regBrokerId ? Number(regBrokerId) : Number(localStorage.getItem('ref_broker_id')) || undefined) : undefined
       );
       onAuth?.({ name: user.name, email: user.email, role: user.role, roles: user.roles, id: user.id, photo_url: user.photo_url });
       onClose();
