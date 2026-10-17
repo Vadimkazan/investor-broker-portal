@@ -12,6 +12,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import Icon from '@/components/ui/icon';
 import { User, UserRole } from '@/services/api';
+import CertifiedBadge from '@/components/ui/certified-badge';
 import { DeleteConfirm } from './adminConstants';
 import { ROLE_LABELS } from '@/utils/roles';
 
@@ -88,7 +89,18 @@ const AdminUsersTab = ({
                   onClick={() => navigate(`/admin/users/${u.id}`)}
                 >
                   <TableCell className="text-muted-foreground">{u.id}</TableCell>
-                  <TableCell className="font-medium">{u.name}</TableCell>
+                  <TableCell className="font-medium">
+                    {u.name}
+                    {u.roles?.includes('broker') && (
+                      <div className="mt-1">
+                        {u.broker_status === 'approved' && <CertifiedBadge />}
+                        {u.broker_status === 'pending' && (
+                          <Badge className="bg-yellow-100 text-yellow-800">{u.cert_file_url ? 'На проверке' : 'Сертификат не загружен'}</Badge>
+                        )}
+                        {u.broker_status === 'rejected' && <Badge className="bg-red-100 text-red-800">Отклонён</Badge>}
+                      </div>
+                    )}
+                  </TableCell>
                   <TableCell className="text-muted-foreground">{u.email}</TableCell>
                   <TableCell className="text-muted-foreground">{u.phone || '—'}</TableCell>
                   <TableCell onClick={(e) => e.stopPropagation()}>
