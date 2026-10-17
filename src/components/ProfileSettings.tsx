@@ -11,6 +11,7 @@ import { useNavigate } from 'react-router-dom';
 import { getUserRoles, isAdminOrManager } from '@/utils/roles';
 import { api, UserRole } from '@/services/api';
 import AvatarUpload from '@/components/profile/AvatarUpload';
+import CertifiedBadge from '@/components/ui/certified-badge';
 import BrokerCertificateCard from '@/components/profile/BrokerCertificateCard';
 
 const AUTH_URL = 'https://functions.poehali.dev/fc00dc4e-18bf-4893-bb9d-331e8abda973?resource=auth';
@@ -136,6 +137,7 @@ const ProfileSettings = () => {
               />
               <div>
                 <p className="font-semibold text-lg">{user.name}</p>
+                {getUserRoles(user).includes('broker') && user.broker_status === 'approved' && <CertifiedBadge className="my-1" />}
                 <p className="text-muted-foreground">{user.email}</p>
               </div>
             </div>

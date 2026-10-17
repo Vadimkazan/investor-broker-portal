@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import CertifiedBadge from '@/components/ui/certified-badge';
 import Icon from '@/components/ui/icon';
 import { api, User } from '@/services/api';
 import { useAuth } from '@/contexts/AuthContext';
@@ -93,6 +94,7 @@ const MyBrokerCard = () => {
               </div>
               <div className="min-w-0">
                 <p className="font-semibold truncate">{myBroker.name}</p>
+                {myBroker.broker_status === 'approved' && <CertifiedBadge className="my-1" />}
                 {myBroker.city && <p className="text-sm text-muted-foreground truncate">{myBroker.city}</p>}
               </div>
             </div>
@@ -132,7 +134,7 @@ const MyBrokerCard = () => {
                   </SelectTrigger>
                   <SelectContent>
                     {brokers.map((b) => (
-                      <SelectItem key={b.id} value={String(b.id)}>{b.name}</SelectItem>
+                      <SelectItem key={b.id} value={String(b.id)}>{b.name}{b.broker_status === 'approved' ? ' ✓ сертифицирован' : ''}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
