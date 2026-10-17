@@ -67,7 +67,7 @@ const HeroSection = ({ dashboardStats, onRegisterClick, scrollToSection }: HeroS
               <CardContent className="pt-4 sm:pt-6 px-4 sm:px-6">
                 <div className="flex items-center justify-between mb-2">
                   <Icon name={stat.icon} size={22} className="text-white" />
-                  <Badge className="bg-white/20 text-white text-xs">{stat.change}</Badge>
+                  {stat.change && <Badge className="bg-white/20 text-white text-xs">{stat.change}</Badge>}
                 </div>
                 <div className="text-2xl sm:text-3xl font-bold mb-1">{stat.value}</div>
                 <div className="text-xs sm:text-sm text-white/70">{stat.label}</div>
