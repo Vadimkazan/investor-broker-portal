@@ -146,6 +146,12 @@ const ObjectCard = ({ object }: ObjectCardProps) => {
           <div className="flex items-center gap-1.5 pt-2 text-xs text-muted-foreground">
             <Icon name="UserCheck" size={13} />
             <span className="truncate">Брокер: {object.broker.name}</span>
+            {object.broker.certified && (
+              <Badge className="bg-green-100 text-green-800 text-[10px] px-1.5 py-0 gap-1 shrink-0">
+                <Icon name="BadgeCheck" size={11} />
+                Сертифицирован
+              </Badge>
+            )}
             {isOwner && (
               <Badge variant="secondary" className="ml-auto text-[10px] px-1.5 py-0">Ваш объект</Badge>
             )}

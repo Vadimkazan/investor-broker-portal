@@ -444,7 +444,7 @@ def handle_objects(cur, method: str, event: Dict[str, Any]) -> Dict[str, Any]:
                 SELECT o.id, o.broker_id, o.title, o.city, o.address, o.property_type, o.area, o.price, 
                        o.yield_percent, o.description, o.images, o.status, o.created_at,
                        u.id, u.name, u.email, u.phone, u.photo_url, u.city, u.club,
-                       o.commission_percent
+                       o.commission_percent, u.broker_status
                 FROM investment_objects o
                 LEFT JOIN users u ON o.broker_id = u.id
                 WHERE o.id = {escape_sql(int(object_id))}
@@ -460,7 +460,7 @@ def handle_objects(cur, method: str, event: Dict[str, Any]) -> Dict[str, Any]:
                 SELECT o.id, o.broker_id, o.title, o.city, o.address, o.property_type, o.area, o.price, 
                        o.yield_percent, o.description, o.images, o.status, o.created_at,
                        u.id, u.name, u.email, u.phone, u.photo_url, u.city, u.club,
-                       o.commission_percent
+                       o.commission_percent, u.broker_status
                 FROM investment_objects o
                 LEFT JOIN users u ON o.broker_id = u.id
                 ORDER BY o.created_at DESC LIMIT 100
@@ -514,7 +514,7 @@ def handle_objects(cur, method: str, event: Dict[str, Any]) -> Dict[str, Any]:
             SELECT o.id, o.broker_id, o.title, o.city, o.address, o.property_type, o.area, o.price, 
                    o.yield_percent, o.description, o.images, o.status, o.created_at,
                    u.id, u.name, u.email, u.phone, u.photo_url, u.city, u.club,
-                       o.commission_percent
+                       o.commission_percent, u.broker_status
             FROM investment_objects o
             LEFT JOIN users u ON o.broker_id = u.id
             WHERE o.id = {escape_sql(new_id)}
@@ -562,7 +562,7 @@ def handle_objects(cur, method: str, event: Dict[str, Any]) -> Dict[str, Any]:
             SELECT o.id, o.broker_id, o.title, o.city, o.address, o.property_type, o.area, o.price, 
                    o.yield_percent, o.description, o.images, o.status, o.created_at,
                    u.id, u.name, u.email, u.phone, u.photo_url, u.city, u.club,
-                       o.commission_percent
+                       o.commission_percent, u.broker_status
             FROM investment_objects o
             LEFT JOIN users u ON o.broker_id = u.id
             WHERE o.id = {escape_sql(int(object_id))}
@@ -1021,6 +1021,7 @@ def format_object_with_broker(row) -> Dict[str, Any]:
         'broker': {
             'id': row[13], 'name': row[14], 'email': row[15],
             'phone': row[16], 'photoUrl': row[17], 'city': row[18], 'club': row[19],
+            'certified': (row[21] == 'approved') if len(row) > 21 else False,
         } if row[13] else None,
         'brokerCommission': float(row[20]) if len(row) > 20 and row[20] is not None else None,
     }

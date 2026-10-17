@@ -55,6 +55,7 @@ export interface InvestmentObject {
     city?: string;
     club?: string;
     training_stream?: string;
+    certified?: boolean;
   };
   monthlyIncome?: number;
   rentalYield?: number;

@@ -78,7 +78,8 @@ const ObjectDetailPage = () => {
           phone: found.phone || '',
           email: found.email || '',
           city: found.city || '',
-        } as Broker);
+          certified: found.broker_status === 'approved',
+        } as Broker & { certified: boolean });
       }
     } catch {
       setBroker(null);
@@ -411,6 +412,12 @@ const ObjectDetailPage = () => {
                     </div>
                     <div>
                       <p className="font-semibold">{broker.name}</p>
+                      {(broker as Broker & { certified?: boolean }).certified && (
+                        <Badge className="bg-green-100 text-green-800 gap-1 my-1">
+                          <Icon name="BadgeCheck" size={14} />
+                          Сертифицированный брокер
+                        </Badge>
+                      )}
                       {broker.company && (
                         <p className="text-sm text-muted-foreground">{broker.company}</p>
                       )}

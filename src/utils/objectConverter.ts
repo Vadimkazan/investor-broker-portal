@@ -8,7 +8,7 @@ type RawObject = InvestmentObjectDB & {
   paybackYears?: number;
   brokerCommission?: number | null;
   createdAt?: string;
-  broker?: { id: number; name: string; email: string; phone?: string; city?: string; club?: string };
+  broker?: { id: number; name: string; email: string; phone?: string; city?: string; club?: string; certified?: boolean };
 };
 
 export const convertDBObjectToFrontend = (input: InvestmentObjectDB): InvestmentObject => {
