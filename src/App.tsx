@@ -16,6 +16,7 @@ import CrmPage from "./pages/CrmPage";
 import AdminUserDetailPage from "./pages/AdminUserDetailPage";
 import TelegramCallbackPage from "./pages/TelegramCallbackPage";
 import NotFound from "./pages/NotFound";
+import { ThemeProvider } from "next-themes";
 import { AuthProvider } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Footer from "@/components/Footer";
@@ -34,6 +35,7 @@ const queryClient = new QueryClient({
 const App = () => {
 
   return (
+    <ThemeProvider attribute="class" defaultTheme="light" storageKey="theme">
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <TooltipProvider>
@@ -61,6 +63,7 @@ const App = () => {
         </TooltipProvider>
       </AuthProvider>
     </QueryClientProvider>
+    </ThemeProvider>
   );
 };
 

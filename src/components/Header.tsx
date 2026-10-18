@@ -1,6 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { useTheme } from 'next-themes';
 import Icon from '@/components/ui/icon';
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -34,6 +35,7 @@ interface HeaderProps {
 const Header = ({ activeTab, onTabChange, user, onAuthClick, onLogout, onRoleSwitch }: HeaderProps) => {
   const [favoritesCount, setFavoritesCount] = useState(0);
   const { syncing } = useAuth();
+  const { resolvedTheme, setTheme } = useTheme();
 
   useEffect(() => {
     const updateFavorites = () => {
@@ -96,6 +98,15 @@ const Header = ({ activeTab, onTabChange, user, onAuthClick, onLogout, onRoleSwi
                 <span className="hidden sm:inline">Кабинет</span>
               </Button>
             )}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="flex-shrink-0"
+              onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
+              title="Тёмная тема"
+            >
+              <Icon name={resolvedTheme === 'dark' ? 'Sun' : 'Moon'} size={20} />
+            </Button>
             {favoritesCount > 0 && (
               <Button
                 variant="ghost"

@@ -48,6 +48,21 @@
 }
 
 @layer base {
+  .dark {
+    --background: 240 10% 7%;
+    --foreground: 0 0% 94%;
+    --card: 240 10% 10%;
+    --card-foreground: 0 0% 94%;
+    --popover: 240 10% 10%;
+    --popover-foreground: 0 0% 94%;
+    --muted: 240 8% 15%;
+    --muted-foreground: 240 5% 65%;
+    --border: 240 6% 20%;
+    --input: 240 6% 20%;
+  }
+}
+
+@layer base {
   * {
     @apply border-border;
   }
